@@ -235,10 +235,10 @@ pub trait HasTexture {
   fn clear_part<L, D, P>(tex: &Self::ATexture, gen_mimpmaps: bool, offset: D::Offset, size: D::Size, pixel: P::Encoding)
     where L: Layerable, D: Dimensionable, D::Offset: Copy, D::Size: Copy, P: Pixel, P::Encoding: Copy;
   /// Upload texels to the texture’s memory.
-  fn upload_part<L, D, P>(tex: &Self::ATexture, gen_mipmaps: bool, offset: D::Offset, size: D::Size, texels: &Vec<P::Encoding>)
+  fn upload_part<L, D, P>(tex: &Self::ATexture, gen_mipmaps: bool, offset: D::Offset, size: D::Size, texels: &[P::Encoding])
     where L: Layerable, D::Offset: Copy, D::Size: Copy, D: Dimensionable, P: Pixel;
   /// Upload raw texels to the texture’s memory.
-  fn upload_part_raw<L, D, P>(tex: &Self::ATexture, gen_mipmaps: bool, offset: D::Offset, size: D::Size, texels: &Vec<P::RawEncoding>)
+  fn upload_part_raw<L, D, P>(tex: &Self::ATexture, gen_mipmaps: bool, offset: D::Offset, size: D::Size, texels: &[P::RawEncoding])
     where L: Layerable, D::Offset: Copy, D::Size: Copy, D: Dimensionable, P: Pixel;
   /// Retrieve the texels as a collection of P::RawEncoding.
   fn get_raw_texels<P>(tex: &Self::ATexture) -> Vec<P::RawEncoding> where P: Pixel, P::RawEncoding: Copy;
@@ -309,25 +309,25 @@ impl<C, L, D, P> Texture<C, L, D, P>
     self.clear_part(gen_mipmaps, D::zero_offset(), self.size, pixel)
   }
 
-  pub fn upload_part(&self, gen_mipmaps: bool, offset: D::Offset, size: D::Size, texels: &Vec<P::Encoding>) 
+  pub fn upload_part(&self, gen_mipmaps: bool, offset: D::Offset, size: D::Size, texels: &[P::Encoding])
       where D::Offset: Copy,
             D::Size: Copy {
     C::upload_part::<L, D, P>(&self.repr, gen_mipmaps, offset, size, texels)
   }
 
-  pub fn upload(&self, gen_mipmaps: bool, texels: &Vec<P::Encoding>)
+  pub fn upload(&self, gen_mipmaps: bool, texels: &[P::Encoding])
       where D::Offset: Copy,
             D::Size: Copy {
     self.upload_part(gen_mipmaps, D::zero_offset(), self.size, texels)
   }
 
-  pub fn upload_part_raw(&self, gen_mipmaps: bool, offset: D::Offset, size: D::Size, texels: &Vec<P::RawEncoding>) 
+  pub fn upload_part_raw(&self, gen_mipmaps: bool, offset: D::Offset, size: D::Size, texels: &[P::RawEncoding])
       where D::Offset: Copy,
             D::Size: Copy {
     C::upload_part_raw::<L, D, P>(&self.repr, gen_mipmaps, offset, size, texels)
   }
 
-  pub fn upload_raw(&self, gen_mipmaps: bool, texels: &Vec<P::RawEncoding>)
+  pub fn upload_raw(&self, gen_mipmaps: bool, texels: &[P::RawEncoding])
       where D::Offset: Copy,
             D::Size: Copy {
     self.upload_part_raw(gen_mipmaps, D::zero_offset(), self.size, texels)

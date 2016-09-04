@@ -28,7 +28,7 @@ pub trait HasPipeline: HasFramebuffer + HasProgram + HasTessellation + HasTextur
 ///
 /// `CS` and `DS` are – respectively – the *color* and *depth* `Slot` of the underlying
 /// `Framebuffer`.
-pub struct Pipeline<'a, C, L, D, CS, DS> 
+pub struct Pipeline<'a, C, L, D, CS, DS>
     where C: 'a + HasFramebuffer + HasProgram + HasTessellation + HasTexture,
           L: 'a + Layerable,
           D: 'a + Dimensionable,
@@ -84,7 +84,7 @@ pub struct ShadingCommand<'a, C, T> where C: 'a + HasProgram + HasTessellation, 
 impl<'a, C, T> ShadingCommand<'a, C, T> where C: 'a + HasProgram + HasTessellation {
   pub fn new<F: Fn(&T) + 'a>(program: &'a Program<C, T>, update: F, render_commands: Vec<RenderCommand<'a, C, T>>) -> Self {
     ShadingCommand {
-      program: &program,
+      program: program,
       update: Box::new(update),
       render_commands: render_commands
     }

@@ -123,7 +123,7 @@ impl<'a, C> ProgramProxy<'a, C> where C: HasProgram {
     let ty = T::reify_type();
     let dim = T::dim();
 
-    let (u, w) = C::map_uniform(&self.repr, String::from(name), ty, dim);
+    let (u, w) = C::map_uniform(self.repr, String::from(name), ty, dim);
     (Uniform::new(u), w)
   }
 }
