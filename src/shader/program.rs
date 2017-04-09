@@ -52,18 +52,18 @@ pub struct Program {
 
 impl Program {
   /// Create a new program by linking shader stages.
-  pub fn new(tess: Option<(&Stage, &Stage)>, vertex: &Stage, geometry: Option<&Stage>, fragment: &Stage, sem_map: &[Sem]) -> Result<(Self, Vec<UniformWarning>)> {
+  pub fn new<'a, T, G>(tess: T, vertex: &Stage, geometry: G, fragment: &Stage, sem_map: &[Sem]) -> Result<(Self, Vec<UniformWarning>)> where T: Into<Option<(&'a Stage, &'a Stage)>>, G: Into<Option<&'a Stage>> {
     unsafe {
       let handle = gl::CreateProgram();
 
-      if let Some((tcs, tes)) = tess {
+      if let Some((tcs, tes)) = tess.into() {
         gl::AttachShader(handle, tcs.handle());
         gl::AttachShader(handle, tes.handle());
       }
 
       gl::AttachShader(handle, vertex.handle());
 
-      if let Some(geometry) = geometry {
+      if let Some(geometry) = geometry.into() {
         gl::AttachShader(handle, geometry.handle());
       }
 

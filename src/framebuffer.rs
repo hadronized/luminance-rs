@@ -499,12 +499,12 @@ pub trait DepthSlot<L, D> where L: Layerable, D: Dimensionable, D::Size: Copy {
   /// Turn a depth slot into a pixel format.
   fn depth_format() -> Option<PixelFormat>;
   /// Reify a raw textures into a depth slot.
-  fn reify_texture(size: D::Size, mipmaps: usize, texture: Option<GLuint>) -> Self; }
+  fn reify_texture<T>(size: D::Size, mipmaps: usize, texture: T) -> Self where T: Into<Option<GLuint>>; }
 
 impl<L, D> DepthSlot<L, D> for () where L: Layerable, D: Dimensionable, D::Size: Copy {
   fn depth_format() -> Option<PixelFormat> { None }
 
-  fn reify_texture(_: D::Size, _: usize, _: Option<GLuint>) -> Self { () }
+  fn reify_texture<T>(_: D::Size, _: usize, _: T) -> Self where T: Into<Option<GLuint>> { () }
 }
 
 impl<L, D, P> DepthSlot<L, D> for Texture<L, D, P>
@@ -514,9 +514,9 @@ impl<L, D, P> DepthSlot<L, D> for Texture<L, D, P>
           P: DepthPixel {
   fn depth_format() -> Option<PixelFormat> { Some(P::pixel_format()) }
 
-  fn reify_texture(size: D::Size, mipmaps: usize, texture: Option<GLuint>) -> Self {
+  fn reify_texture<T>(size: D::Size, mipmaps: usize, texture: T) -> Self where T: Into<Option<GLuint>> {
     unsafe {
-      let raw = RawTexture::new(texture.unwrap(), opengl_target(L::layering(), D::dim()));
+      let raw = RawTexture::new(texture.into().unwrap(), opengl_target(L::layering(), D::dim()));
       Texture::from_raw(raw, size, mipmaps)
     }
   }

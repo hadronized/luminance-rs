@@ -97,7 +97,7 @@ impl Tess {
   /// The `mode` argument gives the type of the primitives and how to interpret the `vertices` and
   /// `indices` slices. If `indices` is set to `None`, the tessellation will use the `vertices`
   /// as-is.
-  pub fn new<'a, V, T>(mode: Mode, vertices: V, indices: Option<&[u32]>) -> Self where TessVertices<'a, T>: From<V>, T: 'a + Vertex {
+  pub fn new<'a, V, T, O>(mode: Mode, vertices: V, indices: O) -> Self where TessVertices<'a, T>: From<V>, T: 'a + Vertex, O: Into<Option<&'a[u32]>> {
     let vertices = vertices.into();
 
     let mut vao: GLuint = 0;
@@ -126,7 +126,7 @@ impl Tess {
 
       // TODO: refactor this schiesse
       // in case of indexed render, create an index buffer
-      if let Some(indices) = indices {
+      if let Some(indices) = indices.into() {
         let ind_nb = indices.len();
         let index_buffer = Buffer::new(ind_nb);
         index_buffer.fill(indices);

@@ -221,8 +221,8 @@ fn bind_textures(textures: &[&RawTexture]) {
 }
 
 #[inline]
-fn set_blending(blending: Option<(Equation, Factor, Factor)>) {
-  match blending {
+fn set_blending<B>(blending: B) where B: Into<Option<(Equation, Factor, Factor)>> {
+  match blending.into() {
     Some((equation, src_factor, dest_factor)) => {
       unsafe {
         gl::Enable(gl::BLEND);
