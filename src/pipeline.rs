@@ -305,11 +305,11 @@ pub struct RenderGate<V> {
 }
 
 impl<V> RenderGate<V> {
-  pub fn render<B, F>(&self, blending: B, depth_test: bool, f: F)
-      where B: Into<Option<(Equation, Factor, Factor)>>, F: FnOnce(&TessGate<V>) {
+  pub fn render<B, F>(&self, rdr_st: RenderState, f: F) where F: FnOnce(&TessGate<V>) {
     unsafe {
-      set_blending(blending);
-      set_depth_test(depth_test);
+      set_blending(rdr_st.blending);
+      set_depth_test(rdr_st.depth_test);
+      set_face_culling(rdr_st.face_culling);
     }
 
     let tess_gate = TessGate {
@@ -318,6 +318,89 @@ impl<V> RenderGate<V> {
 
     f(&tess_gate);
   }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct RenderState {
+  blending: Option<(Equation, Factor, Factor)>,
+  depth_test: DepthTest,
+  face_culling: Option<FaceCulling>
+}
+
+impl RenderState {
+  pub fn set_blending<B>(self, blending: B) -> Self where B: Into<Option<(Equation, Factor, Factor)>> {
+    RenderState {
+      blending: blending.into(),
+      .. self
+    }
+  }
+
+  pub fn blending(&self) -> Option<(Equation, Factor, Factor)> {
+    self.blending
+  }
+
+  pub fn set_depth_test(self, depth_test: DepthTest) -> Self {
+    RenderState {
+      depth_test,
+      .. self
+    }
+  }
+
+  pub fn depth_test(&self) -> DepthTest {
+    self.depth_test
+  }
+
+  pub fn set_face_culling<FC>(self, face_culling: FC) -> Self where FC: Into<Option<FaceCulling>> {
+    RenderState {
+      face_culling: face_culling.into(),
+      .. self
+    }
+  }
+
+  pub fn face_culling(&self) -> Option<FaceCulling> {
+    self.face_culling
+  }
+}
+
+impl Default for RenderState {
+  fn default() -> Self {
+    RenderState {
+      blending: None,
+      depth_test: DepthTest::Enabled,
+      face_culling: Some(FaceCulling::new(FaceCullingOrder::CCW, FaceCullingMode::Back))
+    }
+  }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum DepthTest {
+  Enabled,
+  Disabled
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct FaceCulling {
+  order: FaceCullingOrder,
+  mode: FaceCullingMode
+}
+
+impl FaceCulling {
+  pub fn new(order: FaceCullingOrder, mode: FaceCullingMode) -> Self {
+    FaceCulling { order, mode }
+  }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum FaceCullingOrder {
+  CW,
+  CCW
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum FaceCullingMode {
+  Front,
+  Back,
+  Both
 }
 
 pub struct TessGate<V> {
@@ -342,8 +425,8 @@ unsafe fn bind_texture_at(tex: &RawTexture, unit: u32) {
 }
 
 #[inline]
-unsafe fn set_blending<B>(blending: B) where B: Into<Option<(Equation, Factor, Factor)>> {
-  match blending.into() {
+unsafe fn set_blending(blending: Option<(Equation, Factor, Factor)>) {
+  match blending {
     Some((equation, src_factor, dest_factor)) => {
       gl::Enable(gl::BLEND);
       gl::BlendEquation(blending_equation(equation));
@@ -356,11 +439,24 @@ unsafe fn set_blending<B>(blending: B) where B: Into<Option<(Equation, Factor, F
 }
 
 #[inline]
-unsafe fn set_depth_test(test: bool) {
-  if test {
-    gl::Enable(gl::DEPTH_TEST);
-  } else {
-    gl::Disable(gl::DEPTH_TEST);
+unsafe fn set_depth_test(test: DepthTest) {
+  match test {
+    DepthTest::Enabled => gl::Enable(gl::DEPTH_TEST),
+    DepthTest::Disabled => gl::Disable(gl::DEPTH_TEST)
+  }
+}
+
+#[inline]
+unsafe fn set_face_culling(face_culling: Option<FaceCulling>) {
+  match face_culling {
+    Some(face_culling) => {
+      gl::Enable(gl::CULL_FACE);
+      gl::FrontFace(face_culling_order(face_culling.order));
+      gl::CullFace(face_culling_mode(face_culling.mode));
+    },
+    None => {
+      gl::Disable(gl::CULL_FACE);
+    }
   }
 }
 
@@ -389,5 +485,22 @@ fn blending_factor(factor: Factor) -> GLenum {
     Factor::DstAlpha => gl::DST_ALPHA,
     Factor::DstAlphaComplement => gl::ONE_MINUS_DST_ALPHA,
     Factor::SrcAlphaSaturate => gl::SRC_ALPHA_SATURATE
+  }
+}
+
+#[inline]
+fn face_culling_order(order: FaceCullingOrder) -> GLenum {
+  match order {
+    FaceCullingOrder::CW => gl::CW,
+    FaceCullingOrder::CCW => gl::CCW
+  }
+}
+
+#[inline]
+fn face_culling_mode(mode: FaceCullingMode) -> GLenum {
+  match mode {
+    FaceCullingMode::Front => gl::FRONT,
+    FaceCullingMode::Back => gl::BACK,
+    FaceCullingMode::Both => gl::FRONT_AND_BACK,
   }
 }
