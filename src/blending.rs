@@ -10,7 +10,7 @@
 //! The factors are encoded with `Factor`.
 
 /// Blending equation. Used to state how blending factors and pixel data should be blended.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Equation {
   /// `Additive` represents the following blending equation:
   ///
@@ -37,7 +37,7 @@ pub enum Equation {
 
 /// Blending factors. Pixel data are multiplied by these factors to achieve several effects driven
 /// by *blending equations*.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Factor {
   /// `1 * color = factor`
   One,
