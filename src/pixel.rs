@@ -75,118 +75,294 @@ pub fn is_depth_pixel(f: PixelFormat) -> bool {
   !is_color_pixel(f)
 }
 
-/// A red, green and blue 8-bit unsigned pixel format.
-#[derive(Clone, Copy, Debug)]
-pub struct RGB8UI;
-
-impl Pixel for RGB8UI {
-  type Encoding = (u8, u8, u8);
-  type RawEncoding = u8;
-
-  fn pixel_format() -> PixelFormat {
-    PixelFormat {
-      encoding: Type::Unsigned,
-      format: Format::RGB(8, 8, 8)
+macro_rules! impl_Pixel {
+  ($t:ty, $encoding:ty, $raw_encoding:ty, $encoding_ty:expr, $format:expr) => {
+    impl Pixel for $t {
+      type Encoding = $encoding;
+      type RawEncoding = $raw_encoding;
+    
+      fn pixel_format() -> PixelFormat {
+        PixelFormat {
+          encoding: $encoding_ty,
+          format: $format
+        }
+      }
     }
   }
 }
 
-impl ColorPixel for RGB8UI {}
-impl RenderablePixel for RGB8UI {}
-
-/// A red, green, blue and alpha 8-bit unsigned pixel format.
-#[derive(Clone, Copy, Debug)]
-pub struct RGBA8UI;
-
-impl Pixel for RGBA8UI {
-  type Encoding = (u8, u8, u8, u8);
-  type RawEncoding = u8;
-
-  fn pixel_format() -> PixelFormat {
-    PixelFormat {
-      encoding: Type::Unsigned,
-      format: Format::RGBA(8, 8, 8, 8)
-    }
+macro_rules! impl_ColorPixel {
+  ($t:ty) => {
+    impl ColorPixel for $t {}
   }
 }
 
-impl ColorPixel for RGBA8UI {}
-impl RenderablePixel for RGBA8UI {}
+macro_rules! impl_DepthPixel {
+  ($t:ty) => {
+    impl DepthPixel for $t {}
+  }
+}
+
+macro_rules! impl_RenderablePixel {
+  ($t:ty) => {
+    impl RenderablePixel for $t {}
+  }
+}
+
+/// A red 8-bit signed integral pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct R8I;
+
+impl_Pixel!(R8I, i8, i8, Type::Integral, Format::R(8));
+impl_ColorPixel!(R8I);
+impl_RenderablePixel!(R8I);
+
+/// A red 8-bit unsigned integral pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct R8UI;
+
+impl_Pixel!(R8UI, u8, u8, Type::Unsigned, Format::R(8));
+impl_ColorPixel!(R8UI);
+impl_RenderablePixel!(R8UI);
+
+// --------------------
+
+/// A red 16-bit signed integral pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct R16I;
+
+impl_Pixel!(R16I, i16, i16, Type::Integral, Format::R(16));
+impl_ColorPixel!(R16I);
+impl_RenderablePixel!(R16I);
+
+/// A red 16-bit unsigned integral pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct R16UI;
+
+impl_Pixel!(R16UI, u16, u16, Type::Unsigned, Format::R(16));
+impl_ColorPixel!(R16UI);
+impl_RenderablePixel!(R16UI);
+
+// --------------------
+
+/// A red 32-bit signed integral pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct R32I;
+
+impl_Pixel!(R32I, i32, i32, Type::Integral, Format::R(32));
+impl_ColorPixel!(R32I);
+impl_RenderablePixel!(R32I);
+
+/// A red 32-bit unsigned integral pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct R32UI;
+
+impl_Pixel!(R32UI, u32, u32, Type::Unsigned, Format::R(32));
+impl_ColorPixel!(R32UI);
+impl_RenderablePixel!(R32UI);
 
 /// A red 32-bit floating pixel format.
 #[derive(Clone, Copy, Debug)]
 pub struct R32F;
 
-impl Pixel for R32F {
-  type Encoding = f32;
-  type RawEncoding = f32;
+impl_Pixel!(R32F, f32, f32, Type::Floating, Format::R(32));
+impl_ColorPixel!(R32F);
+impl_RenderablePixel!(R32F);
 
-  fn pixel_format() -> PixelFormat {
-    PixelFormat {
-      encoding: Type::Floating,
-      format: Format::R(32)
-    }
-  }
-}
+// --------------------
 
-impl ColorPixel for R32F {}
-impl RenderablePixel for R32F {}
+/// A red and green 8-bit signed integral pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct RG8I;
+
+impl_Pixel!(RG8I, (i8, i8), i8, Type::Integral, Format::RG(8, 8));
+impl_ColorPixel!(RG8I);
+impl_RenderablePixel!(RG8I);
+
+/// A red and green 8-bit unsigned integral pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct RG8UI;
+
+impl_Pixel!(RG8UI, (u8, u8), u8, Type::Unsigned, Format::RG(8, 8));
+impl_ColorPixel!(RG8UI);
+impl_RenderablePixel!(RG8UI);
+
+// --------------------
+
+/// A red and green 16-bit signed integral pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct RG16I;
+
+impl_Pixel!(RG16I, (i16, i16), i16, Type::Integral, Format::RG(16, 16));
+impl_ColorPixel!(RG16I);
+impl_RenderablePixel!(RG16I);
+
+/// A red and green 16-bit unsigned integral pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct RG16UI;
+
+impl_Pixel!(RG16UI, (u16, u16), u16, Type::Unsigned, Format::RG(16, 16));
+impl_ColorPixel!(RG16UI);
+impl_RenderablePixel!(RG16UI);
+
+// --------------------
+
+/// A red and green 32-bit signed integral pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct RG32I;
+
+impl_Pixel!(RG32I, (i32, i32), i32, Type::Integral, Format::RG(32, 32));
+impl_ColorPixel!(RG32I);
+impl_RenderablePixel!(RG32I);
+
+/// A red and green 32-bit unsigned integral pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct RG32UI;
+
+impl_Pixel!(RG32UI, (u32, u32), u32, Type::Unsigned, Format::RG(32, 32));
+impl_ColorPixel!(RG32UI);
+impl_RenderablePixel!(RG32UI);
+
+/// A red and green 32-bit floating pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct RG32F;
+
+impl_Pixel!(RG32F, (f32, f32), f32, Type::Floating, Format::RG(32, 32));
+impl_ColorPixel!(RG32F);
+impl_RenderablePixel!(RG32F);
+
+// --------------------
+
+/// A red, green and blue 8-bit signed integral pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct RGB8I;
+
+impl_Pixel!(RGB8I, (i8, i8, i8), i8, Type::Integral, Format::RGB(8, 8, 8));
+impl_ColorPixel!(RGB8I);
+impl_RenderablePixel!(RGB8I);
+
+/// A red, green and blue 8-bit unsigned integral pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct RGB8UI;
+
+impl_Pixel!(RGB8UI, (u8, u8, u8), u8, Type::Unsigned, Format::RGB(8, 8, 8));
+impl_ColorPixel!(RGB8UI);
+impl_RenderablePixel!(RGB8UI);
+
+// --------------------
+
+/// A red, green and blue 16-bit signed integral pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct RGB16I;
+
+impl_Pixel!(RGB16I, (i16, i16, i16), i16, Type::Integral, Format::RGB(16, 16, 16));
+impl_ColorPixel!(RGB16I);
+impl_RenderablePixel!(RGB16I);
+
+/// A red, green and blue 16-bit unsigned integral pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct RGB16UI;
+
+impl_Pixel!(RGB16UI, (u16, u16, u16), u16, Type::Unsigned, Format::RGB(16, 16, 16));
+impl_ColorPixel!(RGB16UI);
+impl_RenderablePixel!(RGB16UI);
+
+// --------------------
+
+/// A red, green and blue 32-bit signed integral pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct RGB32I;
+
+impl_Pixel!(RGB32I, (i32, i32, i32), i32, Type::Integral, Format::RGB(32, 32, 32));
+impl_ColorPixel!(RGB32I);
+impl_RenderablePixel!(RGB32I);
+
+/// A red, green and blue 32-bit unsigned integral pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct RGB32UI;
+
+impl_Pixel!(RGB32UI, (u32, u32, u32), u32, Type::Unsigned, Format::RGB(32, 32, 32));
+impl_ColorPixel!(RGB32UI);
+impl_RenderablePixel!(RGB32UI);
 
 /// A red, green and blue 32-bit floating pixel format.
 #[derive(Clone, Copy, Debug)]
 pub struct RGB32F;
 
-impl Pixel for RGB32F {
-  type Encoding = (f32, f32, f32);
-  type RawEncoding = f32;
+impl_Pixel!(RGB32F, (f32, f32, f32), f32, Type::Floating, Format::RGB(32, 32, 32));
+impl_ColorPixel!(RGB32F);
+impl_RenderablePixel!(RGB32F);
 
-  fn pixel_format() -> PixelFormat {
-    PixelFormat {
-      encoding: Type::Floating,
-      format: Format::RGB(32, 32, 32)
-    }
-  }
-}
+// --------------------
 
-impl ColorPixel for RGB32F {}
-impl RenderablePixel for RGB32F {}
+/// A red, green, blue and alpha 8-bit signed integral pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct RGBA8I;
+
+impl_Pixel!(RGBA8I, (i8, i8, i8, i8), i8, Type::Integral, Format::RGBA(8, 8, 8, 8));
+impl_ColorPixel!(RGBA8I);
+impl_RenderablePixel!(RGBA8I);
+
+/// A red, green, blue and alpha 8-bit unsigned integral pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct RGBA8UI;
+
+impl_Pixel!(RGBA8UI, (u8, u8, u8, u8), u8, Type::Unsigned, Format::RGBA(8, 8, 8, 8));
+impl_ColorPixel!(RGBA8UI);
+impl_RenderablePixel!(RGBA8UI);
+
+// --------------------
+
+/// A red, green, blue and alpha 16-bit signed integral pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct RGBA16I;
+
+impl_Pixel!(RGBA16I, (i16, i16, i16, i16), i16, Type::Integral, Format::RGBA(16, 16, 16, 16));
+impl_ColorPixel!(RGBA16I);
+impl_RenderablePixel!(RGBA16I);
+
+/// A red, green, blue and alpha 16-bit unsigned integral pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct RGBA16UI;
+
+impl_Pixel!(RGBA16UI, (u16, u16, u16, u16), u16, Type::Unsigned, Format::RGBA(16, 16, 16, 16));
+impl_ColorPixel!(RGBA16UI);
+impl_RenderablePixel!(RGBA16UI);
+
+// --------------------
+
+/// A red, green, blue and alpha 32-bit signed integral pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct RGBA32I;
+
+impl_Pixel!(RGBA32I, (i32, i32, i32, i32), i32, Type::Integral, Format::RGBA(32, 32, 32, 32));
+impl_ColorPixel!(RGBA32I);
+impl_RenderablePixel!(RGBA32I);
+
+/// A red, green, blue and alpha 32-bit unsigned integral pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct RGBA32UI;
+
+impl_Pixel!(RGBA32UI, (u32, u32, u32, u32), u32, Type::Unsigned, Format::RGBA(32, 32, 32, 32));
+impl_ColorPixel!(RGBA32UI);
+impl_RenderablePixel!(RGBA32UI);
 
 /// A red, green, blue and alpha 32-bit floating pixel format.
 #[derive(Clone, Copy, Debug)]
 pub struct RGBA32F;
 
-impl Pixel for RGBA32F {
-  type Encoding = (f32, f32, f32, f32);
-  type RawEncoding = f32;
+impl_Pixel!(RGBA32F, (f32, f32, f32, f32), f32, Type::Floating, Format::RGBA(32, 32, 32, 32));
+impl_ColorPixel!(RGBA32F);
+impl_RenderablePixel!(RGBA32F);
 
-  fn pixel_format() -> PixelFormat {
-    PixelFormat {
-      encoding: Type::Floating,
-      format: Format::RGBA(32, 32, 32, 32)
-    }
-  }
-}
-
-impl ColorPixel for RGBA32F {}
-impl RenderablePixel for RGBA32F {}
+// --------------------
 
 /// A depth 32-bit floating pixel format.
 #[derive(Clone, Copy, Debug)]
 pub struct Depth32F;
 
-impl Pixel for Depth32F {
-  type Encoding = f32;
-  type RawEncoding = f32;
-
-  fn pixel_format() -> PixelFormat {
-    PixelFormat {
-      encoding: Type::Floating,
-      format: Format::Depth(32)
-    }
-  }
-}
-
-impl DepthPixel for Depth32F {}
+impl_Pixel!(Depth32F, f32, f32, Type::Floating, Format::Depth(32));
+impl_DepthPixel!(Depth32F);
 
 // OpenGL format, internal sized-format and type.
 pub fn opengl_pixel_format(pf: PixelFormat) -> Option<(GLenum, GLenum, GLenum)> {
