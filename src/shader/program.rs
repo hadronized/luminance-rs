@@ -864,7 +864,7 @@ macro_rules! uniform_interface_impl_trait {
       fn uniform_interface(
         builder: $crate::shader::program::UniformBuilder
       ) -> ::std::result::Result<(Self, Vec<$crate::shader::program::UniformWarning>), $crate::shader::program::ProgramError> {
-        #[allow(dead_code)]
+        #[allow(unused_mut)]
         let mut warnings = Vec::new();
 
         $(
