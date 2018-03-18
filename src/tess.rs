@@ -37,6 +37,7 @@ use gl::types::*;
 use std::error::Error;
 use std::fmt;
 use std::marker::PhantomData;
+use std::mem::size_of;
 use std::os::raw::c_void;
 use std::ptr;
 
@@ -194,7 +195,7 @@ impl<V> Tess<V> where V: Vertex {
 
   /// Render the tessellation by providing the number of vertices to pick from it and how many
   /// instances are wished.
-  fn render(&self, vert_nb: usize, inst_nb: usize) {
+  fn render(&self, start_index: usize, vert_nb: usize, inst_nb: usize) {
     let vert_nb = vert_nb as GLsizei;
     let inst_nb = inst_nb as GLsizei;
 
@@ -202,18 +203,22 @@ impl<V> Tess<V> where V: Vertex {
       gl::BindVertexArray(self.vao);
 
       if self.ibo.is_some() { // indexed render
+        let first = (size_of::<u32>() * start_index) as *const c_void;
+
         if inst_nb == 1 {
-          gl::DrawElements(self.mode, vert_nb, gl::UNSIGNED_INT, ptr::null());
+          gl::DrawElements(self.mode, vert_nb, gl::UNSIGNED_INT, first);
         } else if inst_nb > 1 {
-          gl::DrawElementsInstanced(self.mode, vert_nb, gl::UNSIGNED_INT, ptr::null(), inst_nb);
+          gl::DrawElementsInstanced(self.mode, vert_nb, gl::UNSIGNED_INT, first, inst_nb);
         } else {
           panic!("cannot index-render 0 instance");
         }
       } else { // direct render
+        let first = start_index as GLint;
+
         if inst_nb == 1 {
-          gl::DrawArrays(self.mode, 0, vert_nb);
+          gl::DrawArrays(self.mode, first, vert_nb);
         } else if inst_nb > 1 {
-          gl::DrawArraysInstanced(self.mode, 0, vert_nb, inst_nb);
+          gl::DrawArraysInstanced(self.mode, first, vert_nb, inst_nb);
         } else {
           panic!("cannot render 0 instance");
         }
@@ -386,6 +391,8 @@ fn opengl_mode(mode: Mode) -> GLenum {
 pub struct TessRender<'a, V> where V: 'a {
   /// Tessellation to render.
   tess: &'a Tess<V>,
+  /// Start index (vertex) in the tessellation.
+  start_index: usize,
   /// Number of vertices to pick from the tessellation. If `None`, all of them are selected.
   vert_nb: usize,
   /// Number of instances to render.
@@ -393,18 +400,24 @@ pub struct TessRender<'a, V> where V: 'a {
 }
 
 impl<'a, V> TessRender<'a, V> {
-  /// Create a tessellation render for the whole tessellation once.
+  /// Create a tessellation render that will render the whole input tessellation with only one
+  /// instance.
   pub fn one_whole(tess: &'a Tess<V>) -> Self {
     TessRender {
       tess: tess,
+      start_index: 0,
       vert_nb: tess.vert_nb,
       inst_nb: 1
     }
   }
 
-  /// Create a tessellation render for a part of the tessellation once. The part is selected by
-  /// giving the number of vertices to render. This function can then be used to use the
-  /// tessellation’s vertex buffer as one see fit.
+  /// Create a tessellation render for a part of the tessellation starting at the beginning of its
+  /// buffer with only one instance.
+  ///
+  /// The part is selected by giving the number of vertices to render.
+  ///
+  /// > Note: if you also need to use an arbitrary part of your tessellation (not starting at the
+  /// > first vertex in its buffer), have a look at `TessRender::one_slice`.
   ///
   /// # Panic
   ///
@@ -416,13 +429,42 @@ impl<'a, V> TessRender<'a, V> {
 
     TessRender {
       tess: tess,
+      start_index: 0,
       vert_nb: vert_nb,
       inst_nb: 1
     }
   }
 
+  /// Create a tessellation render for a slice of the tessellation starting anywhere in its buffer
+  /// with only one instance.
+  ///
+  /// The part is selected by giving the start vertex and the number of vertices to render. This
+  ///
+  /// # Panic
+  ///
+  /// Panic if the start vertex is higher to the capacity of the tessellation’s vertex buffer.
+  ///
+  /// Panic if the number of vertices is higher to the capacity of the tessellation’s vertex buffer.
+  pub fn one_slice(tess: &'a Tess<V>, start: usize, nb: usize) -> Self {
+    if start > tess.vert_nb {
+      panic!("cannot render {} vertices starting at vertex {} for a tessellation which vertex capacity is {}", nb, start, tess.vert_nb);
+    }
+
+    if nb > tess.vert_nb {
+      panic!("cannot render {} vertices for a tessellation which vertex capacity is {}", nb, tess.vert_nb);
+    }
+
+    TessRender {
+      tess: tess,
+      start_index: start,
+      vert_nb: nb,
+      inst_nb: 1
+    }
+  }
+
+  /// Render a tessellation.
   pub fn render(&self) where V: Vertex {
-    self.tess.render(self.vert_nb, self.inst_nb);
+    self.tess.render(self.start_index, self.vert_nb, self.inst_nb);
   }
 }
 
