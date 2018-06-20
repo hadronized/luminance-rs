@@ -28,6 +28,7 @@ impl Stage {
   /// Create a new shader stage.
   pub fn new(ty: Type, src: &str) -> Result<Self> {
     unsafe {
+
       let src = CString::new(glsl_pragma_src(src).as_bytes()).unwrap();
       let handle = gl::CreateShader(opengl_shader_type(ty));
 
@@ -99,13 +100,32 @@ impl Error for StageError {
 }
 
 fn glsl_pragma_src(src: &str) -> String {
-  let mut pragma = String::from(GLSL_PRAGMA);
-  pragma.push_str(src);
-  pragma
+  // Naive method that miss some cases with the extensions
+  // and is not memory efficient.
+  // Do not think is is probelamtic for a functio ncalled so few times
+  let mut lines = src.lines().collect::<Vec<_>>();
+
+  // remove blanks lines
+  while lines.len() > 0 && lines[0].is_empty() {
+      lines.remove(0);
+  }
+
+  // Check if version is given
+  if lines.len()>0 && !lines[0].starts_with("#version") {
+    lines.insert(0, GLSL_PRAGMA_VERSION);
+  }
+
+  // Insert in all cases the extension.
+  if lines.iter().any(|s| -> bool {s.starts_with("#extension") && s.contains("GL_ARB_separate_shader_objects")}) {
+    lines.insert(1, GLSL_PRAGMA_EXTENSION);
+  }
+
+  lines.join("\n")
 }
 
-const GLSL_PRAGMA: &'static str = "\
-#version 330 core\n\
+const GLSL_PRAGMA_VERSION: &'static str = "\
+#version 330 core\n";
+const GLSL_PRAGMA_EXTENSION: &'static str = "\
 #extension GL_ARB_separate_shader_objects : require\n";
 
 fn opengl_shader_type(t: Type) -> GLenum {

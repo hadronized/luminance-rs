@@ -985,3 +985,6 @@ macro_rules! uniform_interface_impl_trait_map {
     let $field_name = $builder.ask(stringify!($field_name)).map_err($crate::shader::program::ProgramError::UniformWarning)?;
   }
 }
+
+
+
