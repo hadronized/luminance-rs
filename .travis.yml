@@ -19,3 +19,4 @@ script:
   - cargo --version
   - cargo build --verbose
   - cargo test --lib --verbose
+  - cd examples && cargo check --verbose

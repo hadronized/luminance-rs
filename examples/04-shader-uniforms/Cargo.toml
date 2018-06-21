@@ -1,0 +1,8 @@
+[package]
+name = "shader-uniforms"
+version = "0.1.0"
+authors = ["Dimitri Sabadie <dimitri.sabadie@gmail.com>"]
+
+[dependencies]
+luminance = "0.26"
+luminance-glfw = "0.5"
