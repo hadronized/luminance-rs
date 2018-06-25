@@ -19,7 +19,7 @@ extern crate luminance_glfw;
 
 use luminance::framebuffer::Framebuffer;
 use luminance::shader::program::Program;
-use luminance::tess::{Mode, Tess, TessRender};
+use luminance::tess::{Mode, Tess, TessSliceIndex};
 use luminance::render_state::RenderState;
 use luminance_glfw::event::{Action, Key, WindowEvent};
 use luminance_glfw::surface::{GlfwSurface, Surface, WindowDim, WindowOpt};
@@ -41,7 +41,7 @@ const TRI_VERTICES: [Vertex; 6] = [
   ([ 0.5,  0.5], [0., 0., 1.])
 ];
 
-// Convenience type to demonstrate how the depth test influences the rendering of two triangles.
+// Convenience type to select which slice to render.
 #[derive(Copy, Clone, Debug)]
 enum SliceMethod { 
   Red, // draw the red triangle
@@ -96,15 +96,15 @@ fn main() {
       shd_gate.shade(&program, |rdr_gate, _| {
         rdr_gate.render(RenderState::default(), |tess_gate| {
           let slice = match slice_method {
-            // the red triangle is at slice [0..3]; you can also use the TessRender::one_sub
+            // the red triangle is at slice [..3]; you can also use the TessSlice::one_sub
             // combinator if the start element is 0
-            SliceMethod::Red => TessRender::one_slice(&triangles, 0, 3),
-            // the blue triangle is at slice [3..6]
-            SliceMethod::Blue => TessRender::one_slice(&triangles, 3, 6),
+            SliceMethod::Red => triangles.slice(..3), // TessSlice::one_slice(&triangles, 0, 3),
+            // the blue triangle is at slice [3..]
+            SliceMethod::Blue => triangles.slice(3..), // TessSlice::one_slice(&triangles, 3, 6),
             // both triangles are at slice [0..6] or [..], but we’ll use the faster
-            // TessRender::one_whole combinator; this combinator is also if you invoke the From or
+            // TessSlice::one_whole combinator; this combinator is also if you invoke the From or
             // Into method on (&triangles) (we did that in 02-render-state)
-            SliceMethod::Both => TessRender::one_whole(&triangles)
+            SliceMethod::Both => triangles.slice(..) // TessSlice::one_whole(&triangles)
           };
 
 

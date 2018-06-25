@@ -30,32 +30,11 @@ use std::path::Path;
 const VS: &'static str = include_str!("vs.glsl");
 const FS: &'static str = include_str!("fs.glsl");
 
-fn load_from_disk(surface: &mut GlfwSurface, path: &Path) -> Option<Texture<Flat, Dim2, RGB32F>> {
-  // load the texture into memory as a whole bloc (i.e. no streaming)
-  match image::open(&path) {
-    Ok(img) => {
-      // convert the image to a RGB colorspace (this allocates a new copy of the image
-      let rgb_img = img.flipv().to_rgb();
-      let (width, height) = rgb_img.dimensions();
-      let texels = rgb_img.pixels().map(|rgb| {
-        (rgb[0] as f32 / 255., rgb[1] as f32 / 255., rgb[2] as f32 / 255.)
-      }).collect::<Vec<_>>();
-
-      // create the luminance texture; the third argument is the number of mipmaps we want (leave it
-      // to 0 for now) and the latest is a the sampler to use when sampling the texels in the 
-      // shader (we’ll just use the default one)
-      let tex = Texture::new(surface, [width, height], 0, &Sampler::default()).expect("luminance texture creation");
-
-      // the first argument disables mipmap generation (we don’t care so far)
-      tex.upload(false, &texels);
-
-      Some(tex)
-    }
-
-    Err(e) => {
-      eprintln!("cannot open image {}: {}", path.display(), e);
-      None
-    }
+fn main() {
+  if let Some(texture_path) = env::args().skip(1).next() {
+    run(Path::new(&texture_path));
+  } else {
+    eprintln!("missing first argument (path to the texture to load");
   }
 }
 
@@ -68,9 +47,7 @@ uniform_interface! {
   }
 }
 
-fn main() {
-  let texture_path = env::args().skip(1).next().expect("missing first argument (path to the texture to load");
-
+fn run(texture_path: &Path) {
   let mut surface = GlfwSurface::new(WindowDim::Windowed(960, 540), "Hello, world!", WindowOpt::default()).expect("GLFW surface creation");
 
   let tex = load_from_disk(&mut surface, Path::new(&texture_path)).expect("texture loading");
@@ -122,5 +99,34 @@ fn main() {
     });
 
     surface.swap_buffers();
+  }
+}
+
+fn load_from_disk(surface: &mut GlfwSurface, path: &Path) -> Option<Texture<Flat, Dim2, RGB32F>> {
+  // load the texture into memory as a whole bloc (i.e. no streaming)
+  match image::open(&path) {
+    Ok(img) => {
+      // convert the image to a RGB colorspace (this allocates a new copy of the image
+      let rgb_img = img.flipv().to_rgb();
+      let (width, height) = rgb_img.dimensions();
+      let texels = rgb_img.pixels().map(|rgb| {
+        (rgb[0] as f32 / 255., rgb[1] as f32 / 255., rgb[2] as f32 / 255.)
+      }).collect::<Vec<_>>();
+
+      // create the luminance texture; the third argument is the number of mipmaps we want (leave it
+      // to 0 for now) and the latest is a the sampler to use when sampling the texels in the 
+      // shader (we’ll just use the default one)
+      let tex = Texture::new(surface, [width, height], 0, &Sampler::default()).expect("luminance texture creation");
+
+      // the first argument disables mipmap generation (we don’t care so far)
+      tex.upload(false, &texels);
+
+      Some(tex)
+    }
+
+    Err(e) => {
+      eprintln!("cannot open image {}: {}", path.display(), e);
+      None
+    }
   }
 }

@@ -29,7 +29,7 @@
 //!
 //! # Tessellation render
 //!
-//! In order to render a `Tess`, you have to use a `TessRender` object. You’ll be able to use that
+//! In order to render a `Tess`, you have to use a `TessSlice` object. You’ll be able to use that
 //! object in *pipelines*. See the `pipeline` module for further details.
 
 use gl;
@@ -38,6 +38,7 @@ use std::error::Error;
 use std::fmt;
 use std::marker::PhantomData;
 use std::mem::size_of;
+use std::ops::{Range, RangeFull, RangeFrom, RangeTo};
 use std::os::raw::c_void;
 use std::ptr;
 
@@ -391,11 +392,11 @@ fn opengl_mode(mode: Mode) -> GLenum {
   }
 }
 
-/// Tessellation render.
+/// Tessellation slice.
 ///
 /// This type enables slicing a tessellation on the fly so that we can render patches of it.
 #[derive(Clone)]
-pub struct TessRender<'a, V> where V: 'a {
+pub struct TessSlice<'a, V> where V: 'a {
   /// Tessellation to render.
   tess: &'a Tess<V>,
   /// Start index (vertex) in the tessellation.
@@ -406,11 +407,11 @@ pub struct TessRender<'a, V> where V: 'a {
   inst_nb: usize
 }
 
-impl<'a, V> TessRender<'a, V> {
+impl<'a, V> TessSlice<'a, V> {
   /// Create a tessellation render that will render the whole input tessellation with only one
   /// instance.
   pub fn one_whole(tess: &'a Tess<V>) -> Self {
-    TessRender {
+    TessSlice {
       tess: tess,
       start_index: 0,
       vert_nb: tess.vert_nb,
@@ -424,7 +425,7 @@ impl<'a, V> TessRender<'a, V> {
   /// The part is selected by giving the number of vertices to render.
   ///
   /// > Note: if you also need to use an arbitrary part of your tessellation (not starting at the
-  /// > first vertex in its buffer), have a look at `TessRender::one_slice`.
+  /// > first vertex in its buffer), have a look at `TessSlice::one_slice`.
   ///
   /// # Panic
   ///
@@ -434,7 +435,7 @@ impl<'a, V> TessRender<'a, V> {
       panic!("cannot render {} vertices for a tessellation which vertex capacity is {}", vert_nb, tess.vert_nb);
     }
 
-    TessRender {
+    TessSlice {
       tess: tess,
       start_index: 0,
       vert_nb: vert_nb,
@@ -461,7 +462,7 @@ impl<'a, V> TessRender<'a, V> {
       panic!("cannot render {} vertices for a tessellation which vertex capacity is {}", nb, tess.vert_nb);
     }
 
-    TessRender {
+    TessSlice {
       tess: tess,
       start_index: start,
       vert_nb: nb,
@@ -475,8 +476,36 @@ impl<'a, V> TessRender<'a, V> {
   }
 }
 
-impl<'a, V> From<&'a Tess<V>> for TessRender<'a, V> {
+impl<'a, V> From<&'a Tess<V>> for TessSlice<'a, V> {
   fn from(tess: &'a Tess<V>) -> Self {
-    TessRender::one_whole(tess)
+    TessSlice::one_whole(tess)
+  }
+}
+
+pub trait TessSliceIndex<Idx, V> {
+  fn slice<'a>(&'a self, idx: Idx) -> TessSlice<'a, V>;
+}
+
+impl<V> TessSliceIndex<RangeFull, V> for Tess<V> {
+  fn slice<'a>(&'a self, _: RangeFull) -> TessSlice<'a, V> {
+    TessSlice::one_whole(self)
+  }
+}
+
+impl<V> TessSliceIndex<RangeTo<usize>, V> for Tess<V> {
+  fn slice<'a>(&'a self, to: RangeTo<usize>) -> TessSlice<'a, V> {
+    TessSlice::one_sub(self, to.end)
+  }
+}
+
+impl<V> TessSliceIndex<RangeFrom<usize>, V> for Tess<V> {
+  fn slice<'a>(&'a self, from: RangeFrom<usize>) -> TessSlice<'a, V> {
+    TessSlice::one_slice(self, from.start, self.vert_nb)
+  }
+}
+
+impl<V> TessSliceIndex<Range<usize>, V> for Tess<V> {
+  fn slice<'a>(&'a self, range: Range<usize>) -> TessSlice<'a, V> {
+    TessSlice::one_slice(self, range.start, range.end)
   }
 }

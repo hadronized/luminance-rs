@@ -112,7 +112,7 @@ use framebuffer::{ColorSlot, DepthSlot, Framebuffer};
 use render_state::RenderState;
 use shader::program::{Dim, Program, Type, Uniform, Uniformable, UniformInterface};
 use state::GraphicsState;
-use tess::TessRender;
+use tess::TessSlice;
 use texture::{Dimensionable, Layerable, RawTexture};
 use vertex::{CompatibleVertex, Vertex};
 
@@ -405,7 +405,7 @@ impl<V> TessGate<V> where V: Vertex {
   pub fn render<C, W>(
     &self,
     ctx: &mut C,
-    tess: TessRender<W>
+    tess: TessSlice<W>
   ) where C: GraphicsContext, W: CompatibleVertex<V> {
     tess.render(ctx);
   }

@@ -18,3 +18,6 @@ Each example comes in with a few explanations and how to use them at the top of 
   - [05-attributeless](./05-attributeless): render a triangle without sending any vertex data to the
     GPU!
   - [06-texture](./06-texture): learn how to use a loaded image as a luminance texture on the GPU!
+  - [07-offscreen](./07-offscreen): get introduced to *offscreen rendering*, a powerful technique
+    used to render frames into memory without directly displaying them on your screen. Offscreen
+    framebuffers can be seen as a generalization of your screen.
