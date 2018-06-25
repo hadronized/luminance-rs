@@ -28,7 +28,6 @@ impl Stage {
   /// Create a new shader stage.
   pub fn new(ty: Type, src: &str) -> Result<Self> {
     unsafe {
-
       let src = CString::new(glsl_pragma_src(src).as_bytes()).unwrap();
       let handle = gl::CreateShader(opengl_shader_type(ty));
 
