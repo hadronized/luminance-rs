@@ -1,3 +1,24 @@
+# 1.0
+
+> ?
+
+  - Support for dynamic uniform queries. Those are used whenever you don’t know which variables will
+    be used in a shader at compile-time. This might be the case if you’re writing a GUI tool or a
+    video game that uses a custom scripting language / node-ish representation of shaders. That
+    feature doesn’t break the already-in-place and great uniform interface but complements it. You
+    can use a shader `Program<_, _, ()>` and still set uniform values by querying the uniforms
+    dynamically. This feature also fully benefits from the strongly typed interface of `Uniform<_>`,
+    so you will get `TypeMismatch` runtime error if you try to trick the type system.
+  - Change the framebuffer’s slots types and meanings. Those are now more natural to use (for
+    instance, you don’t have to repeat the framebuffer’s associated types and dimensions nor even
+    use the `Texture<..>` type anymore, as a type family is now used to ease the generation of
+    color and depth slots).
+  - Add the `std` feature gate, allowing to compile with the standard library – this is enabled by
+    default. The purpose of this feature is to allow people to use `default-features = false` to
+    compile without the standard library. This feature is currently very experimental and shouldn’t
+    be used on any production releases so far – expect breakage / undefined behaviors as this
+    feature hasn’t been quite intensively tested yet.
+
 ## 0.30.1
 
 > Monday, 10th of September, 2018
