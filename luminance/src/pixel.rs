@@ -64,6 +64,8 @@ pub enum Format {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Size {
   Eight,
+  Ten,
+  Eleven,
   Sixteen,
   ThirtyTwo,
 }
@@ -487,6 +489,19 @@ impl_Pixel!(
 impl_ColorPixel!(RGBA32F);
 impl_RenderablePixel!(RGBA32F);
 
+#[derive(Clone, Copy, Debug)]
+pub struct R11G11B10F;
+
+impl_Pixel!(
+  R11G11B10F,
+  (f32, f32, f32, f32),
+  f32,
+  Type::Floating,
+  Format::RGB(Size::Eleven, Size::Eleven, Size::Ten)
+);
+impl_ColorPixel!(R11G11B10F);
+impl_RenderablePixel!(R11G11B10F);
+
 // --------------------
 
 /// A depth 32-bit floating pixel format.
@@ -536,6 +551,9 @@ pub(crate) fn opengl_pixel_format(pf: PixelFormat) -> Option<(GLenum, GLenum, GL
     }
     (Format::RGB(Size::Sixteen, Size::Sixteen, Size::Sixteen), Type::Unsigned) => {
       Some((gl::RGB_INTEGER, gl::RGB16UI, gl::UNSIGNED_SHORT))
+    }
+    (Format::RGB(Size::Eleven, Size::Eleven, Size::Ten), Type::Floating) => {
+      Some((gl::RGB, gl::R11F_G11F_B10F, gl::FLOAT))
     }
     (Format::RGB(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo), Type::Integral) => {
       Some((gl::RGB_INTEGER, gl::RGB32I, gl::INT))
