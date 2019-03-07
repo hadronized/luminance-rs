@@ -121,7 +121,7 @@ use context::GraphicsContext;
 use face_culling::FaceCullingState;
 use framebuffer::{ColorSlot, DepthSlot, Framebuffer};
 use metagl::*;
-use pixel::{Pixel, Type as PxType};
+use pixel::{Pixel, SamplerType, Type as PxType};
 use render_state::RenderState;
 use shader::program::{Program, ProgramInterface, Type, Uniform, UniformInterface, Uniformable};
 use state::GraphicsState;
@@ -227,7 +227,10 @@ impl<'a> Pipeline<'a> {
   /// Bind a texture and return the bound texture.
   ///
   /// The texture remains bound as long as the return value lives.
-  pub fn bind_texture<L, D, P>(&'a self, texture: &'a Texture<L, D, P>) -> BoundTexture<'a, L, D, P>
+  pub fn bind_texture<L, D, P>(
+    &'a self,
+    texture: &'a Texture<L, D, P>,
+  ) -> BoundTexture<'a, L, D, P::SamplerType>
   where
     L: 'a + Layerable,
     D: 'a + Dimensionable,
@@ -280,22 +283,21 @@ impl<'a> Pipeline<'a> {
 
 /// An opaque type representing a bound texture in a `Builder`. You may want to pass such an object
 /// to a shader’s uniform’s update.
-pub struct BoundTexture<'a, L, D, P>
+pub struct BoundTexture<'a, L, D, S>
 where
   L: 'a + Layerable,
   D: 'a + Dimensionable,
-  P: 'a + Pixel,
-{
+  S: 'a + SamplerType, {
   unit: u32,
   binding_stack: &'a Rc<RefCell<BindingStack>>,
-  _t: PhantomData<&'a Texture<L, D, P>>,
+  _t: PhantomData<&'a (L, D, S)>,
 }
 
-impl<'a, L, D, P> BoundTexture<'a, L, D, P>
+impl<'a, L, D, S> BoundTexture<'a, L, D, S>
 where
   L: 'a + Layerable,
   D: 'a + Dimensionable,
-  P: 'a + Pixel,
+  S: 'a + SamplerType,
 {
   fn new(binding_stack: &'a Rc<RefCell<BindingStack>>, unit: u32) -> Self {
     BoundTexture {
@@ -306,11 +308,11 @@ where
   }
 }
 
-impl<'a, L, D, P> Drop for BoundTexture<'a, L, D, P>
+impl<'a, L, D, S> Drop for BoundTexture<'a, L, D, S>
 where
   L: 'a + Layerable,
   D: 'a + Dimensionable,
-  P: 'a + Pixel,
+  S: 'a + SamplerType,
 {
   fn drop(&mut self) {
     let mut bstack = self.binding_stack.borrow_mut();
@@ -319,18 +321,18 @@ where
   }
 }
 
-unsafe impl<'a, 'b, L, D, P> Uniformable for &'b BoundTexture<'a, L, D, P>
+unsafe impl<'a, 'b, L, D, S> Uniformable for &'b BoundTexture<'a, L, D, S>
 where
   L: 'a + Layerable,
   D: 'a + Dimensionable,
-  P: 'a + Pixel,
+  S: 'a + SamplerType,
 {
   fn update(self, u: &Uniform<Self>) {
     unsafe { gl::Uniform1i(u.index(), self.unit as GLint) }
   }
 
   fn ty() -> Type {
-    match (P::pixel_format().encoding, D::dim()) {
+    match (S::sample_type(), D::dim()) {
       (PxType::Integral, Dim::Dim1) => Type::ISampler1D,
       (PxType::Unsigned, Dim::Dim1) => Type::UISampler1D,
       (PxType::Floating, Dim::Dim1) => Type::Sampler1D,

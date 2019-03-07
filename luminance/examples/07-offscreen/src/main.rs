@@ -16,7 +16,7 @@ use crate::common::{Vertex, VertexPosition, VertexColor};
 use luminance::context::GraphicsContext;
 use luminance::framebuffer::Framebuffer;
 use luminance::pipeline::BoundTexture;
-use luminance::pixel::RGBA32F;
+use luminance::pixel::{RGBA32F, Floating};
 use luminance::render_state::RenderState;
 use luminance::shader::program::Program;
 use luminance::tess::{Mode, TessBuilder, TessSliceIndex};
@@ -45,7 +45,7 @@ uniform_interface! {
   struct ShaderInterface {
     // we only need the source texture (from the framebuffer) to fetch from
     #[unbound, as("source_texture")]
-    texture: &'static BoundTexture<'static, Flat, Dim2, RGBA32F>
+    texture: &'static BoundTexture<'static, Flat, Dim2, Floating>
   }
 }
 

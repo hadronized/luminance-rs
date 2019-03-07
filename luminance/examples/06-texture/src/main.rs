@@ -19,7 +19,7 @@ extern crate luminance_glfw;
 use luminance::context::GraphicsContext;
 use luminance::framebuffer::Framebuffer;
 use luminance::pipeline::BoundTexture;
-use luminance::pixel::RGB32F;
+use luminance::pixel::{RGB32F, Floating};
 use luminance::render_state::RenderState;
 use luminance::shader::program::Program;
 use luminance::tess::{Mode, TessBuilder};
@@ -44,7 +44,7 @@ fn main() {
 uniform_interface! {
   struct ShaderInterface {
     // the 'static lifetime acts as “anything” here
-    tex: &'static BoundTexture<'static, Flat, Dim2, RGB32F>
+    tex: &'static BoundTexture<'static, Flat, Dim2, Floating>
   }
 }
 
