@@ -92,6 +92,7 @@ pub fn is_depth_pixel(f: PixelFormat) -> bool {
 }
 
 /// The integral sample type
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Integral;
 
 unsafe impl SamplerType for Integral {
@@ -101,6 +102,7 @@ unsafe impl SamplerType for Integral {
 }
 
 /// The integral sample type
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Unsigned;
 
 unsafe impl SamplerType for Unsigned {
@@ -110,6 +112,7 @@ unsafe impl SamplerType for Unsigned {
 }
 
 /// The integral sample type
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Floating;
 
 unsafe impl SamplerType for Floating {
