@@ -146,6 +146,7 @@ pub struct TessBuilder<'a, C, I> {
   ctx: &'a mut C,
   vertex_buffers: Vec<VertexBuffer>,
   index_buffer: Option<RawBuffer>,
+  restart_index: Option<u32>,
   mode: Mode,
   vert_nb: usize,
   instance_buffers: Vec<VertexBuffer>,
@@ -159,6 +160,7 @@ impl<'a, C, I> TessBuilder<'a, C, I> {
       ctx,
       vertex_buffers: Vec::new(),
       index_buffer: None,
+      restart_index: None,
       mode: Mode::Point,
       vert_nb: 0,
       instance_buffers: Vec::new(),
@@ -240,6 +242,12 @@ where
     self
   }
 
+  /// Set the primitive restart index. The initial value is `None`, implying no primitive restart
+  pub fn set_primitive_restart_index(mut self, index: Option<u32>) -> Self {
+    self.restart_index = index;
+    self
+  }
+
   pub fn build(self) -> Result<Tess<I>, TessError> {
     // try to deduce the number of vertices to render if it’s not specified
     let vert_nb = self.guess_vert_nb_or_fail()?;
@@ -275,6 +283,16 @@ where
         set_vertex_pointers(&vb.fmt);
       }
 
+      let index_state = match self.index_buffer {
+        Some(buffer) => {
+          Some(IndexedDrawState {
+            restart_index: self.restart_index,
+            buffer,
+          })
+        }
+        None => None,
+      };
+
       // convert to OpenGL-friendly internals and return
       Ok(Tess {
         mode: opengl_mode(self.mode),
@@ -283,7 +301,7 @@ where
         vao,
         vertex_buffers: self.vertex_buffers,
         instance_buffers: self.instance_buffers,
-        index_buffer: self.index_buffer,
+        index_state,
         _phantom: PhantomData,
       })
     }
@@ -434,6 +452,12 @@ unsafe impl VertIndex for u32 {
   }
 }
 
+/// All the data extra data required when doing indexed drawing
+struct IndexedDrawState {
+  buffer: RawBuffer,
+  restart_index: Option<u32>,
+}
+
 pub struct Tess<I> {
   mode: GLenum,
   vert_nb: usize,
@@ -441,7 +465,7 @@ pub struct Tess<I> {
   vao: GLenum,
   vertex_buffers: Vec<VertexBuffer>,
   instance_buffers: Vec<VertexBuffer>,
-  index_buffer: Option<RawBuffer>,
+  index_state: Option<IndexedDrawState>,
   _phantom: PhantomData<I>,
 }
 
@@ -454,9 +478,16 @@ impl<I: VertIndex> Tess<I> {
     unsafe {
       ctx.state().borrow_mut().bind_vertex_array(self.vao);
 
-      if self.index_buffer.is_some() {
+      if let Some(index_state) = self.index_state.as_ref() {
         // indexed render
         let first = (I::size() * start_index) as *const c_void;
+
+        if let Some(restart_index) = index_state.restart_index {
+          gl::Enable(gl::PRIMITIVE_RESTART);
+          gl::PrimitiveRestartIndex(restart_index);
+        } else {
+          gl::Disable(gl::PRIMITIVE_RESTART);
+        }
 
         if inst_nb <= 1 {
           gl::DrawElements(self.mode, vert_nb, I::to_glenum(), first);
