@@ -145,7 +145,7 @@ struct VertexBuffer {
 pub struct TessBuilder<'a, C, I> {
   ctx: &'a mut C,
   vertex_buffers: Vec<VertexBuffer>,
-  index_buffer: Option<RawBuffer>,
+  index_buffer: Option<(RawBuffer, IndexType)>,
   restart_index: Option<u32>,
   mode: Mode,
   vert_nb: usize,
@@ -222,7 +222,7 @@ where
     // create a new raw buffer containing the indices and turn it into a vertex buffer
     let buf = Buffer::from_slice(self.ctx, indices).to_raw();
 
-    self.index_buffer = Some(buf);
+    self.index_buffer = Some((buf, I::INDEX_TYPE));
 
     self
   }
@@ -248,7 +248,7 @@ where
     self
   }
 
-  pub fn build(self) -> Result<Tess<I>, TessError> {
+  pub fn build(self) -> Result<Tess, TessError> {
     // try to deduce the number of vertices to render if it’s not specified
     let vert_nb = self.guess_vert_nb_or_fail()?;
     let inst_nb = self.guess_inst_nb_or_fail()?;
@@ -256,7 +256,7 @@ where
   }
 
   /// Build a tessellation based on a given number of vertices to render by default.
-  fn build_tess(self, vert_nb: usize, inst_nb: usize) -> Result<Tess<I>, TessError> {
+  fn build_tess(self, vert_nb: usize, inst_nb: usize) -> Result<Tess, TessError> {
     let mut vao: GLuint = 0;
 
     unsafe {
@@ -274,7 +274,7 @@ where
 
       // in case of indexed render, create an index buffer
       if let Some(ref index_buffer) = self.index_buffer {
-        gfx_st.bind_element_array_buffer(index_buffer.handle());
+        gfx_st.bind_element_array_buffer(index_buffer.0.handle());
       }
 
       // add any instance buffers, if any
@@ -284,10 +284,11 @@ where
       }
 
       let index_state = match self.index_buffer {
-        Some(buffer) => {
+        Some((buffer, index_type)) => {
           Some(IndexedDrawState {
             restart_index: self.restart_index,
             buffer,
+            index_type
           })
         }
         None => None,
@@ -302,7 +303,6 @@ where
         vertex_buffers: self.vertex_buffers,
         instance_buffers: self.instance_buffers,
         index_state,
-        _phantom: PhantomData,
       })
     }
   }
@@ -314,7 +314,7 @@ where
       // we don’t have an explicit vertex number to render; go and guess!
       if let Some(ref index_buffer) = self.index_buffer {
         // we have an index buffer: just use its size
-        Ok(index_buffer.len())
+        Ok(index_buffer.0.len())
       } else {
         // deduce the number of vertices based on the vertex buffers; they all
         // must be of the same length, otherwise it’s an error
@@ -344,8 +344,8 @@ where
       // makes sense
       if let Some(ref index_buffer) = self.index_buffer {
         // we have indices (indirect draw); so we’ll compare to them
-        if index_buffer.len() < self.vert_nb {
-          return Err(TessError::Overflow(index_buffer.len(), self.vert_nb));
+        if index_buffer.0.len() < self.vert_nb {
+          return Err(TessError::Overflow(index_buffer.0.len(), self.vert_nb));
         }
       } else {
         let incoherent = Self::check_incoherent_buffers(self.vertex_buffers.iter(), self.vert_nb);
@@ -417,48 +417,53 @@ pub enum TessError {
   Overflow(usize, usize)
 }
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum IndexType {
+    U8, U16, U32,
+}
+
+impl IndexType {
+    fn to_glenum(self) -> GLenum {
+        match self {
+            IndexType::U8 => gl::UNSIGNED_BYTE,
+            IndexType::U16 => gl::UNSIGNED_SHORT,
+            IndexType::U32 => gl::UNSIGNED_INT,
+        }
+    }
+
+    fn size(self) -> usize {
+        match self {
+            IndexType::U8 => 1,
+            IndexType::U16 => 2,
+            IndexType::U32 => 4,
+        }
+    }
+}
+
 pub unsafe trait VertIndex {
-  fn to_glenum() -> GLenum;
-  fn size() -> usize;
+    const INDEX_TYPE: IndexType;
 }
 
 unsafe impl VertIndex for u8 {
-  fn to_glenum() -> GLenum {
-    gl::UNSIGNED_BYTE
-  }
-
-  fn size() -> usize {
-    size_of::<u8>()
-  }
+    const INDEX_TYPE: IndexType = IndexType::U8;
 }
 
 unsafe impl VertIndex for u16 {
-  fn to_glenum() -> GLenum {
-    gl::UNSIGNED_SHORT
-  }
-
-  fn size() -> usize {
-    size_of::<u16>()
-  }
+    const INDEX_TYPE: IndexType = IndexType::U16;
 }
 
 unsafe impl VertIndex for u32 {
-  fn to_glenum() -> GLenum {
-    gl::UNSIGNED_INT
-  }
-
-  fn size() -> usize {
-    size_of::<u32>()
-  }
+    const INDEX_TYPE: IndexType = IndexType::U32;
 }
 
 /// All the data extra data required when doing indexed drawing
 struct IndexedDrawState {
   buffer: RawBuffer,
   restart_index: Option<u32>,
+  index_type: IndexType,
 }
 
-pub struct Tess<I> {
+pub struct Tess {
   mode: GLenum,
   vert_nb: usize,
   inst_nb: usize,
@@ -466,10 +471,9 @@ pub struct Tess<I> {
   vertex_buffers: Vec<VertexBuffer>,
   instance_buffers: Vec<VertexBuffer>,
   index_state: Option<IndexedDrawState>,
-  _phantom: PhantomData<I>,
 }
 
-impl<I: VertIndex> Tess<I> {
+impl Tess {
   fn render<C>(&self, ctx: &mut C, start_index: usize, vert_nb: usize, inst_nb: usize)
   where C: GraphicsContext {
     let vert_nb = vert_nb as GLsizei;
@@ -480,7 +484,7 @@ impl<I: VertIndex> Tess<I> {
 
       if let Some(index_state) = self.index_state.as_ref() {
         // indexed render
-        let first = (I::size() * start_index) as *const c_void;
+        let first = (index_state.index_type.size() * start_index) as *const c_void;
 
         if let Some(restart_index) = index_state.restart_index {
           gl::Enable(gl::PRIMITIVE_RESTART);
@@ -490,9 +494,15 @@ impl<I: VertIndex> Tess<I> {
         }
 
         if inst_nb <= 1 {
-          gl::DrawElements(self.mode, vert_nb, I::to_glenum(), first);
+          gl::DrawElements(self.mode, vert_nb, index_state.index_type.to_glenum(), first);
         } else {
-          gl::DrawElementsInstanced(self.mode, vert_nb, I::to_glenum(), first, inst_nb);
+          gl::DrawElementsInstanced(
+            self.mode,
+            vert_nb,
+            index_state.index_type.to_glenum(),
+            first,
+            inst_nb,
+          );
         }
       } else {
         // direct render
@@ -588,7 +598,7 @@ impl<I: VertIndex> Tess<I> {
   }
 }
 
-impl<I> Drop for Tess<I> {
+impl Drop for Tess {
   fn drop(&mut self) {
     unsafe {
       gl::DeleteVertexArrays(1, &self.vao);
@@ -730,9 +740,9 @@ fn opengl_mode(mode: Mode) -> GLenum {
 ///
 /// This type enables slicing a tessellation on the fly so that we can render patches of it.
 #[derive(Clone)]
-pub struct TessSlice<'a, I> {
+pub struct TessSlice<'a> {
   /// Tessellation to render.
-  tess: &'a Tess<I>,
+  tess: &'a Tess,
   /// Start index (vertex) in the tessellation.
   start_index: usize,
   /// Number of vertices to pick from the tessellation. If `None`, all of them are selected.
@@ -741,10 +751,10 @@ pub struct TessSlice<'a, I> {
   inst_nb: usize,
 }
 
-impl<'a, I: 'a + VertIndex> TessSlice<'a, I> {
+impl<'a> TessSlice<'a> {
   /// Create a tessellation render that will render the whole input tessellation with only one
   /// instance.
-  pub fn one_whole(tess: &'a Tess<I>) -> Self {
+  pub fn one_whole(tess: &'a Tess) -> Self {
     TessSlice {
       tess,
       start_index: 0,
@@ -764,7 +774,7 @@ impl<'a, I: 'a + VertIndex> TessSlice<'a, I> {
   /// # Panic
   ///
   /// Panic if the number of vertices is higher to the capacity of the tessellation’s vertex buffer.
-  pub fn one_sub(tess: &'a Tess<I>, vert_nb: usize) -> Self {
+  pub fn one_sub(tess: &'a Tess, vert_nb: usize) -> Self {
     if vert_nb > tess.vert_nb {
       panic!(
         "cannot render {} vertices for a tessellation which vertex capacity is {}",
@@ -790,7 +800,7 @@ impl<'a, I: 'a + VertIndex> TessSlice<'a, I> {
   /// Panic if the start vertex is higher to the capacity of the tessellation’s vertex buffer.
   ///
   /// Panic if the number of vertices is higher to the capacity of the tessellation’s vertex buffer.
-  pub fn one_slice(tess: &'a Tess<I>, start: usize, nb: usize) -> Self {
+  pub fn one_slice(tess: &'a Tess, start: usize, nb: usize) -> Self {
     if start > tess.vert_nb {
       panic!(
         "cannot render {} vertices starting at vertex {} for a tessellation which vertex capacity is {}",
@@ -821,36 +831,36 @@ impl<'a, I: 'a + VertIndex> TessSlice<'a, I> {
   }
 }
 
-impl<'a, I: VertIndex> From<&'a Tess<I>> for TessSlice<'a, I> {
-  fn from(tess: &'a Tess<I>) -> Self {
+impl<'a> From<&'a Tess> for TessSlice<'a> {
+  fn from(tess: &'a Tess) -> Self {
     TessSlice::one_whole(tess)
   }
 }
 
-pub trait TessSliceIndex<VertIdx, Idx> {
-  fn slice(&self, idx: Idx) -> TessSlice<VertIdx>;
+pub trait TessSliceIndex<Idx> {
+  fn slice(&self, idx: Idx) -> TessSlice;
 }
 
-impl<I: VertIndex> TessSliceIndex<I, RangeFull> for Tess<I> {
-  fn slice<'a>(&self, _: RangeFull) -> TessSlice<I> {
+impl TessSliceIndex<RangeFull> for Tess {
+  fn slice<'a>(&self, _: RangeFull) -> TessSlice {
     TessSlice::one_whole(self)
   }
 }
 
-impl<I: VertIndex> TessSliceIndex<I, RangeTo<usize>> for Tess<I> {
-  fn slice(&self, to: RangeTo<usize>) -> TessSlice<I> {
+impl TessSliceIndex<RangeTo<usize>> for Tess {
+  fn slice(&self, to: RangeTo<usize>) -> TessSlice {
     TessSlice::one_sub(self, to.end)
   }
 }
 
-impl<I: VertIndex> TessSliceIndex<I, RangeFrom<usize>> for Tess<I> {
-  fn slice(&self, from: RangeFrom<usize>) -> TessSlice<I> {
+impl TessSliceIndex<RangeFrom<usize>> for Tess {
+  fn slice(&self, from: RangeFrom<usize>) -> TessSlice {
     TessSlice::one_slice(self, from.start, self.vert_nb)
   }
 }
 
-impl<I: VertIndex> TessSliceIndex<I, Range<usize>> for Tess<I> {
-  fn slice(&self, range: Range<usize>) -> TessSlice<I> {
+impl TessSliceIndex<Range<usize>> for Tess {
+  fn slice(&self, range: Range<usize>) -> TessSlice {
     TessSlice::one_slice(self, range.start, range.end)
   }
 }

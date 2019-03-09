@@ -465,7 +465,7 @@ pub struct TessGate {
 
 impl TessGate {
   /// Render a tessellation.
-  pub fn render<C, I: crate::tess::VertIndex>(&self, ctx: &mut C, tess: TessSlice<I>) where C: GraphicsContext {
+  pub fn render<C>(&self, ctx: &mut C, tess: TessSlice) where C: GraphicsContext {
     tess.render(ctx);
   }
 }
