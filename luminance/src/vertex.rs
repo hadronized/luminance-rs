@@ -142,11 +142,15 @@ pub unsafe trait VertexAttrib {
 pub trait VertexAttribSem: Sized {
   /// Retrieve the semantics index of this semantics.
   fn index(&self) -> usize;
+
+  /// Get the name of this semantics.
+  fn name(&self) -> &str;
+
   /// Convert from a semantics name to a semantics.
   fn parse(name: &str) -> Option<Self>;
 }
 
-/// Class of types that have an associated value which typ implements [`VertexAttribSem`], defining
+/// Class of types that have an associated value which type implements [`VertexAttribSem`], defining
 /// vertex legit attributes.
 ///
 /// Vertex attribute types can be associated with only one semantics.

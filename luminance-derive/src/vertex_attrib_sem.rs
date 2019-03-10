@@ -45,6 +45,7 @@ pub(crate) fn generate_enum_vertex_attrib_sem_impl(ident: Ident, enum_: DataEnum
   });
 
   let mut parse_branches = Vec::new();
+  let mut name_branches = Vec::new();
   let mut field_based_gen = Vec::new();
 
   let mut errors = Vec::new();
@@ -59,11 +60,14 @@ pub(crate) fn generate_enum_vertex_attrib_sem_impl(ident: Ident, enum_: DataEnum
         let ty_name = field.3;
 
         // dynamic branch used for parsing the semantics from a string
-        let branch = quote!{
+        parse_branches.push(quote!{
           #sem_name => Some(#ident::#sem_var)
-        };
+        });
 
-        parse_branches.push(branch);
+        // name of a semantics
+        name_branches.push(quote!{
+          #ident::#sem_var => #sem_name
+        });
 
         // field-based code generation
         let field_gen = quote!{
@@ -119,6 +123,12 @@ pub(crate) fn generate_enum_vertex_attrib_sem_impl(ident: Ident, enum_: DataEnum
     impl luminance::vertex::VertexAttribSem for #ident {
       fn index(&self) -> usize {
         *self as usize
+      }
+
+      fn name(&self) -> &str {
+        match *self {
+          #(#name_branches,)*
+        }
       }
 
       fn parse(name: &str) -> Option<Self> {

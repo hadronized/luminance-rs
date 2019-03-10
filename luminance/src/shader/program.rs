@@ -130,16 +130,16 @@ impl Drop for RawProgram {
 /// Typed shader programs represent their inputs, outputs and environment (uniforms) directly in
 /// their types. This is very interesting as it adds more static safety and enables such programs
 /// to *“store”* information like the uniform interface and such.
-pub struct Program<In, Out, Uni> {
+pub struct Program<V, Out, Uni> {
   raw: RawProgram,
   uni_iface: Uni,
-  _in: PhantomData<*const In>,
+  _in: PhantomData<*const V>,
   _out: PhantomData<*const Out>,
 }
 
-impl<In, Out, Uni> Program<In, Out, Uni>
+impl<V, Out, Uni> Program<V, Out, Uni>
 where
-  In: for<'a> Vertex<'a>,
+  V: for<'a> Vertex<'a>,
 {
   /// Create a new program by consuming `Stage`s.
   pub fn from_stages<'a, T, G>(
@@ -185,6 +185,10 @@ where
     G: Into<Option<&'a Stage>>,
   {
     let raw = RawProgram::new(tess, vertex, geometry, fragment)?;
+
+    // TODO
+    //bind_vertex_attribs_locations::<V::VERTEX_ATTRIB_SEM>(&raw);
+
     let (uni_iface, warnings) = create_uniform_interface(&raw, env)?;
 
     let program = Program {
@@ -257,7 +261,7 @@ where
   /// uniform interface and if the new uniform interface is correctly generated, return the same
   /// shader program updated with the new uniform interface. If the generation of the new uniform
   /// interface fails, this function will return the program with the former uniform interface.
-  pub fn adapt<Q>(self) -> Result<(Program<In, Out, Q>, Vec<UniformWarning>), (ProgramError, Self)>
+  pub fn adapt<Q>(self) -> Result<(Program<V, Out, Q>, Vec<UniformWarning>), (ProgramError, Self)>
   where
     Q: UniformInterface,
   {
@@ -273,7 +277,7 @@ where
   pub fn adapt_env<Q, E>(
     self,
     env: E,
-  ) -> Result<(Program<In, Out, Q>, Vec<UniformWarning>), (ProgramError, Self)>
+  ) -> Result<(Program<V, Out, Q>, Vec<UniformWarning>), (ProgramError, Self)>
   where
     Q: UniformInterface<E>,
   {
@@ -313,7 +317,7 @@ where
   }
 }
 
-impl<In, Out, Uni> Deref for Program<In, Out, Uni> {
+impl<V, Out, Uni> Deref for Program<V, Out, Uni> {
   type Target = RawProgram;
 
   fn deref(&self) -> &Self::Target {
@@ -506,7 +510,7 @@ impl fmt::Display for ProgramError {
 pub enum UniformWarning {
   /// Inactive uniform (not in use / no participation to the final output in shaders).
   Inactive(String),
-  /// Type mismatch between the static requested type (i.e. the `T` in `Uniform<T>` for instance)
+  /// Type mismatch between the static requested type (i.e. the `T` in [`Uniform<T>`] for instance)
   /// and the type that got reflected from the backend in the shaders.
   ///
   /// The first `String` is the name of the uniform; the second one gives the type mismatch.
@@ -523,8 +527,8 @@ impl fmt::Display for UniformWarning {
   }
 }
 
-/// A shader uniform. `Uniform<T>` doesn’t hold any value. It’s more like a mapping between the
-/// host code and the shader the uniform was retrieved from.
+/// A contravariant shader uniform. `Uniform<T>` doesn’t hold any value. It’s more like a mapping
+/// between the host code and the shader the uniform was retrieved from.
 #[derive(Debug)]
 pub struct Uniform<T> {
   program: GLuint,
