@@ -15,7 +15,7 @@ install:
 script:
   - rustc --version
   - cargo --version
-  - cargo build --verbose
-  - cargo test --lib --verbose
+  - cargo build
+  - cargo test
   # luminance examples
   - cd luminance/examples && cargo check --verbose
