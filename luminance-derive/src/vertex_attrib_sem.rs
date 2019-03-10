@@ -29,7 +29,7 @@ impl fmt::Display for VertexAttribSemImplError {
 /// Get vertex semantics attributes.
 ///
 ///   (name, repr, type_name)
-fn get_vertex_sem_attribs<'a, A>(var_name: &Ident, attrs: A) -> Result<(Ident, Type, Type), AttrError> where A: IntoIterator<Item = &'a Attribute> + Clone {
+fn get_vertex_sem_attribs<'a, A>(var_name: &Ident, attrs: A) -> Result<(Ident, Type, Type), AttrError> where A: Iterator<Item = &'a Attribute> + Clone {
   let sem_name = get_field_attr_once::<_, Ident>(var_name, attrs.clone(), "sem", "name", KNOWN_SUBKEYS)?;
   let sem_repr = get_field_attr_once::<_, Type>(var_name, attrs.clone(), "sem", "repr", KNOWN_SUBKEYS)?;
   let sem_type_name = get_field_attr_once::<_, Type>(var_name, attrs, "sem", "type_name", KNOWN_SUBKEYS)?;

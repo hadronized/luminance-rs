@@ -16,12 +16,10 @@ fn derive_simple_semantics() {
   }
 
   #[derive(Clone, Copy, Debug, Vertex)]
-  #[vertex(sem = "Semantics")]
+  #[vertex(sem = "Semantics", instanced = "true")]
   struct Vertex {
     pos: VertexPosition,
-    #[vertex(instanced = "false")]
     nor: VertexNormal,
-    #[vertex(instanced = "true")]
     col: VertexColor
   }
 
@@ -38,8 +36,8 @@ fn derive_simple_semantics() {
   assert_eq!(VertexPosition::new([1., 2., 3.]).repr, [1., 2., 3.]);
 
   let expected_fmt = vec![
-    IndexedVertexAttribFmt::new(Semantics::Position, VertexInstancing::Off, <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_FMT),
-    IndexedVertexAttribFmt::new(Semantics::Normal, VertexInstancing::Off, <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_FMT),
+    IndexedVertexAttribFmt::new(Semantics::Position, VertexInstancing::On, <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_FMT),
+    IndexedVertexAttribFmt::new(Semantics::Normal, VertexInstancing::On, <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_FMT),
     IndexedVertexAttribFmt::new(Semantics::Color, VertexInstancing::On, <[f32; 4] as VertexAttrib>::VERTEX_ATTRIB_FMT),
   ];
 

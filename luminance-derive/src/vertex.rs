@@ -42,7 +42,7 @@
 //!
 //! // visit the VertexAttribSem proc-macro documentation for further details
 //! #[derive(Clone, Copy, Debug, PartialEq, VertexAttribSem)]
-//! enum Semantics {
+//! pub enum Semantics {
 //!   #[sem(name = "position", repr = "[f32; 3]", type_name = "VertexPosition")]
 //!   Position,
 //!   #[sem(name = "color", repr = "[f32; 4]", type_name = "VertexColor")]
@@ -57,13 +57,17 @@
 //! }
 //! ```
 //!
+//! > Note: the `Semantics` enum must be public because of the implementation of [`HasSemantics`]
+//! > trait.
+//!
 //! Besides the `Semantics`-related code, this will:
 //!
 //!   - Create a type called `MyVertex`, a struct that will hold a single vertex.
 //!   - Implement `Vertex for MyVertex`.
 //!
-//! The proc-macro also supports an optional `#[vertex(instanced = "<bool>")]` attribute. This
-//! attribute allows you to specify whether an attribute is instanced.
+//! The proc-macro also supports an optional `#[vertex(instanced = "<bool>")]` struct attribute.
+//! This attribute allows you to specify whether the fields are to be instanced or not. For more
+//! about that, have a look at [`VertexInstancing`].
 
 use crate::attrib::{AttrError, get_field_attr_once};
 use proc_macro::TokenStream;
@@ -101,15 +105,36 @@ pub(crate) fn generate_vertex_impl<'a, A>(
   attrs: A,
   struct_: DataStruct
 ) -> Result<TokenStream, StructImplError>
-where A: IntoIterator<Item = &'a Attribute> {
+where A: Iterator<Item = &'a Attribute> + Clone {
   // search the semantics name
   let sem_type: Type = get_field_attr_once(
     &ident,
-    attrs,
+    attrs.clone(),
     "vertex",
     "sem",
     KNOWN_SUBKEYS
   ).map_err(StructImplError::SemanticsError)?;
+
+  // search for the instancing argument; if not there, we don’t use vertex instancing
+  let instancing = get_field_attr_once(
+    &ident,
+    attrs,
+    "vertex",
+    "instanced",
+    KNOWN_SUBKEYS
+  ).map(|b: LitBool| {
+      if b.value {
+        quote! { luminance::vertex::VertexInstancing::On }
+      } else {
+        quote! { luminance::vertex::VertexInstancing::Off }
+      }
+  }).or_else(|e| match e {
+    AttrError::CannotFindAttribute(..) => {
+      Ok(quote! { luminance::vertex::VertexInstancing::Off })
+    }
+
+    _ => Err(e)
+  }).map_err(StructImplError::FieldError)?;
 
   match struct_.fields {
     Fields::Named(named_fields) => {
@@ -118,30 +143,6 @@ where A: IntoIterator<Item = &'a Attribute> {
 
       // partition and generate IndexedVertexAttribFmt
       for field in named_fields.named {
-        let instancing_attr = get_field_attr_once(
-          field.ident.as_ref().unwrap(),
-          field.attrs.iter(),
-          "vertex",
-          "instanced",
-          KNOWN_SUBKEYS
-        );
-        let instancing = instancing_attr
-          .map(|b: LitBool| {
-            if b.value {
-              quote! { luminance::vertex::VertexInstancing::On }
-            } else {
-              quote! { luminance::vertex::VertexInstancing::Off }
-            }
-          })
-          .or_else(|e| match e {
-            AttrError::CannotFindAttribute(..) => {
-              Ok(quote! { luminance::vertex::VertexInstancing::Off })
-            }
-
-            _ => Err(e)
-          })
-          .map_err(StructImplError::FieldError)?;
-
         let field_ty = field.ty;
         let indexed_vertex_attrib_fmt_q = quote!{
           luminance::vertex::IndexedVertexAttribFmt::new::<#sem_type>(
