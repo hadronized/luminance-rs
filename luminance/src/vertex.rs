@@ -12,12 +12,12 @@
 /// [luminance-derive] `Vertex` proc-macro-derive instead.
 ///
 /// > Note: implementing this trait is `unsafe`.
-pub unsafe trait Vertex<'a> {
+pub unsafe trait Vertex {
   /// The associated vertex format.
   fn vertex_fmt() -> VertexFmt;
 }
 
-unsafe impl<'a> Vertex<'a> for () {
+unsafe impl Vertex for () {
   fn vertex_fmt() -> VertexFmt {
     Vec::new()
   }
@@ -29,14 +29,20 @@ pub type VertexFmt = Vec<IndexedVertexAttribFmt>;
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct IndexedVertexAttribFmt {
   pub index: usize,
+  pub name: &'static str,
   pub instancing: VertexInstancing,
   pub attrib_fmt: VertexAttribFmt
 }
 
 impl IndexedVertexAttribFmt {
-  pub fn new<S>(sem: S, instancing: VertexInstancing, attrib_fmt: VertexAttribFmt) -> Self where S: VertexAttribSem {
+  pub fn new<S>(
+    sem: S,
+    instancing: VertexInstancing,
+    attrib_fmt: VertexAttribFmt
+  ) -> Self where S: VertexAttribSem {
     let index = sem.index();
-    IndexedVertexAttribFmt { index, instancing, attrib_fmt }
+    let name = sem.name();
+    IndexedVertexAttribFmt { index, name, instancing, attrib_fmt }
   }
 }
 
@@ -128,7 +134,7 @@ pub trait VertexAttribSem: Sized {
   /// Retrieve the semantics index of this semantics.
   fn index(&self) -> usize;
   /// Get the name of this semantics.
-  fn name(&self) -> &str;
+  fn name(&self) -> &'static str;
   /// Convert from a semantics name to a semantics.
   fn parse(name: &str) -> Option<Self>;
 }

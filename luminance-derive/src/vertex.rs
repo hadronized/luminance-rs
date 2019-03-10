@@ -160,7 +160,7 @@ where A: Iterator<Item = &'a Attribute> + Clone {
       // formats needed to implement the Vertex trait
       let struct_name = ident;
       let impl_ = quote! {
-        unsafe impl<'a> luminance::vertex::Vertex<'a> for #struct_name {
+        unsafe impl luminance::vertex::Vertex for #struct_name {
           fn vertex_fmt() -> luminance::vertex::VertexFmt {
             vec![#(#indexed_vertex_attrib_fmts),*]
           }

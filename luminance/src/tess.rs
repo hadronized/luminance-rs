@@ -175,7 +175,7 @@ where
   pub fn add_vertices<V, W>(mut self, vertices: W) -> Self
   where
     W: AsRef<[V]>,
-    V: Vertex<'a>
+    V: Vertex
   {
     let vertices = vertices.as_ref();
 
@@ -191,7 +191,7 @@ where
 
   pub fn add_instances<V, W>(mut self, instances: W) -> Self
   where W: AsRef<[V]>,
-        V: Vertex<'a> {
+        V: Vertex {
     let instances = instances.as_ref();
 
     let vb = VertexBuffer {
@@ -520,8 +520,7 @@ impl Tess {
     }
   }
 
-  pub fn as_slice<'a, V>(&'a self) -> Result<BufferSlice<V>, TessMapError>
-  where V: Vertex<'a> {
+  pub fn as_slice<'a, V>(&'a self) -> Result<BufferSlice<V>, TessMapError> where V: Vertex {
     match self.vertex_buffers.len() {
       0 => Err(TessMapError::ForbiddenAttributelessMapping),
 
@@ -540,8 +539,7 @@ impl Tess {
     }
   }
 
-  pub fn as_slice_mut<'a, V>(&mut self) -> Result<BufferSliceMut<V>, TessMapError>
-  where V: Vertex<'a> {
+  pub fn as_slice_mut<'a, V>(&mut self) -> Result<BufferSliceMut<V>, TessMapError> where V: Vertex {
     match self.vertex_buffers.len() {
       0 => Err(TessMapError::ForbiddenAttributelessMapping),
 
@@ -560,8 +558,7 @@ impl Tess {
     }
   }
 
-  pub fn as_inst_slice<'a, V>(&'a self) -> Result<BufferSlice<V>, TessMapError>
-  where V: Vertex<'a> {
+  pub fn as_inst_slice<'a, V>(&'a self) -> Result<BufferSlice<V>, TessMapError> where V: Vertex {
     match self.instance_buffers.len() {
       0 => Err(TessMapError::ForbiddenAttributelessMapping),
 
@@ -580,8 +577,7 @@ impl Tess {
     }
   }
 
-  pub fn as_inst_slice_mut<'a, V>(&mut self) -> Result<BufferSliceMut<V>, TessMapError>
-  where V: Vertex<'a> {
+  pub fn as_inst_slice_mut<'a, V>(&mut self) -> Result<BufferSliceMut<V>, TessMapError> where V: Vertex {
     match self.instance_buffers.len() {
       0 => Err(TessMapError::ForbiddenAttributelessMapping),
 

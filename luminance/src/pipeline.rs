@@ -397,7 +397,7 @@ impl<'a> ShadingGate<'a> {
   /// Run a shader on a set of rendering commands.
   pub fn shade<In, Out, Uni, F>(&self, program: &'a Program<In, Out, Uni>, f: F)
   where
-    In: for<'b> Vertex<'b>,
+    In: Vertex,
     Uni: UniformInterface,
     F: FnOnce(&RenderGate, ProgramInterface<'a, Uni>),
   {

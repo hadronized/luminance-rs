@@ -125,7 +125,7 @@ pub(crate) fn generate_enum_vertex_attrib_sem_impl(ident: Ident, enum_: DataEnum
         *self as usize
       }
 
-      fn name(&self) -> &str {
+      fn name(&self) -> &'static str {
         match *self {
           #(#name_branches,)*
         }
