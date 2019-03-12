@@ -278,7 +278,7 @@ where
         Some((buffer, index_type)) => {
           Some(IndexedDrawState {
             restart_index: self.restart_index,
-            buffer,
+            _buffer: buffer,
             index_type,
           })
         }
@@ -451,7 +451,7 @@ unsafe impl TessIndex for u32 {
 
 /// All the data extra data required when doing indexed drawing
 struct IndexedDrawState {
-  buffer: RawBuffer,
+  _buffer: RawBuffer,
   restart_index: Option<u32>,
   index_type: TessIndexType,
 }
