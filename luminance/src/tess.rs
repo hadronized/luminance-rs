@@ -57,10 +57,6 @@
 #[cfg(feature = "std")]
 use std::fmt;
 #[cfg(feature = "std")]
-use std::marker::PhantomData;
-#[cfg(feature = "std")]
-use std::mem::size_of;
-#[cfg(feature = "std")]
 use std::ops::{Range, RangeFrom, RangeFull, RangeTo};
 #[cfg(feature = "std")]
 use std::os::raw::c_void;
@@ -71,10 +67,6 @@ use std::ptr;
 use alloc::vec::Vec;
 #[cfg(not(feature = "std"))]
 use core::fmt;
-#[cfg(not(feature = "std"))]
-use core::marker::PhantomData;
-#[cfg(not(feature = "std"))]
-use core::mem::size_of;
 #[cfg(not(feature = "std"))]
 use core::ops::{Range, RangeFrom, RangeFull, RangeTo};
 #[cfg(not(feature = "std"))]
@@ -142,7 +134,7 @@ struct VertexBuffer {
 }
 
 /// Build tessellations the easy way.
-pub struct TessBuilder<'a, C, I> {
+pub struct TessBuilder<'a, C> {
   ctx: &'a mut C,
   vertex_buffers: Vec<VertexBuffer>,
   index_buffer: Option<(RawBuffer, TessIndexType)>,
@@ -151,10 +143,9 @@ pub struct TessBuilder<'a, C, I> {
   vert_nb: usize,
   instance_buffers: Vec<VertexBuffer>,
   inst_nb: usize,
-  _phantom: PhantomData<I>,
 }
 
-impl<'a, C, I> TessBuilder<'a, C, I> {
+impl<'a, C> TessBuilder<'a, C> {
   pub fn new(ctx: &'a mut C) -> Self {
     TessBuilder {
       ctx,
@@ -165,15 +156,13 @@ impl<'a, C, I> TessBuilder<'a, C, I> {
       vert_nb: 0,
       instance_buffers: Vec::new(),
       inst_nb: 0,
-      _phantom: PhantomData,
     }
   }
 }
 
-impl<'a, C, I> TessBuilder<'a, C, I>
+impl<'a, C> TessBuilder<'a, C>
 where
   C: GraphicsContext,
-  I: TessIndex,
 {
   /// Add vertices to be part of the tessellation.
   ///
@@ -215,8 +204,10 @@ where
   }
 
   /// Set vertex indices in order to specify how vertices should be picked by the GPU pipeline.
-  pub fn set_indices<T>(mut self, indices: T) -> Self
-  where T: AsRef<[I]> {
+  pub fn set_indices<T, I>(mut self, indices: T) -> Self
+  where
+    T: AsRef<[I]>,
+    I: TessIndex  {
     let indices = indices.as_ref();
 
     // create a new raw buffer containing the indices and turn it into a vertex buffer
