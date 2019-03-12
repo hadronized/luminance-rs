@@ -145,7 +145,7 @@ struct VertexBuffer {
 pub struct TessBuilder<'a, C, I> {
   ctx: &'a mut C,
   vertex_buffers: Vec<VertexBuffer>,
-  index_buffer: Option<(RawBuffer, IndexType)>,
+  index_buffer: Option<(RawBuffer, TessIndexType)>,
   restart_index: Option<u32>,
   mode: Mode,
   vert_nb: usize,
@@ -173,7 +173,7 @@ impl<'a, C, I> TessBuilder<'a, C, I> {
 impl<'a, C, I> TessBuilder<'a, C, I>
 where
   C: GraphicsContext,
-  I: VertIndex,
+  I: TessIndex,
 {
   /// Add vertices to be part of the tessellation.
   ///
@@ -288,7 +288,7 @@ where
           Some(IndexedDrawState {
             restart_index: self.restart_index,
             buffer,
-            index_type
+            index_type,
           })
         }
         None => None,
@@ -418,49 +418,51 @@ pub enum TessError {
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum IndexType {
-    U8, U16, U32,
+pub enum TessIndexType {
+  U8,
+  U16,
+  U32,
 }
 
-impl IndexType {
-    fn to_glenum(self) -> GLenum {
-        match self {
-            IndexType::U8 => gl::UNSIGNED_BYTE,
-            IndexType::U16 => gl::UNSIGNED_SHORT,
-            IndexType::U32 => gl::UNSIGNED_INT,
-        }
+impl TessIndexType {
+  fn to_glenum(self) -> GLenum {
+    match self {
+      TessIndexType::U8 => gl::UNSIGNED_BYTE,
+      TessIndexType::U16 => gl::UNSIGNED_SHORT,
+      TessIndexType::U32 => gl::UNSIGNED_INT,
     }
+  }
 
-    fn size(self) -> usize {
-        match self {
-            IndexType::U8 => 1,
-            IndexType::U16 => 2,
-            IndexType::U32 => 4,
-        }
+  fn size(self) -> usize {
+    match self {
+      TessIndexType::U8 => 1,
+      TessIndexType::U16 => 2,
+      TessIndexType::U32 => 4,
     }
+  }
 }
 
-pub unsafe trait VertIndex {
-    const INDEX_TYPE: IndexType;
+pub unsafe trait TessIndex {
+  const INDEX_TYPE: TessIndexType;
 }
 
-unsafe impl VertIndex for u8 {
-    const INDEX_TYPE: IndexType = IndexType::U8;
+unsafe impl TessIndex for u8 {
+  const INDEX_TYPE: TessIndexType = TessIndexType::U8;
 }
 
-unsafe impl VertIndex for u16 {
-    const INDEX_TYPE: IndexType = IndexType::U16;
+unsafe impl TessIndex for u16 {
+  const INDEX_TYPE: TessIndexType = TessIndexType::U16;
 }
 
-unsafe impl VertIndex for u32 {
-    const INDEX_TYPE: IndexType = IndexType::U32;
+unsafe impl TessIndex for u32 {
+  const INDEX_TYPE: TessIndexType = TessIndexType::U32;
 }
 
 /// All the data extra data required when doing indexed drawing
 struct IndexedDrawState {
   buffer: RawBuffer,
   restart_index: Option<u32>,
-  index_type: IndexType,
+  index_type: TessIndexType,
 }
 
 pub struct Tess {
