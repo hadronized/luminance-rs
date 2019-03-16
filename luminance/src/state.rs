@@ -215,6 +215,15 @@ impl GraphicsState {
     }
   }
 
+  pub(crate) unsafe fn set_vertex_restart(&mut self, state: VertexRestart) {
+    if self.vertex_restart != state {
+      match state {
+        VertexRestart::Enabled => gl::Enable(gl::PRIMITIVE_RESTART),
+        VertexRestart::Disabled => gl::Disable(gl::PRIMITIVE_RESTART),
+      }
+    }
+  }
+
   pub(crate) unsafe fn set_texture_unit(&mut self, unit: u32) {
     if self.current_texture_unit != unit {
       gl::ActiveTexture(gl::TEXTURE0 + unit as GLenum);

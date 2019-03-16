@@ -79,6 +79,7 @@ use vertex::{
   IndexedVertexAttribFmt, Vertex, VertexAttribDim, VertexAttribFmt, VertexAttribType, VertexFmt,
   VertexInstancing
 };
+use vertex_restart::VertexRestart;
 
 /// Vertices can be connected via several modes.
 #[derive(Copy, Clone, Debug)]
@@ -481,17 +482,18 @@ impl Tess {
     let inst_nb = inst_nb as GLsizei;
 
     unsafe {
-      ctx.state().borrow_mut().bind_vertex_array(self.vao);
+      let mut gfx_st = ctx.state().borrow_mut();
+      gfx_st.bind_vertex_array(self.vao);
 
       if let Some(index_state) = self.index_state.as_ref() {
         // indexed render
         let first = (index_state.index_type.bytes() * start_index) as *const c_void;
 
         if let Some(restart_index) = index_state.restart_index {
-          gl::Enable(gl::PRIMITIVE_RESTART);
+          gfx_st.set_vertex_restart(VertexRestart::Enabled);
           gl::PrimitiveRestartIndex(restart_index);
         } else {
-          gl::Disable(gl::PRIMITIVE_RESTART);
+          gfx_st.set_vertex_restart(VertexRestart::Disabled);
         }
 
         if inst_nb <= 1 {
