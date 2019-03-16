@@ -233,7 +233,7 @@ where
     self
   }
 
-  /// Set the primitive restart index. The initial value is `None`, implying no primitive restart
+  /// Set the primitive restart index. The initial value is `None`, implying no primitive restart.
   pub fn set_primitive_restart_index(mut self, index: Option<u32>) -> Self {
     self.restart_index = index;
     self
@@ -274,16 +274,14 @@ where
         set_vertex_pointers(&vb.fmt);
       }
 
-      let index_state = match self.index_buffer {
-        Some((buffer, index_type)) => {
-          Some(IndexedDrawState {
-            restart_index: self.restart_index,
-            _buffer: buffer,
-            index_type,
-          })
+      let restart_index = self.restart_index;
+      let index_state = self.index_buffer.map(move |(buffer, index_type)| {
+        IndexedDrawState {
+          restart_index,
+          _buffer: buffer,
+          index_type,
         }
-        None => None,
-      };
+      });
 
       // convert to OpenGL-friendly internals and return
       Ok(Tess {
@@ -408,6 +406,7 @@ pub enum TessError {
   Overflow(usize, usize)
 }
 
+/// Possible tessellation index types.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum TessIndexType {
   U8,
@@ -424,7 +423,7 @@ impl TessIndexType {
     }
   }
 
-  fn size(self) -> usize {
+  fn bytes(self) -> usize {
     match self {
       TessIndexType::U8 => 1,
       TessIndexType::U16 => 2,
@@ -433,6 +432,15 @@ impl TessIndexType {
   }
 }
 
+/// Class of tessellation indexes.
+///
+/// Values which types implement this trait are allowed to be used to index tessellation in *indexed
+/// draw commands*.
+///
+/// You shouldn’t have to worry to much about that trait. Have a look at the current implementors
+/// for an exhaustive list of types you can use.
+///
+/// > Implementing this trait is `unsafe`.
 pub unsafe trait TessIndex {
   const INDEX_TYPE: TessIndexType;
 }
@@ -449,7 +457,7 @@ unsafe impl TessIndex for u32 {
   const INDEX_TYPE: TessIndexType = TessIndexType::U32;
 }
 
-/// All the data extra data required when doing indexed drawing
+/// All the extra data required when doing indexed drawing.
 struct IndexedDrawState {
   _buffer: RawBuffer,
   restart_index: Option<u32>,
@@ -477,7 +485,7 @@ impl Tess {
 
       if let Some(index_state) = self.index_state.as_ref() {
         // indexed render
-        let first = (index_state.index_type.size() * start_index) as *const c_void;
+        let first = (index_state.index_type.bytes() * start_index) as *const c_void;
 
         if let Some(restart_index) = index_state.restart_index {
           gl::Enable(gl::PRIMITIVE_RESTART);
