@@ -18,6 +18,7 @@ use blending::{BlendingState, Equation, Factor};
 use depth_test::DepthTest;
 use face_culling::{FaceCullingMode, FaceCullingOrder, FaceCullingState};
 use metagl::*;
+use vertex_restart::VertexRestart;
 
 // TLS synchronization barrier for `GraphicsState`.
 //
@@ -46,6 +47,9 @@ pub struct GraphicsState {
   face_culling_state: FaceCullingState,
   face_culling_order: FaceCullingOrder,
   face_culling_mode: FaceCullingMode,
+
+  // vertex restart
+  vertex_restart: VertexRestart,
 
   // texture
   current_texture_unit: GLenum,
@@ -109,6 +113,7 @@ impl GraphicsState {
       let face_culling_state = get_ctx_face_culling_state()?;
       let face_culling_order = get_ctx_face_culling_order()?;
       let face_culling_mode = get_ctx_face_culling_mode()?;
+      let vertex_restart = get_ctx_vertex_restart()?;
       let current_texture_unit = get_ctx_current_texture_unit()?;
       let bound_textures = vec![(gl::TEXTURE_2D, 0); 48]; // 48 is the platform minimal requirement
       let bound_uniform_buffers = vec![0; 36]; // 36 is the platform minimal requirement
@@ -127,6 +132,7 @@ impl GraphicsState {
         face_culling_state,
         face_culling_order,
         face_culling_mode,
+        vertex_restart,
         current_texture_unit,
         bound_textures,
         bound_uniform_buffers,
@@ -334,6 +340,7 @@ pub enum StateQueryError {
   UnknownFaceCullingState(GLboolean),
   UnknownFaceCullingOrder(GLenum),
   UnknownFaceCullingMode(GLenum),
+  UnknownVertexRestartState(GLboolean),
 }
 
 impl fmt::Display for StateQueryError {
@@ -350,6 +357,7 @@ impl fmt::Display for StateQueryError {
       StateQueryError::UnknownFaceCullingState(ref s) => write!(f, "unknown face culling state: {}", s),
       StateQueryError::UnknownFaceCullingOrder(ref o) => write!(f, "unknown face culling order: {}", o),
       StateQueryError::UnknownFaceCullingMode(ref m) => write!(f, "unknown face culling mode: {}", m),
+      StateQueryError::UnknownVertexRestartState(ref s) => write!(f, "unknown vertex restart state: {}", s),
     }
   }
 }
@@ -452,6 +460,16 @@ unsafe fn get_ctx_face_culling_mode() -> Result<FaceCullingMode, StateQueryError
     gl::BACK => Ok(FaceCullingMode::Back),
     gl::FRONT_AND_BACK => Ok(FaceCullingMode::Both),
     _ => Err(StateQueryError::UnknownFaceCullingMode(mode)),
+  }
+}
+
+unsafe fn get_ctx_vertex_restart() -> Result<VertexRestart, StateQueryError> {
+  let state = gl::IsEnabled(gl::PRIMITIVE_RESTART);
+
+  match state {
+    gl::TRUE => Ok(VertexRestart::Enabled),
+    gl::FALSE => Ok(VertexRestart::Disabled),
+    _ => Err(StateQueryError::UnknownVertexRestartState(state)),
   }
 }
 

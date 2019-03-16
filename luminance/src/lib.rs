@@ -126,3 +126,4 @@ pub mod state;
 pub mod tess;
 pub mod texture;
 pub mod vertex;
+pub mod vertex_restart;
