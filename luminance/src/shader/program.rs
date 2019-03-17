@@ -57,7 +57,7 @@ use core::ptr::null_mut;
 use linear::{M22, M33, M44};
 use metagl::*;
 use shader::stage::{self, Stage, StageError};
-use vertex::Vertex;
+use vertex::HasSemantics;
 
 /// A raw shader program.
 ///
@@ -137,10 +137,7 @@ pub struct Program<V, Out, Uni> {
   _out: PhantomData<*const Out>,
 }
 
-impl<V, Out, Uni> Program<V, Out, Uni>
-where
-  V: Vertex,
-{
+impl<V, Out, Uni> Program<V, Out, Uni> where V: HasSemantics {
   /// Create a new program by consuming `Stage`s.
   pub fn from_stages<'a, T, G>(
     tess: T,
@@ -148,11 +145,9 @@ where
     geometry: G,
     fragment: &Stage,
   ) -> Result<(Self, Vec<UniformWarning>), ProgramError>
-  where
-    Uni: UniformInterface,
-    T: Into<Option<(&'a Stage, &'a Stage)>>,
-    G: Into<Option<&'a Stage>>,
-  {
+  where Uni: UniformInterface,
+        T: Into<Option<(&'a Stage, &'a Stage)>>,
+        G: Into<Option<&'a Stage>> {
     Self::from_stages_env(tess, vertex, geometry, fragment, ())
   }
 
@@ -163,11 +158,9 @@ where
     geometry: G,
     fragment: &str,
   ) -> Result<(Self, Vec<UniformWarning>), ProgramError>
-  where
-    Uni: UniformInterface,
-    T: Into<Option<(&'a str, &'a str)>>,
-    G: Into<Option<&'a str>>,
-  {
+  where Uni: UniformInterface,
+        T: Into<Option<(&'a str, &'a str)>>,
+        G: Into<Option<&'a str>> {
     Self::from_strings_env(tess, vertex, geometry, fragment, ())
   }
 
@@ -179,11 +172,9 @@ where
     fragment: &Stage,
     env: E,
   ) -> Result<(Self, Vec<UniformWarning>), ProgramError>
-  where
-    Uni: UniformInterface<E>,
-    T: Into<Option<(&'a Stage, &'a Stage)>>,
-    G: Into<Option<&'a Stage>>,
-  {
+  where Uni: UniformInterface<E>,
+        T: Into<Option<(&'a Stage, &'a Stage)>>,
+        G: Into<Option<&'a Stage>> {
     let raw = RawProgram::new(tess, vertex, geometry, fragment)?;
 
     // TODO
@@ -209,11 +200,9 @@ where
     fragment: &str,
     env: E,
   ) -> Result<(Self, Vec<UniformWarning>), ProgramError>
-  where
-    Uni: UniformInterface<E>,
-    T: Into<Option<(&'a str, &'a str)>>,
-    G: Into<Option<&'a str>>,
-  {
+  where Uni: UniformInterface<E>,
+        T: Into<Option<(&'a str, &'a str)>>,
+        G: Into<Option<&'a str>> {
     let tess = match tess.into() {
       Some((tcs_str, tes_str)) => {
         let tcs =
@@ -262,9 +251,7 @@ where
   /// shader program updated with the new uniform interface. If the generation of the new uniform
   /// interface fails, this function will return the program with the former uniform interface.
   pub fn adapt<Q>(self) -> Result<(Program<V, Out, Q>, Vec<UniformWarning>), (ProgramError, Self)>
-  where
-    Q: UniformInterface,
-  {
+  where Q: UniformInterface {
     self.adapt_env(())
   }
 
@@ -278,9 +265,7 @@ where
     self,
     env: E,
   ) -> Result<(Program<V, Out, Q>, Vec<UniformWarning>), (ProgramError, Self)>
-  where
-    Q: UniformInterface<E>,
-  {
+  where Q: UniformInterface<E> {
     // first, try to create the new uniform interface
     let new_uni_iface = create_uniform_interface(&self.raw, env);
 
@@ -310,9 +295,7 @@ where
   /// This function might be needed for when you want to update the uniform interface but still
   /// enforce that the type must remain the same.
   pub fn readapt_env<E>(self, env: E) -> Result<(Self, Vec<UniformWarning>), (ProgramError, Self)>
-  where
-    Uni: UniformInterface<E>,
-  {
+  where Uni: UniformInterface<E> {
     self.adapt_env(env)
   }
 }
@@ -367,9 +350,7 @@ impl<'a> UniformBuilder<'a> {
   /// one defined in the shader doesn’t type match. If you don’t want a failure but an *unbound*
   /// uniform, head over to the `ask_unbound` function.
   pub fn ask<T>(&self, name: &str) -> Result<Uniform<T>, UniformWarning>
-  where
-    T: Uniformable,
-  {
+  where T: Uniformable {
     let uniform = match T::ty() {
       Type::BufferBinding => self.ask_uniform_block(name)?,
       _ => self.ask_uniform(name)?,
@@ -382,9 +363,7 @@ impl<'a> UniformBuilder<'a> {
   }
 
   pub fn ask_unbound<T>(&mut self, name: &str) -> Uniform<T>
-  where
-    T: Uniformable,
-  {
+  where T: Uniformable {
     match self.ask(name) {
       Ok(uniform) => uniform,
       Err(warning) => {
@@ -395,9 +374,7 @@ impl<'a> UniformBuilder<'a> {
   }
 
   fn ask_uniform<T>(&self, name: &str) -> Result<Uniform<T>, UniformWarning>
-  where
-    T: Uniformable,
-  {
+  where T: Uniformable {
     let location = {
       #[cfg(feature = "std")]
       {
@@ -419,9 +396,7 @@ impl<'a> UniformBuilder<'a> {
   }
 
   fn ask_uniform_block<T>(&self, name: &str) -> Result<Uniform<T>, UniformWarning>
-  where
-    T: Uniformable,
-  {
+  where T: Uniformable {
     let location = {
       #[cfg(feature = "std")]
       {
@@ -450,9 +425,7 @@ impl<'a> UniformBuilder<'a> {
   /// Use that function when you need a uniform to complete a uniform interface but you’re sure you
   /// won’t use it.
   pub fn unbound<T>(&self) -> Uniform<T>
-  where
-    T: Uniformable,
-  {
+  where T: Uniformable {
     Uniform::unbound(self.raw.handle)
   }
 }
@@ -537,9 +510,7 @@ pub struct Uniform<T> {
 }
 
 impl<T> Uniform<T>
-where
-  T: Uniformable,
-{
+where T: Uniformable {
   fn new(program: GLuint, index: GLint) -> Self {
     Uniform {
       program,
