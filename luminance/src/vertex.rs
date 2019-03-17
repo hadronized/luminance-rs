@@ -29,6 +29,7 @@ pub type VertexFmt = Vec<IndexedVertexAttribFmt>;
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct IndexedVertexAttribFmt {
   pub index: usize,
+  pub name: &'static str,
   pub instancing: VertexInstancing,
   pub attrib_fmt: VertexAttribFmt
 }
@@ -40,7 +41,8 @@ impl IndexedVertexAttribFmt {
     attrib_fmt: VertexAttribFmt
   ) -> Self where S: VertexAttribSem {
     let index = sem.index();
-    IndexedVertexAttribFmt { index, instancing, attrib_fmt }
+    let name = sem.name();
+    IndexedVertexAttribFmt { index, name, instancing, attrib_fmt }
   }
 }
 

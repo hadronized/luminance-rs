@@ -396,11 +396,9 @@ pub struct ShadingGate<'a> {
 impl<'a> ShadingGate<'a> {
   /// Run a shader on a set of rendering commands.
   pub fn shade<In, Out, Uni, F>(&self, program: &'a Program<In, Out, Uni>, f: F)
-  where
-    In: Vertex,
-    Uni: UniformInterface,
-    F: FnOnce(&RenderGate, ProgramInterface<'a, Uni>),
-  {
+  where In: Vertex,
+        Uni: UniformInterface,
+        F: FnOnce(&RenderGate, ProgramInterface<'a, Uni>) {
     unsafe {
       let bstack = self.binding_stack.borrow_mut();
       bstack.gfx_state.borrow_mut().use_program(program.handle());

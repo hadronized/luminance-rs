@@ -57,7 +57,7 @@ use core::ptr::null_mut;
 use linear::{M22, M33, M44};
 use metagl::*;
 use shader::stage::{self, Stage, StageError};
-use vertex::HasSemantics;
+use vertex::Vertex;
 
 /// A raw shader program.
 ///
@@ -137,7 +137,7 @@ pub struct Program<V, Out, Uni> {
   _out: PhantomData<*const Out>,
 }
 
-impl<V, Out, Uni> Program<V, Out, Uni> where V: HasSemantics {
+impl<V, Out, Uni> Program<V, Out, Uni> where V: Vertex {
   /// Create a new program by consuming `Stage`s.
   pub fn from_stages<'a, T, G>(
     tess: T,
