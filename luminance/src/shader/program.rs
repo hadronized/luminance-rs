@@ -144,7 +144,7 @@ impl<V, Out, Uni> Program<V, Out, Uni> where V: Vertex {
     vertex: &Stage,
     geometry: G,
     fragment: &Stage,
-  ) -> Result<(Self, Vec<UniformWarning>), ProgramError>
+  ) -> Result<(Self, Vec<ProgramWarning>), ProgramError>
   where Uni: UniformInterface,
         T: Into<Option<(&'a Stage, &'a Stage)>>,
         G: Into<Option<&'a Stage>> {
@@ -157,7 +157,7 @@ impl<V, Out, Uni> Program<V, Out, Uni> where V: Vertex {
     vertex: &str,
     geometry: G,
     fragment: &str,
-  ) -> Result<(Self, Vec<UniformWarning>), ProgramError>
+  ) -> Result<(Self, Vec<ProgramWarning>), ProgramError>
   where Uni: UniformInterface,
         T: Into<Option<(&'a str, &'a str)>>,
         G: Into<Option<&'a str>> {
@@ -171,16 +171,15 @@ impl<V, Out, Uni> Program<V, Out, Uni> where V: Vertex {
     geometry: G,
     fragment: &Stage,
     env: E,
-  ) -> Result<(Self, Vec<UniformWarning>), ProgramError>
+  ) -> Result<(Self, Vec<ProgramWarning>), ProgramError>
   where Uni: UniformInterface<E>,
         T: Into<Option<(&'a Stage, &'a Stage)>>,
         G: Into<Option<&'a Stage>> {
     let raw = RawProgram::new(tess, vertex, geometry, fragment)?;
 
-    // TODO
-    //bind_vertex_attribs_locations::<V::VERTEX_ATTRIB_SEM>(&raw);
-
-    let (uni_iface, warnings) = create_uniform_interface(&raw, env)?;
+    let mut warnings = bind_vertex_attribs_locations::<V>(&raw);
+    let (uni_iface, uniform_warnings) = create_uniform_interface(&raw, env)?;
+    warnings.extend(uniform_warnings.into_iter().map(ProgramWarning::Uniform));
 
     let program = Program {
       raw,
@@ -199,7 +198,7 @@ impl<V, Out, Uni> Program<V, Out, Uni> where V: Vertex {
     geometry: G,
     fragment: &str,
     env: E,
-  ) -> Result<(Self, Vec<UniformWarning>), ProgramError>
+  ) -> Result<(Self, Vec<ProgramWarning>), ProgramError>
   where Uni: UniformInterface<E>,
         T: Into<Option<(&'a str, &'a str)>>,
         G: Into<Option<&'a str>> {
@@ -456,7 +455,7 @@ impl<'a, Uni> ProgramInterface<'a, Uni> {
 }
 
 /// Errors that a `Program` can generate.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum ProgramError {
   StageError(StageError),
   /// Program link failed. You can inspect the reason by looking at the contained `String`.
@@ -464,6 +463,8 @@ pub enum ProgramError {
   /// Some uniform configuration is ill-formed. It can be a problem of inactive uniform, mismatch
   /// type, etc. Check the `UniformWarning` type for more information.
   UniformWarning(UniformWarning),
+  /// Some vertex attribute is ill-formed.
+  VertexAttribWarning(VertexAttribWarning)
 }
 
 impl fmt::Display for ProgramError {
@@ -473,13 +474,33 @@ impl fmt::Display for ProgramError {
 
       ProgramError::LinkFailed(ref s) => write!(f, "shader program failed to link: {}", s),
 
-      ProgramError::UniformWarning(ref e) => write!(f, "shader program contains warning(s): {}", e),
+      ProgramError::UniformWarning(ref e) => write!(f, "shader program contains uniform warning(s): {}", e),
+      ProgramError::VertexAttribWarning(ref e) => write!(f, "shader program contains vertex attribute warning(s): {}", e),
+    }
+  }
+}
+
+/// Program warnings, not necessarily considered blocking errors.
+#[derive(Debug)]
+pub enum ProgramWarning {
+  /// Some uniform configuration is ill-formed. It can be a problem of inactive uniform, mismatch
+  /// type, etc. Check the `UniformWarning` type for more information.
+  Uniform(UniformWarning),
+  /// Some vertex attribute is ill-formed.
+  VertexAttrib(VertexAttribWarning),
+}
+
+impl fmt::Display for ProgramWarning {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    match *self {
+      ProgramWarning::Uniform(ref e) => write!(f, "uniform warning: {}", e),
+      ProgramWarning::VertexAttrib(ref e) => write!(f, "vertex attribute warning: {}", e),
     }
   }
 }
 
 /// Warnings related to uniform issues.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum UniformWarning {
   /// Inactive uniform (not in use / no participation to the final output in shaders).
   Inactive(String),
@@ -496,6 +517,21 @@ impl fmt::Display for UniformWarning {
       UniformWarning::Inactive(ref s) => write!(f, "inactive {} uniform", s),
 
       UniformWarning::TypeMismatch(ref n, ref t) => write!(f, "type mismatch for uniform {}: {}", n, t),
+    }
+  }
+}
+
+/// Warnings related to vertex attributes issues.
+#[derive(Debug)]
+pub enum VertexAttribWarning {
+  /// Inactive vertex attribute (not read).
+  Inactive(String)
+}
+
+impl fmt::Display for VertexAttribWarning {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    match *self {
+      VertexAttribWarning::Inactive(ref s) => write!(f, "inactive {} vertex attribute", s)
     }
   }
 }
@@ -1024,7 +1060,7 @@ fn uniform_type_match(program: GLuint, name: &str, ty: Type) -> Result<(), Strin
     #[cfg(feature = "std")]
     {
       let c_name = CString::new(name.as_bytes()).unwrap();
-      gl::GetUniformIndices(program, 1, [c_name.as_ptr() as *const i8].as_ptr(), &mut index);
+      gl::GetUniformIndices(program, 1, [c_name.as_ptr() as *const GLchar].as_ptr(), &mut index);
     }
 
     #[cfg(not(feature = "std"))]
@@ -1049,7 +1085,7 @@ fn uniform_type_match(program: GLuint, name: &str, ty: Type) -> Result<(), Strin
     }
 
     // get its size and type
-    let mut name_ = Vec::<i8>::with_capacity(max_len as usize);
+    let mut name_ = Vec::<GLchar>::with_capacity(max_len as usize);
     gl::GetActiveUniform(
       program,
       index,
@@ -1133,6 +1169,68 @@ where
   let mut builder = UniformBuilder::new(raw);
   let iface = Uni::uniform_interface(&mut builder, env)?;
   Ok((iface, builder.warnings))
+}
+
+fn bind_vertex_attribs_locations<V>(
+  raw: &RawProgram
+) -> Vec<ProgramWarning>
+where V: Vertex {
+  let mut warnings = Vec::new();
+
+  for fmt in &V::vertex_fmt() {
+    match get_vertex_attrib_location(raw, fmt.name) {
+      Ok(_) => {
+        let index = fmt.index as GLuint;
+
+        // we are not interested in the location as we’re about to change it to what we’ve
+        // decided in the semantics
+        #[cfg(feature = "std")]
+        {
+          let c_name = CString::new(fmt.name.as_bytes()).unwrap();
+          unsafe { gl::BindAttribLocation(raw.handle, index, c_name.as_ptr() as *const GLchar) };
+        }
+
+        #[cfg(not(feature = "std"))]
+        {
+          unsafe {
+            with_cstring(fmt.name, |c_name| {
+              gl::BindAttribLocation(raw.handle, index, c_name.as_ptr() as *const GLchar);
+            });
+          }
+        }
+      }
+
+      Err(warning) => warnings.push(ProgramWarning::VertexAttrib(warning))
+    }
+  }
+
+  warnings
+}
+
+fn get_vertex_attrib_location(
+  raw: &RawProgram,
+  name: &str
+) -> Result<GLuint, VertexAttribWarning> {
+  let location = {
+    #[cfg(feature = "std")]
+    {
+      let c_name = CString::new(name.as_bytes()).unwrap();
+      unsafe { gl::GetAttribLocation(raw.handle, c_name.as_ptr() as *const GLchar) }
+    }
+
+    #[cfg(not(feature = "std"))]
+    {
+      unsafe {
+        with_cstring(name, |c_name| gl::GetAttribLocation(raw.handle, c_name)).unwrap_or(-1)
+      }
+    }
+  };
+
+  if location < 0 {
+    Err(VertexAttribWarning::Inactive(name.to_owned()))
+  } else {
+    Ok(location as _)
+  }
 }
 
 /// Create a new `struct` that represents a *uniform interface* and automatically derive the
