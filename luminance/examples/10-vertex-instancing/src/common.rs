@@ -25,10 +25,8 @@ pub struct Vertex {
 
 // definition of a single instance
 #[derive(Clone, Copy, Debug, PartialEq, Vertex)]
-#[vertex(sem = "Semantics")]
+#[vertex(sem = "Semantics", instanced = "true")]
 pub struct Instance {
-  #[vertex(instanced = "true")]
   pub pos: VertexInstancePosition,
-  #[vertex(instanced = "true")]
   pub w: VertexWeight
 }
