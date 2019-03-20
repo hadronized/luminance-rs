@@ -678,7 +678,7 @@ fn set_component_format(stride: GLsizei, off: usize, fmt: &IndexedVertexAttribFm
   let index = fmt.index as GLuint;
 
   unsafe {
-    match f.comp_type {
+    match f.ty {
       VertexAttribType::Floating => {
         gl::VertexAttribPointer(
           index,
@@ -712,7 +712,7 @@ fn set_component_format(stride: GLsizei, off: usize, fmt: &IndexedVertexAttribFm
 }
 
 fn opengl_sized_type(f: &VertexAttribFmt) -> GLenum {
-  match (f.comp_type, f.unit_size) {
+  match (f.ty, f.unit_size) {
     (VertexAttribType::Integral, 1) => gl::BYTE,
     (VertexAttribType::Integral, 2) => gl::SHORT,
     (VertexAttribType::Integral, 4) => gl::INT,

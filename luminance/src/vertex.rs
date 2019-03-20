@@ -60,7 +60,7 @@ pub enum VertexInstancing {
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct VertexAttribFmt {
   /// Type of the attribute. See [`VertexAttribType`] for further details.
-  pub comp_type: VertexAttribType,
+  pub ty: VertexAttribType,
   /// Dimension of the attribute. It should be in 1–4. See [`VertexAttribDim`] for further details.
   pub dim: VertexAttribDim,
   /// Size in bytes that a single element of the attribute takes. That is, if your attribute has
@@ -179,10 +179,10 @@ const fn align_of<T>() -> usize {
 
 // Macro to quickly implement VertexAttrib for a given type.
 macro_rules! impl_vertex_attribute {
-  ($t:ty, $q:ty, $comp_type:ident, $dim:ident) => {
+  ($t:ty, $q:ty, $attr_ty:ident, $dim:ident) => {
     unsafe impl VertexAttrib for $t {
       const VERTEX_ATTRIB_FMT: VertexAttribFmt = VertexAttribFmt {
-        comp_type: VertexAttribType::$comp_type,
+        ty: VertexAttribType::$attr_ty,
         dim: VertexAttribDim::$dim,
         unit_size: $crate::vertex::size_of::<$q>(),
         align: $crate::vertex::align_of::<$q>(),
@@ -190,12 +190,12 @@ macro_rules! impl_vertex_attribute {
     }
   };
 
-  ($t:ty, $comp_type:ident) => {
-    impl_vertex_attribute!($t, $t, $comp_type, Dim1);
-    impl_vertex_attribute!([$t; 1], $t, $comp_type, Dim1);
-    impl_vertex_attribute!([$t; 2], $t, $comp_type, Dim2);
-    impl_vertex_attribute!([$t; 3], $t, $comp_type, Dim3);
-    impl_vertex_attribute!([$t; 4], $t, $comp_type, Dim4);
+  ($t:ty, $attr_ty:ident) => {
+    impl_vertex_attribute!($t, $t, $attr_ty, Dim1);
+    impl_vertex_attribute!([$t; 1], $t, $attr_ty, Dim1);
+    impl_vertex_attribute!([$t; 2], $t, $attr_ty, Dim2);
+    impl_vertex_attribute!([$t; 3], $t, $attr_ty, Dim3);
+    impl_vertex_attribute!([$t; 4], $t, $attr_ty, Dim4);
   };
 }
 
