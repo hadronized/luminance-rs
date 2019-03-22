@@ -6,10 +6,12 @@
 //! for further details.
 
 /// A type that can be used as a [`Vertex`] has to implement that trait – it must provide an
-/// associated [`VertexFmt`] value via a function call.
+/// associated [`VertexFmt`] value via a function call. This associated value gives enough
+/// information on the types being used as attributes to reify enough memory data to align and, size
+/// and type buffers correctly.
 ///
 /// In theory, you should never have to implement that trait directly. Instead, feel free to use the
-/// [luminance-derive] `Vertex` proc-macro-derive instead.
+/// [luminance-derive] [`Vertex`] proc-macro-derive instead.
 ///
 /// > Note: implementing this trait is `unsafe`.
 pub unsafe trait Vertex {
@@ -46,6 +48,10 @@ impl IndexedVertexAttribFmt {
   }
 }
 
+/// Should vertex instancing be used for a vertex attribute?
+///
+/// Enabling this is done per attribute but if you enable it for a single attribute of a struct, it
+/// should be enabled for all others (interleaved vertex instancing is not supported).
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum VertexInstancing {
   On,
@@ -54,8 +60,12 @@ pub enum VertexInstancing {
 
 /// Vertex attribute format.
 ///
-/// Vertex attributes (such as positions, colors, texture UVs, normals, etc.) have each a specific
+/// Vertex attributes (such as positions, colors, texture UVs, normals, etc.) have all a specific
 /// format that must be passed to the GPU. This type gathers information about a single vertex
+/// attribute and is completly agnostic of the rest of the attributes used to form a vertex.
+///
+/// A type is associated with a single value of type [`VertexAttribFmt`] via the [`VertexAttrib`]
+/// trait. If such an implementor exists for a type, it means that this type can be used as a vertex
 /// attribute.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct VertexAttribFmt {
