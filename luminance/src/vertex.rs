@@ -42,7 +42,7 @@ impl VertexBufferDesc {
     sem: S,
     instancing: VertexInstancing,
     attrib_fmt: VertexAttribFmt
-  ) -> Self where S: VertexAttribSem {
+  ) -> Self where S: Semantics {
     let index = sem.index();
     let name = sem.name();
     VertexBufferDesc { index, name, instancing, attrib_fmt }
@@ -141,7 +141,7 @@ pub unsafe trait VertexAttrib {
 ///
 /// > Note: feel free to use the [luminance-derive] crate to automatically derive this trait from
 /// > an `enum`.
-pub trait VertexAttribSem: Sized {
+pub trait Semantics: Sized {
   /// Retrieve the semantics index of this semantics.
   fn index(&self) -> usize;
   /// Get the name of this semantics.
@@ -150,12 +150,12 @@ pub trait VertexAttribSem: Sized {
   fn parse(name: &str) -> Option<Self>;
 }
 
-/// Class of types that have an associated value which type implements [`VertexAttribSem`], defining
+/// Class of types that have an associated value which type implements [`Semantics`], defining
 /// vertex legit attributes.
 ///
 /// Vertex attribute types can be associated with only one semantics.
 pub trait HasSemantics {
-  type Sem: VertexAttribSem;
+  type Sem: Semantics;
 
   const VERTEX_ATTRIB_SEM: Self::Sem;
 }

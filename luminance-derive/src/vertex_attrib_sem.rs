@@ -7,14 +7,14 @@ use syn::{Attribute, DataEnum, Ident, Type};
 const KNOWN_SUBKEYS: &[&str] = &["name", "repr", "type_name"];
 
 #[derive(Debug)]
-pub(crate) enum VertexAttribSemImplError {
+pub(crate) enum SemanticsImplError {
   AttributeErrors(Vec<AttrError>),
 }
 
-impl fmt::Display for VertexAttribSemImplError {
+impl fmt::Display for SemanticsImplError {
   fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
     match *self {
-      VertexAttribSemImplError::AttributeErrors(ref errs) => {
+      SemanticsImplError::AttributeErrors(ref errs) => {
         for err in errs {
           err.fmt(f)?;
           writeln!(f, "").unwrap();
@@ -37,7 +37,7 @@ fn get_vertex_sem_attribs<'a, A>(var_name: &Ident, attrs: A) -> Result<(Ident, T
   Ok((sem_name, sem_repr, sem_type_name))
 }
 
-pub(crate) fn generate_enum_vertex_attrib_sem_impl(ident: Ident, enum_: DataEnum) -> Result<TokenStream, VertexAttribSemImplError> {
+pub(crate) fn generate_enum_vertex_attrib_sem_impl(ident: Ident, enum_: DataEnum) -> Result<TokenStream, SemanticsImplError> {
   let fields = enum_.variants.into_iter().map(|var| {
     get_vertex_sem_attribs(&var.ident, var.attrs.iter()).map(|attrs| {
       (var.ident, attrs.0, attrs.1, attrs.2)
@@ -115,12 +115,12 @@ pub(crate) fn generate_enum_vertex_attrib_sem_impl(ident: Ident, enum_: DataEnum
   }
 
   if !errors.is_empty() {
-    return Err(VertexAttribSemImplError::AttributeErrors(errors));
+    return Err(SemanticsImplError::AttributeErrors(errors));
   }
 
-  // generate the implementation of VertexAttribSem
+  // generate the implementation of Semantics
   let vertex_attrib_sem_impl = quote!{
-    impl luminance::vertex::VertexAttribSem for #ident {
+    impl luminance::vertex::Semantics for #ident {
       fn index(&self) -> usize {
         *self as usize
       }

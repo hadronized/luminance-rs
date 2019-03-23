@@ -28,8 +28,8 @@
 //!
 //! Once all those requirements are met, you can derive [`Vertex`] pretty easily.
 //!
-//! > Note: feel free to look at the [`VertexAttribSem`] proc-macro as well, that provides a way
-//! > to generate semantics types in order to completely both implement [`VertexAttribSem`] for an
+//! > Note: feel free to look at the [`Semantics`] proc-macro as well, that provides a way
+//! > to generate semantics types in order to completely both implement [`Semantics`] for an
 //! > `enum` of your choice, but also generate *field* types you can use when defining your vertex
 //! > type.
 //!
@@ -38,10 +38,10 @@
 //! The syntax is the following:
 //!
 //! ```rust
-//! # use luminance_derive::{Vertex, VertexAttribSem};
+//! # use luminance_derive::{Vertex, Semantics};
 //!
-//! // visit the VertexAttribSem proc-macro documentation for further details
-//! #[derive(Clone, Copy, Debug, PartialEq, VertexAttribSem)]
+//! // visit the Semantics proc-macro documentation for further details
+//! #[derive(Clone, Copy, Debug, PartialEq, Semantics)]
 //! pub enum Semantics {
 //!   #[sem(name = "position", repr = "[f32; 3]", type_name = "VertexPosition")]
 //!   Position,
