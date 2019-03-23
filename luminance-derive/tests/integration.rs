@@ -1,7 +1,6 @@
 use luminance::vertex::{
   HasSemantics, IndexedVertexAttribFmt, Vertex, VertexAttrib, VertexAttribSem, VertexInstancing
-};
-use luminance_derive::{Vertex, VertexAttribSem};
+}; use luminance_derive::{Vertex, VertexAttribSem};
 
 #[test]
 fn derive_simple_semantics() {
@@ -30,15 +29,15 @@ fn derive_simple_semantics() {
   assert_eq!(<Semantics as VertexAttribSem>::parse("normal"), Some(Semantics::Normal));
   assert_eq!(<Semantics as VertexAttribSem>::parse("color"), Some(Semantics::Color));
   assert_eq!(<Semantics as VertexAttribSem>::parse("bidule"), None);
-  assert_eq!(VertexPosition::VERTEX_ATTRIB_SEM, Semantics::Position);
-  assert_eq!(VertexNormal::VERTEX_ATTRIB_SEM, Semantics::Normal);
-  assert_eq!(VertexColor::VERTEX_ATTRIB_SEM, Semantics::Color);
+  assert_eq!(VertexPosition::SEMANTICS, Semantics::Position);
+  assert_eq!(VertexNormal::SEMANTICS, Semantics::Normal);
+  assert_eq!(VertexColor::SEMANTICS, Semantics::Color);
   assert_eq!(VertexPosition::new([1., 2., 3.]).repr, [1., 2., 3.]);
 
   let expected_fmt = vec![
-    IndexedVertexAttribFmt::new(Semantics::Position, VertexInstancing::On, <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_FMT),
-    IndexedVertexAttribFmt::new(Semantics::Normal, VertexInstancing::On, <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_FMT),
-    IndexedVertexAttribFmt::new(Semantics::Color, VertexInstancing::On, <[f32; 4] as VertexAttrib>::VERTEX_ATTRIB_FMT),
+    IndexedVertexAttribFmt::new(Semantics::Position, VertexInstancing::On, <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_DESC),
+    IndexedVertexAttribFmt::new(Semantics::Normal, VertexInstancing::On, <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_DESC),
+    IndexedVertexAttribFmt::new(Semantics::Color, VertexInstancing::On, <[f32; 4] as VertexAttrib>::VERTEX_ATTRIB_DESC),
   ];
 
   assert_eq!(Vertex::vertex_fmt(), expected_fmt);

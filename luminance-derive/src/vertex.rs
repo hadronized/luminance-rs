@@ -146,9 +146,9 @@ where A: Iterator<Item = &'a Attribute> + Clone {
         let field_ty = field.ty;
         let indexed_vertex_attrib_fmt_q = quote!{
           luminance::vertex::VertexBufferDesc::new::<#sem_type>(
-            <#field_ty as luminance::vertex::HasSemantics>::VERTEX_ATTRIB_SEM,
+            <#field_ty as luminance::vertex::HasSemantics>::SEMANTICS,
             #instancing,
-            <#field_ty as luminance::vertex::VertexAttrib>::VERTEX_ATTRIB_FMT
+            <#field_ty as luminance::vertex::VertexAttrib>::VERTEX_ATTRIB_DESC
           )
         };
 

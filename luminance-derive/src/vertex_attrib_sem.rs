@@ -97,13 +97,13 @@ pub(crate) fn generate_enum_vertex_attrib_sem_impl(ident: Ident, enum_: DataEnum
           impl luminance::vertex::HasSemantics for #ty_name {
             type Sem = #ident;
 
-            const VERTEX_ATTRIB_SEM: Self::Sem = #ident::#sem_var;
+            const SEMANTICS: Self::Sem = #ident::#sem_var;
           }
 
           // make the vertex attrib impl VertexAttrib by forwarding implementation to the repr type
           unsafe impl luminance::vertex::VertexAttrib for #ty_name {
-            const VERTEX_ATTRIB_FMT: luminance::vertex::VertexAttribFmt =
-              <#repr_ty_name as luminance::vertex::VertexAttrib>::VERTEX_ATTRIB_FMT;
+            const VERTEX_ATTRIB_DESC: luminance::vertex::VertexAttribFmt =
+              <#repr_ty_name as luminance::vertex::VertexAttrib>::VERTEX_ATTRIB_DESC;
           }
         };
 

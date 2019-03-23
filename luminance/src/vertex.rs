@@ -117,7 +117,7 @@ pub enum VertexAttribDim {
 /// A vertex attribute type is always associated with a single constant of type [`VertexAttribFmt`],
 /// giving GPUs hints about how to treat them.
 pub unsafe trait VertexAttrib {
-  const VERTEX_ATTRIB_FMT: VertexAttribFmt;
+  const VERTEX_ATTRIB_DESC: VertexAttribFmt;
 }
 
 /// Vertex attribute semantics.
@@ -157,7 +157,7 @@ pub trait Semantics: Sized {
 pub trait HasSemantics {
   type Sem: Semantics;
 
-  const VERTEX_ATTRIB_SEM: Self::Sem;
+  const SEMANTICS: Self::Sem;
 }
 
 /// A local version of size_of that depends on the state of the std feature.
@@ -192,7 +192,7 @@ const fn align_of<T>() -> usize {
 macro_rules! impl_vertex_attribute {
   ($t:ty, $q:ty, $attr_ty:ident, $dim:ident) => {
     unsafe impl VertexAttrib for $t {
-      const VERTEX_ATTRIB_FMT: VertexAttribFmt = VertexAttribFmt {
+      const VERTEX_ATTRIB_DESC: VertexAttribFmt = VertexAttribFmt {
         ty: VertexAttribType::$attr_ty,
         dim: VertexAttribDim::$dim,
         unit_size: $crate::vertex::size_of::<$q>(),
