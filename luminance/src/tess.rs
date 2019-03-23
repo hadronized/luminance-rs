@@ -76,7 +76,7 @@ use buffer::{Buffer, BufferError, BufferSlice, BufferSliceMut, RawBuffer};
 use context::GraphicsContext;
 use metagl::*;
 use vertex::{
-  IndexedVertexAttribFmt, Vertex, VertexAttribDim, VertexAttribFmt, VertexAttribType, VertexFmt,
+  IndexedVertexAttribFmt, Vertex, VertexAttribDim, VertexAttribFmt, VertexAttribType, VertexDesc,
   VertexInstancing
 };
 use vertex_restart::VertexRestart;
@@ -104,7 +104,7 @@ pub enum TessMapError {
   /// The CPU mapping failed due to buffer errors.
   VertexBufferMapFailed(BufferError),
   /// Target type is not the same as the one stored in the buffer.
-  TypeMismatch(VertexFmt, VertexFmt),
+  TypeMismatch(VertexDesc, VertexDesc),
   /// The CPU mapping failed because you cannot map an attributeless tessellation since it doesn’t
   /// have any vertex attribute.
   ForbiddenAttributelessMapping,
@@ -129,7 +129,7 @@ impl fmt::Display for TessMapError {
 
 struct VertexBuffer {
   /// Indexed format of the buffer.
-  fmt: VertexFmt,
+  fmt: VertexDesc,
   /// Internal buffer.
   buf: RawBuffer,
 }
@@ -607,7 +607,7 @@ impl Drop for Tess {
 
 // Give OpenGL types information on the content of the VBO by setting vertex formats and pointers
 // to buffer memory.
-fn set_vertex_pointers(formats: &VertexFmt) {
+fn set_vertex_pointers(formats: &VertexDesc) {
   // this function sets the vertex attribute pointer for the input list by computing:
   //   - The vertex attribute ID: this is the “rank” of the attribute in the input list (order
   //     matters, for short).
@@ -623,7 +623,7 @@ fn set_vertex_pointers(formats: &VertexFmt) {
 }
 
 // Compute offsets for all the vertex components according to the alignments provided.
-fn aligned_offsets(formats: &VertexFmt) -> Vec<usize> {
+fn aligned_offsets(formats: &VertexDesc) -> Vec<usize> {
   let mut offsets = Vec::with_capacity(formats.len());
   let mut off = 0;
 
@@ -661,7 +661,7 @@ fn dim_as_size(d: &VertexAttribDim) -> GLint {
 
 // Weight in bytes of a single vertex, taking into account padding so that the vertex stay correctly
 // aligned.
-fn offset_based_vertex_weight(formats: &VertexFmt, offsets: &[usize]) -> usize {
+fn offset_based_vertex_weight(formats: &VertexDesc, offsets: &[usize]) -> usize {
   if formats.is_empty() || offsets.is_empty() {
     return 0;
   }

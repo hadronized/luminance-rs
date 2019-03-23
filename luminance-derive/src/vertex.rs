@@ -161,7 +161,7 @@ where A: Iterator<Item = &'a Attribute> + Clone {
       let struct_name = ident;
       let impl_ = quote! {
         unsafe impl luminance::vertex::Vertex for #struct_name {
-          fn vertex_fmt() -> luminance::vertex::VertexFmt {
+          fn vertex_fmt() -> luminance::vertex::VertexDesc {
             vec![#(#indexed_vertex_attrib_fmts),*]
           }
         }

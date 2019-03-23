@@ -6,7 +6,7 @@
 //! for further details.
 
 /// A type that can be used as a [`Vertex`] has to implement that trait – it must provide an
-/// associated [`VertexFmt`] value via a function call. This associated value gives enough
+/// associated [`VertexDesc`] value via a function call. This associated value gives enough
 /// information on the types being used as attributes to reify enough memory data to align and, size
 /// and type buffers correctly.
 ///
@@ -16,17 +16,17 @@
 /// > Note: implementing this trait is `unsafe`.
 pub unsafe trait Vertex {
   /// The associated vertex format.
-  fn vertex_fmt() -> VertexFmt;
+  fn vertex_fmt() -> VertexDesc;
 }
 
 unsafe impl Vertex for () {
-  fn vertex_fmt() -> VertexFmt {
+  fn vertex_fmt() -> VertexDesc {
     Vec::new()
   }
 }
 
-/// A [`VertexFmt`] is a list of [`VertexAttribFmt`]s.
-pub type VertexFmt = Vec<IndexedVertexAttribFmt>;
+/// A [`VertexDesc`] is a list of [`VertexAttribFmt`]s.
+pub type VertexDesc = Vec<IndexedVertexAttribFmt>;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct IndexedVertexAttribFmt {
