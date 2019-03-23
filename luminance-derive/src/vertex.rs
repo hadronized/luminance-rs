@@ -141,11 +141,11 @@ where A: Iterator<Item = &'a Attribute> + Clone {
       let mut indexed_vertex_attrib_fmts = Vec::new();
       let mut fields_tys = Vec::new();
 
-      // partition and generate IndexedVertexAttribFmt
+      // partition and generate VertexBufferDesc
       for field in named_fields.named {
         let field_ty = field.ty;
         let indexed_vertex_attrib_fmt_q = quote!{
-          luminance::vertex::IndexedVertexAttribFmt::new::<#sem_type>(
+          luminance::vertex::VertexBufferDesc::new::<#sem_type>(
             <#field_ty as luminance::vertex::HasSemantics>::VERTEX_ATTRIB_SEM,
             #instancing,
             <#field_ty as luminance::vertex::VertexAttrib>::VERTEX_ATTRIB_FMT

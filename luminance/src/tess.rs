@@ -76,7 +76,7 @@ use buffer::{Buffer, BufferError, BufferSlice, BufferSliceMut, RawBuffer};
 use context::GraphicsContext;
 use metagl::*;
 use vertex::{
-  IndexedVertexAttribFmt, Vertex, VertexAttribDim, VertexAttribFmt, VertexAttribType, VertexDesc,
+  VertexBufferDesc, Vertex, VertexAttribDim, VertexAttribFmt, VertexAttribType, VertexDesc,
   VertexInstancing
 };
 use vertex_restart::VertexRestart;
@@ -673,7 +673,7 @@ fn offset_based_vertex_weight(formats: &VertexDesc, offsets: &[usize]) -> usize 
 }
 
 // Set the vertex component OpenGL pointers regarding the index of the component (i), the stride
-fn set_component_format(stride: GLsizei, off: usize, fmt: &IndexedVertexAttribFmt) {
+fn set_component_format(stride: GLsizei, off: usize, fmt: &VertexBufferDesc) {
   let f = &fmt.attrib_fmt;
   let index = fmt.index as GLuint;
 

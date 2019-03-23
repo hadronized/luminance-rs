@@ -26,17 +26,18 @@ unsafe impl Vertex for () {
 }
 
 /// A [`VertexDesc`] is a list of [`VertexAttribFmt`]s.
-pub type VertexDesc = Vec<IndexedVertexAttribFmt>;
+pub type VertexDesc = Vec<VertexBufferDesc>;
 
+/// A vertex attribute descriptor in a vertex buffer.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub struct IndexedVertexAttribFmt {
+pub struct VertexBufferDesc {
   pub index: usize,
   pub name: &'static str,
   pub instancing: VertexInstancing,
   pub attrib_fmt: VertexAttribFmt
 }
 
-impl IndexedVertexAttribFmt {
+impl VertexBufferDesc {
   pub fn new<S>(
     sem: S,
     instancing: VertexInstancing,
@@ -44,7 +45,7 @@ impl IndexedVertexAttribFmt {
   ) -> Self where S: VertexAttribSem {
     let index = sem.index();
     let name = sem.name();
-    IndexedVertexAttribFmt { index, name, instancing, attrib_fmt }
+    VertexBufferDesc { index, name, instancing, attrib_fmt }
   }
 }
 
