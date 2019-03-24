@@ -25,23 +25,26 @@ unsafe impl Vertex for () {
   }
 }
 
-/// A [`VertexDesc`] is a list of [`VertexAttribFmt`]s.
+/// A [`VertexDesc`] is a list of [`VertexAttribDesc`]s.
 pub type VertexDesc = Vec<VertexBufferDesc>;
 
 /// A vertex attribute descriptor in a vertex buffer.
+///
+/// Such a description is used to explain what vertex buffers are made of and how they should be
+/// aligned / etc.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct VertexBufferDesc {
   pub index: usize,
   pub name: &'static str,
   pub instancing: VertexInstancing,
-  pub attrib_fmt: VertexAttribFmt
+  pub attrib_fmt: VertexAttribDesc
 }
 
 impl VertexBufferDesc {
   pub fn new<S>(
     sem: S,
     instancing: VertexInstancing,
-    attrib_fmt: VertexAttribFmt
+    attrib_fmt: VertexAttribDesc
   ) -> Self where S: Semantics {
     let index = sem.index();
     let name = sem.name();
@@ -65,11 +68,11 @@ pub enum VertexInstancing {
 /// format that must be passed to the GPU. This type gathers information about a single vertex
 /// attribute and is completly agnostic of the rest of the attributes used to form a vertex.
 ///
-/// A type is associated with a single value of type [`VertexAttribFmt`] via the [`VertexAttrib`]
+/// A type is associated with a single value of type [`VertexAttribDesc`] via the [`VertexAttrib`]
 /// trait. If such an implementor exists for a type, it means that this type can be used as a vertex
 /// attribute.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub struct VertexAttribFmt {
+pub struct VertexAttribDesc {
   /// Type of the attribute. See [`VertexAttribType`] for further details.
   pub ty: VertexAttribType,
   /// Dimension of the attribute. It should be in 1–4. See [`VertexAttribDim`] for further details.
@@ -114,10 +117,10 @@ pub enum VertexAttribDim {
 
 /// Class of vertex attributes.
 ///
-/// A vertex attribute type is always associated with a single constant of type [`VertexAttribFmt`],
+/// A vertex attribute type is always associated with a single constant of type [`VertexAttribDesc`],
 /// giving GPUs hints about how to treat them.
 pub unsafe trait VertexAttrib {
-  const VERTEX_ATTRIB_DESC: VertexAttribFmt;
+  const VERTEX_ATTRIB_DESC: VertexAttribDesc;
 }
 
 /// Vertex attribute semantics.
@@ -192,7 +195,7 @@ const fn align_of<T>() -> usize {
 macro_rules! impl_vertex_attribute {
   ($t:ty, $q:ty, $attr_ty:ident, $dim:ident) => {
     unsafe impl VertexAttrib for $t {
-      const VERTEX_ATTRIB_DESC: VertexAttribFmt = VertexAttribFmt {
+      const VERTEX_ATTRIB_DESC: VertexAttribDesc = VertexAttribDesc {
         ty: VertexAttribType::$attr_ty,
         dim: VertexAttribDim::$dim,
         unit_size: $crate::vertex::size_of::<$q>(),

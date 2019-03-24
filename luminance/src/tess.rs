@@ -76,7 +76,7 @@ use buffer::{Buffer, BufferError, BufferSlice, BufferSliceMut, RawBuffer};
 use context::GraphicsContext;
 use metagl::*;
 use vertex::{
-  VertexBufferDesc, Vertex, VertexAttribDim, VertexAttribFmt, VertexAttribType, VertexDesc,
+  VertexBufferDesc, Vertex, VertexAttribDim, VertexAttribDesc, VertexAttribType, VertexDesc,
   VertexInstancing
 };
 use vertex_restart::VertexRestart;
@@ -646,7 +646,7 @@ fn off_align(off: usize, align: usize) -> usize {
 }
 
 // Weight in bytes of a vertex component.
-fn component_weight(f: &VertexAttribFmt) -> usize {
+fn component_weight(f: &VertexAttribDesc) -> usize {
   dim_as_size(&f.dim) as usize * f.unit_size
 }
 
@@ -711,7 +711,7 @@ fn set_component_format(stride: GLsizei, off: usize, fmt: &VertexBufferDesc) {
   }
 }
 
-fn opengl_sized_type(f: &VertexAttribFmt) -> GLenum {
+fn opengl_sized_type(f: &VertexAttribDesc) -> GLenum {
   match (f.ty, f.unit_size) {
     (VertexAttribType::Integral, 1) => gl::BYTE,
     (VertexAttribType::Integral, 2) => gl::SHORT,

@@ -102,7 +102,7 @@ pub(crate) fn generate_enum_vertex_attrib_sem_impl(ident: Ident, enum_: DataEnum
 
           // make the vertex attrib impl VertexAttrib by forwarding implementation to the repr type
           unsafe impl luminance::vertex::VertexAttrib for #ty_name {
-            const VERTEX_ATTRIB_DESC: luminance::vertex::VertexAttribFmt =
+            const VERTEX_ATTRIB_DESC: luminance::vertex::VertexAttribDesc =
               <#repr_ty_name as luminance::vertex::VertexAttrib>::VERTEX_ATTRIB_DESC;
           }
         };
