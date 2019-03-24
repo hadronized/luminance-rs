@@ -16,11 +16,11 @@
 /// > Note: implementing this trait is `unsafe`.
 pub unsafe trait Vertex {
   /// The associated vertex format.
-  fn vertex_fmt() -> VertexDesc;
+  fn vertex_desc() -> VertexDesc;
 }
 
 unsafe impl Vertex for () {
-  fn vertex_fmt() -> VertexDesc {
+  fn vertex_desc() -> VertexDesc {
     Vec::new()
   }
 }
@@ -37,18 +37,18 @@ pub struct VertexBufferDesc {
   pub index: usize,
   pub name: &'static str,
   pub instancing: VertexInstancing,
-  pub attrib_fmt: VertexAttribDesc
+  pub attrib_desc: VertexAttribDesc
 }
 
 impl VertexBufferDesc {
   pub fn new<S>(
     sem: S,
     instancing: VertexInstancing,
-    attrib_fmt: VertexAttribDesc
+    attrib_desc: VertexAttribDesc
   ) -> Self where S: Semantics {
     let index = sem.index();
     let name = sem.name();
-    VertexBufferDesc { index, name, instancing, attrib_fmt }
+    VertexBufferDesc { index, name, instancing, attrib_desc }
   }
 }
 
@@ -149,8 +149,17 @@ pub trait Semantics: Sized {
   fn index(&self) -> usize;
   /// Get the name of this semantics.
   fn name(&self) -> &'static str;
-  /// Convert from a semantics name to a semantics.
-  fn parse(name: &str) -> Option<Self>;
+  /// Get all available semantics.
+  fn semantics_set() -> Vec<SemanticsDesc>;
+}
+
+/// Semantics description.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct SemanticsDesc {
+  /// Semantics index.
+  pub index: usize,
+  /// Name of the semantics (used in shaders).
+  pub name: String,
 }
 
 /// Class of types that have an associated value which type implements [`Semantics`], defining

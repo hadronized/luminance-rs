@@ -180,7 +180,7 @@ where
     let vertices = vertices.as_ref();
 
     let vb = VertexBuffer {
-      fmt: V::vertex_fmt(),
+      fmt: V::vertex_desc(),
       buf: Buffer::from_slice(self.ctx, vertices).to_raw(),
     };
 
@@ -195,7 +195,7 @@ where
     let instances = instances.as_ref();
 
     let vb = VertexBuffer {
-      fmt: V::vertex_fmt(),
+      fmt: V::vertex_desc(),
       buf: Buffer::from_slice(self.ctx, instances).to_raw(),
     };
 
@@ -526,7 +526,7 @@ impl Tess {
 
       1 => {
         let vb = &self.vertex_buffers[0];
-        let target_fmt = V::vertex_fmt(); // costs a bit
+        let target_fmt = V::vertex_desc(); // costs a bit
 
         if vb.fmt != target_fmt {
           Err(TessMapError::TypeMismatch(vb.fmt.clone(), target_fmt))
@@ -545,7 +545,7 @@ impl Tess {
 
       1 => {
         let vb = &mut self.vertex_buffers[0];
-        let target_fmt = V::vertex_fmt(); // costs a bit
+        let target_fmt = V::vertex_desc(); // costs a bit
 
         if vb.fmt != target_fmt {
           Err(TessMapError::TypeMismatch(vb.fmt.clone(), target_fmt))
@@ -564,7 +564,7 @@ impl Tess {
 
       1 => {
         let vb = &self.instance_buffers[0];
-        let target_fmt = V::vertex_fmt(); // costs a bit
+        let target_fmt = V::vertex_desc(); // costs a bit
 
         if vb.fmt != target_fmt {
           Err(TessMapError::TypeMismatch(vb.fmt.clone(), target_fmt))
@@ -583,7 +583,7 @@ impl Tess {
 
       1 => {
         let vb = &mut self.instance_buffers[0];
-        let target_fmt = V::vertex_fmt(); // costs a bit
+        let target_fmt = V::vertex_desc(); // costs a bit
 
         if vb.fmt != target_fmt {
           Err(TessMapError::TypeMismatch(vb.fmt.clone(), target_fmt))
@@ -605,34 +605,34 @@ impl Drop for Tess {
   }
 }
 
-// Give OpenGL types information on the content of the VBO by setting vertex formats and pointers
+// Give OpenGL types information on the content of the VBO by setting vertex descriptors and pointers
 // to buffer memory.
-fn set_vertex_pointers(formats: &VertexDesc) {
+fn set_vertex_pointers(descriptors: &VertexDesc) {
   // this function sets the vertex attribute pointer for the input list by computing:
   //   - The vertex attribute ID: this is the “rank” of the attribute in the input list (order
   //     matters, for short).
   //   - The stride: this is easily computed, since it’s the size (bytes) of a single vertex.
   //   - The offsets: each attribute has a given offset in the buffer. This is computed by
   //     accumulating the size of all previously set attributes.
-  let offsets = aligned_offsets(formats);
-  let vertex_weight = offset_based_vertex_weight(formats, &offsets) as GLsizei;
+  let offsets = aligned_offsets(descriptors);
+  let vertex_weight = offset_based_vertex_weight(descriptors, &offsets) as GLsizei;
 
-  for (format, off) in formats.iter().zip(offsets) {
-    set_component_format(vertex_weight, off, format);
+  for (desc, off) in descriptors.iter().zip(offsets) {
+    set_component_format(vertex_weight, off, desc);
   }
 }
 
 // Compute offsets for all the vertex components according to the alignments provided.
-fn aligned_offsets(formats: &VertexDesc) -> Vec<usize> {
-  let mut offsets = Vec::with_capacity(formats.len());
+fn aligned_offsets(descriptor: &VertexDesc) -> Vec<usize> {
+  let mut offsets = Vec::with_capacity(descriptor.len());
   let mut off = 0;
 
   // compute offsets
-  for f in formats {
-    let fmt = &f.attrib_fmt;
-    off = off_align(off, fmt.align); // keep the current component format aligned
+  for desc in descriptor {
+    let desc = &desc.attrib_desc;
+    off = off_align(off, desc.align); // keep the current component descriptor aligned
     offsets.push(off);
-    off += component_weight(fmt); // increment the offset by the pratical size of the component
+    off += component_weight(desc); // increment the offset by the pratical size of the component
   }
 
   offsets
@@ -661,29 +661,29 @@ fn dim_as_size(d: &VertexAttribDim) -> GLint {
 
 // Weight in bytes of a single vertex, taking into account padding so that the vertex stay correctly
 // aligned.
-fn offset_based_vertex_weight(formats: &VertexDesc, offsets: &[usize]) -> usize {
-  if formats.is_empty() || offsets.is_empty() {
+fn offset_based_vertex_weight(descriptors: &VertexDesc, offsets: &[usize]) -> usize {
+  if descriptors.is_empty() || offsets.is_empty() {
     return 0;
   }
 
   off_align(
-    offsets[offsets.len() - 1] + component_weight(&formats[formats.len() - 1].attrib_fmt),
-    formats[0].attrib_fmt.align,
+    offsets[offsets.len() - 1] + component_weight(&descriptors[descriptors.len() - 1].attrib_desc),
+    descriptors[0].attrib_desc.align,
   )
 }
 
 // Set the vertex component OpenGL pointers regarding the index of the component (i), the stride
-fn set_component_format(stride: GLsizei, off: usize, fmt: &VertexBufferDesc) {
-  let f = &fmt.attrib_fmt;
-  let index = fmt.index as GLuint;
+fn set_component_format(stride: GLsizei, off: usize, desc: &VertexBufferDesc) {
+  let attrib_desc = &desc.attrib_desc;
+  let index = desc.index as GLuint;
 
   unsafe {
-    match f.ty {
+    match attrib_desc.ty {
       VertexAttribType::Floating => {
         gl::VertexAttribPointer(
           index,
-          dim_as_size(&f.dim),
-          opengl_sized_type(&f),
+          dim_as_size(&attrib_desc.dim),
+          opengl_sized_type(&attrib_desc),
           gl::FALSE,
           stride,
           ptr::null::<c_void>().offset(off as isize),
@@ -692,8 +692,8 @@ fn set_component_format(stride: GLsizei, off: usize, fmt: &VertexBufferDesc) {
       VertexAttribType::Integral | VertexAttribType::Unsigned | VertexAttribType::Boolean => {
         gl::VertexAttribIPointer(
           index,
-          dim_as_size(&f.dim),
-          opengl_sized_type(&f),
+          dim_as_size(&attrib_desc.dim),
+          opengl_sized_type(&attrib_desc),
           stride,
           ptr::null::<c_void>().offset(off as isize),
           );
@@ -701,7 +701,7 @@ fn set_component_format(stride: GLsizei, off: usize, fmt: &VertexBufferDesc) {
     }
 
     // set vertex attribute divisor based on the vertex instancing configuration
-    let divisor = match fmt.instancing {
+    let divisor = match desc.instancing {
       VertexInstancing::On => 1,
       VertexInstancing::Off => 0
     };

@@ -127,7 +127,7 @@ use shader::program::{Program, ProgramInterface, Type, Uniform, UniformInterface
 use state::GraphicsState;
 use tess::TessSlice;
 use texture::{Dim, Dimensionable, Layerable, Texture};
-use vertex::Vertex;
+use vertex::Semantics;
 
 // A stack of bindings.
 //
@@ -396,7 +396,7 @@ pub struct ShadingGate<'a> {
 impl<'a> ShadingGate<'a> {
   /// Run a shader on a set of rendering commands.
   pub fn shade<In, Out, Uni, F>(&self, program: &'a Program<In, Out, Uni>, f: F)
-  where In: Vertex,
+  where In: Semantics,
         Uni: UniformInterface,
         F: FnOnce(&RenderGate, ProgramInterface<'a, Uni>) {
     unsafe {

@@ -57,7 +57,7 @@ use core::ptr::null_mut;
 use linear::{M22, M33, M44};
 use metagl::*;
 use shader::stage::{self, Stage, StageError};
-use vertex::Vertex;
+use vertex::Semantics;
 
 /// A raw shader program.
 ///
@@ -130,14 +130,14 @@ impl Drop for RawProgram {
 /// Typed shader programs represent their inputs, outputs and environment (uniforms) directly in
 /// their types. This is very interesting as it adds more static safety and enables such programs
 /// to *“store”* information like the uniform interface and such.
-pub struct Program<V, Out, Uni> {
+pub struct Program<S, Out, Uni> {
   raw: RawProgram,
   uni_iface: Uni,
-  _in: PhantomData<*const V>,
+  _in: PhantomData<*const S>,
   _out: PhantomData<*const Out>,
 }
 
-impl<V, Out, Uni> Program<V, Out, Uni> where V: Vertex {
+impl<S, Out, Uni> Program<S, Out, Uni> where S: Semantics {
   /// Create a new program by consuming `Stage`s.
   pub fn from_stages<'a, T, G>(
     tess: T,
@@ -177,7 +177,7 @@ impl<V, Out, Uni> Program<V, Out, Uni> where V: Vertex {
         G: Into<Option<&'a Stage>> {
     let raw = RawProgram::new(tess, vertex, geometry, fragment)?;
 
-    let mut warnings = bind_vertex_attribs_locations::<V>(&raw);
+    let mut warnings = bind_vertex_attribs_locations::<S>(&raw);
     let (uni_iface, uniform_warnings) = create_uniform_interface(&raw, env)?;
     warnings.extend(uniform_warnings.into_iter().map(ProgramWarning::Uniform));
 
@@ -249,7 +249,7 @@ impl<V, Out, Uni> Program<V, Out, Uni> where V: Vertex {
   /// uniform interface and if the new uniform interface is correctly generated, return the same
   /// shader program updated with the new uniform interface. If the generation of the new uniform
   /// interface fails, this function will return the program with the former uniform interface.
-  pub fn adapt<Q>(self) -> Result<(Program<V, Out, Q>, Vec<UniformWarning>), (ProgramError, Self)>
+  pub fn adapt<Q>(self) -> Result<(Program<S, Out, Q>, Vec<UniformWarning>), (ProgramError, Self)>
   where Q: UniformInterface {
     self.adapt_env(())
   }
@@ -263,7 +263,7 @@ impl<V, Out, Uni> Program<V, Out, Uni> where V: Vertex {
   pub fn adapt_env<Q, E>(
     self,
     env: E,
-  ) -> Result<(Program<V, Out, Q>, Vec<UniformWarning>), (ProgramError, Self)>
+  ) -> Result<(Program<S, Out, Q>, Vec<UniformWarning>), (ProgramError, Self)>
   where Q: UniformInterface<E> {
     // first, try to create the new uniform interface
     let new_uni_iface = create_uniform_interface(&self.raw, env);
@@ -299,7 +299,7 @@ impl<V, Out, Uni> Program<V, Out, Uni> where V: Vertex {
   }
 }
 
-impl<V, Out, Uni> Deref for Program<V, Out, Uni> {
+impl<S, Out, Uni> Deref for Program<S, Out, Uni> {
   type Target = RawProgram;
 
   fn deref(&self) -> &Self::Target {
@@ -1171,22 +1171,22 @@ where
   Ok((iface, builder.warnings))
 }
 
-fn bind_vertex_attribs_locations<V>(
+fn bind_vertex_attribs_locations<S>(
   raw: &RawProgram
 ) -> Vec<ProgramWarning>
-where V: Vertex {
+where S: Semantics {
   let mut warnings = Vec::new();
 
-  for fmt in &V::vertex_fmt() {
-    match get_vertex_attrib_location(raw, fmt.name) {
+  for desc in S::semantics_set() {
+    match get_vertex_attrib_location(raw, &desc.name) {
       Ok(_) => {
-        let index = fmt.index as GLuint;
+        let index = desc.index as GLuint;
 
         // we are not interested in the location as we’re about to change it to what we’ve
         // decided in the semantics
         #[cfg(feature = "std")]
         {
-          let c_name = CString::new(fmt.name.as_bytes()).unwrap();
+          let c_name = CString::new(desc.name.as_bytes()).unwrap();
           unsafe { gl::BindAttribLocation(raw.handle, index, c_name.as_ptr() as *const GLchar) };
         }
 

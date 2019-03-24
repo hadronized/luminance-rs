@@ -61,7 +61,7 @@ pub(crate) fn generate_enum_vertex_attrib_sem_impl(ident: Ident, enum_: DataEnum
 
         // dynamic branch used for parsing the semantics from a string
         parse_branches.push(quote!{
-          #sem_name => Some(#ident::#sem_var)
+          #sem_name => Ok(#ident::#sem_var)
         });
 
         // name of a semantics
@@ -118,8 +118,8 @@ pub(crate) fn generate_enum_vertex_attrib_sem_impl(ident: Ident, enum_: DataEnum
     return Err(SemanticsImplError::AttributeErrors(errors));
   }
 
-  // generate the implementation of Semantics
-  let vertex_attrib_sem_impl = quote!{
+  // output generation
+  let output_gen = quote!{
     impl luminance::vertex::Semantics for #ident {
       fn index(&self) -> usize {
         *self as usize
@@ -130,18 +130,23 @@ pub(crate) fn generate_enum_vertex_attrib_sem_impl(ident: Ident, enum_: DataEnum
           #(#name_branches,)*
         }
       }
+    }
 
-      fn parse(name: &str) -> Option<Self> {
+    // easy parsing
+    impl std::str::FromStr for #ident {
+      type Err = ();
+
+      fn from_str(name: &str) -> Result<Self, Self::Err> {
         match name {
-          #(#parse_branches,)*
-          _ => None
+          #(#parse_branches),*
+          _ => Err(())
         }
       }
     }
   };
 
   let output = quote!{
-    #vertex_attrib_sem_impl
+    #output_gen
     #(#field_based_gen)*
   };
 

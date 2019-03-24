@@ -138,13 +138,13 @@ where A: Iterator<Item = &'a Attribute> + Clone {
 
   match struct_.fields {
     Fields::Named(named_fields) => {
-      let mut indexed_vertex_attrib_fmts = Vec::new();
+      let mut indexed_vertex_attrib_descs = Vec::new();
       let mut fields_tys = Vec::new();
 
       // partition and generate VertexBufferDesc
       for field in named_fields.named {
         let field_ty = field.ty;
-        let indexed_vertex_attrib_fmt_q = quote!{
+        let indexed_vertex_attrib_desc_q = quote!{
           luminance::vertex::VertexBufferDesc::new::<#sem_type>(
             <#field_ty as luminance::vertex::HasSemantics>::SEMANTICS,
             #instancing,
@@ -152,17 +152,15 @@ where A: Iterator<Item = &'a Attribute> + Clone {
           )
         };
 
-        indexed_vertex_attrib_fmts.push(indexed_vertex_attrib_fmt_q);
+        indexed_vertex_attrib_descs.push(indexed_vertex_attrib_desc_q);
         fields_tys.push(field_ty);
       }
 
-      // indexed_vertex_attrib_fmts contains the exhaustive list of the indexed vertex attribute
-      // formats needed to implement the Vertex trait
       let struct_name = ident;
       let impl_ = quote! {
         unsafe impl luminance::vertex::Vertex for #struct_name {
-          fn vertex_fmt() -> luminance::vertex::VertexDesc {
-            vec![#(#indexed_vertex_attrib_fmts),*]
+          fn vertex_desc() -> luminance::vertex::VertexDesc {
+            vec![#(#indexed_vertex_attrib_descs),*]
           }
         }
       };
