@@ -20,7 +20,7 @@ extern crate luminance_glfw;
 
 mod common;
 
-use crate::common::{Vertex, VertexPosition, VertexColor};
+use crate::common::{Semantics, Vertex, VertexPosition, VertexColor};
 use luminance::context::GraphicsContext;
 use luminance::framebuffer::Framebuffer;
 use luminance::render_state::RenderState;
@@ -69,7 +69,7 @@ fn main() {
   )
   .expect("GLFW surface creation");
 
-  let (program, _) = Program::<Vertex, (), ()>::from_strings(None, VS, None, FS).expect("program creation");
+  let (program, _) = Program::<Semantics, (), ()>::from_strings(None, VS, None, FS).expect("program creation");
 
   // create a single GPU tessellation that holds both the triangles (like in 01-hello-world)
   let triangles = TessBuilder::new(&mut surface)

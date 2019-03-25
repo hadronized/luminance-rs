@@ -47,10 +47,11 @@ pub(crate) fn generate_enum_semantics_impl(ident: Ident, enum_: DataEnum) -> Res
   let mut parse_branches = Vec::new();
   let mut name_branches = Vec::new();
   let mut field_based_gen = Vec::new();
+  let mut semantics_set = Vec::new();
 
   let mut errors = Vec::new();
 
-  for field in fields {
+  for (index, field) in fields.enumerate() {
     match field {
       Ok(field) => {
         // parse branches
@@ -67,6 +68,13 @@ pub(crate) fn generate_enum_semantics_impl(ident: Ident, enum_: DataEnum) -> Res
         // name of a semantics
         name_branches.push(quote!{
           #ident::#sem_var => #sem_name
+        });
+
+        semantics_set.push(quote!{
+          luminance::vertex::SemanticsDesc {
+            index: #index,
+            name: #sem_name.to_owned()
+          }
         });
 
         // field-based code generation
@@ -132,7 +140,7 @@ pub(crate) fn generate_enum_semantics_impl(ident: Ident, enum_: DataEnum) -> Res
       }
 
       fn semantics_set() -> Vec<luminance::vertex::SemanticsDesc> {
-        Vec::new()
+        vec![#(#semantics_set,)*]
       }
     }
 

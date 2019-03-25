@@ -12,7 +12,7 @@ extern crate luminance_glfw;
 
 mod common;
 
-use crate::common::{Vertex, VertexPosition, VertexColor};
+use crate::common::{Semantics, Vertex, VertexPosition, VertexColor};
 use luminance::context::GraphicsContext;
 use luminance::framebuffer::Framebuffer;
 use luminance::pipeline::BoundTexture;
@@ -57,7 +57,7 @@ fn main() {
   )
   .expect("GLFW surface creation");
 
-  let (program, _) = Program::<Vertex, (), ()>::from_strings(None, VS, None, FS).expect("program creation");
+  let (program, _) = Program::<Semantics, (), ()>::from_strings(None, VS, None, FS).expect("program creation");
   let (copy_program, warnings) =
     Program::<(), (), ShaderInterface>::from_strings(None, COPY_VS, None, COPY_FS)
       .expect("copy program creation");

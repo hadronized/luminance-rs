@@ -153,6 +153,20 @@ pub trait Semantics: Sized {
   fn semantics_set() -> Vec<SemanticsDesc>;
 }
 
+impl Semantics for () {
+  fn index(&self) -> usize {
+    0
+  }
+
+  fn name(&self) -> &'static str {
+    ""
+  }
+
+  fn semantics_set() -> Vec<SemanticsDesc> {
+    Vec::new()
+  }
+}
+
 /// Semantics description.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct SemanticsDesc {

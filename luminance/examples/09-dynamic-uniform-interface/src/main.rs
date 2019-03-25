@@ -19,7 +19,7 @@ extern crate luminance_glfw;
 
 mod common;
 
-use crate::common::{Vertex, VertexPosition, VertexColor};
+use crate::common::{Semantics, Vertex, VertexPosition, VertexColor};
 use luminance::context::GraphicsContext;
 use luminance::framebuffer::Framebuffer;
 use luminance::render_state::RenderState;
@@ -48,7 +48,7 @@ fn main() {
   .expect("GLFW surface creation");
 
   // notice that we don’t set a uniform interface here: we’re going to look it up on the fly
-  let program = Program::<Vertex, (), ()>::from_strings(None, VS, None, FS)
+  let program = Program::<Semantics, (), ()>::from_strings(None, VS, None, FS)
     .expect("program creation")
     .0;
 

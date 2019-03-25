@@ -15,7 +15,7 @@ extern crate luminance_glfw;
 
 mod common;
 
-use crate::common::{Vertex, VertexPosition, VertexColor};
+use crate::common::{Semantics, Vertex, VertexPosition, VertexColor};
 use luminance::blending::{Equation, Factor};
 use luminance::context::GraphicsContext;
 use luminance::depth_test::DepthTest;
@@ -74,7 +74,7 @@ fn main() {
   )
   .expect("GLFW surface creation");
 
-  let (program, _) = Program::<Vertex, (), ()>::from_strings(None, VS, None, FS).expect("program creation");
+  let (program, _) = Program::<Semantics, (), ()>::from_strings(None, VS, None, FS).expect("program creation");
 
   // create a red and blue triangles
   let red_triangle = TessBuilder::new(&mut surface)

@@ -21,7 +21,7 @@ extern crate luminance_glfw;
 
 mod common;
 
-use crate::common::{Vertex, VertexPosition, VertexColor};
+use crate::common::{Semantics, Vertex, VertexPosition, VertexColor};
 use luminance::context::GraphicsContext;
 use luminance::framebuffer::Framebuffer;
 use luminance::render_state::RenderState;
@@ -61,8 +61,8 @@ uniform_interface! {
 
 // Which interface to use?
 enum ProgramMode {
-  First(Program<Vertex, (), ShaderInterface1>),
-  Second(Program<Vertex, (), ShaderInterface2>),
+  First(Program<Semantics, (), ShaderInterface1>),
+  Second(Program<Semantics, (), ShaderInterface2>),
 }
 
 impl ProgramMode {
@@ -96,7 +96,7 @@ fn main() {
   .expect("GLFW surface creation");
 
   let mut program = ProgramMode::First(
-    Program::<Vertex, (), ShaderInterface1>::from_strings(None, VS, None, FS)
+    Program::<Semantics, (), ShaderInterface1>::from_strings(None, VS, None, FS)
       .expect("program creation")
       .0,
   );

@@ -17,7 +17,7 @@ use luminance::framebuffer::Framebuffer;
 use luminance::render_state::RenderState;
 use luminance::shader::program::Program;
 use luminance::tess::{Mode, TessBuilder};
-use luminance_derive::{Vertex, VertexAttribSem};
+use luminance_derive::{Semantics, Vertex};
 use luminance_glfw::event::{Action, Key, WindowEvent};
 use luminance_glfw::surface::{GlfwSurface, Surface, WindowDim, WindowOpt};
 
@@ -30,7 +30,7 @@ const FS: &'static str = include_str!("fs.glsl");
 // mind they’re mandatory and act as “protocol” between GPU’s memory regions and shaders.
 //
 // We derive VertexAttribSem automatically and provide the mapping as field attributes.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, VertexAttribSem)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Semantics)]
 pub enum Semantics {
   // reference vertex positions with the co variable in vertex shaders
   #[sem(name = "co", repr = "[f32; 2]", type_name = "VertexPosition")]
@@ -131,7 +131,7 @@ fn main() {
 
   // we need a program to “shade” our triangles and to tell luminance which is the input vertex
   // type, and we’re not interested in the other two type variables for this sample
-  let (program, _) = Program::<Vertex, (), ()>::from_strings(None, VS, None, FS).expect("program creation");
+  let (program, _) = Program::<Semantics, (), ()>::from_strings(None, VS, None, FS).expect("program creation");
 
   // create tessellation for direct geometry; that is, tessellation that will render vertices by
   // taking one after another in the provided slice

@@ -1,11 +1,11 @@
 extern crate proc_macro;
 
 mod attrib;
-mod vertex;
 mod semantics;
+mod vertex;
 
-use crate::vertex::generate_vertex_impl;
 use crate::semantics::generate_enum_semantics_impl;
+use crate::vertex::generate_vertex_impl;
 use proc_macro::TokenStream;
 use syn::{self, Data, DeriveInput, parse_macro_input};
 

@@ -1,6 +1,6 @@
-use luminance_derive::{Vertex, VertexAttribSem};
+use luminance_derive::{Semantics, Vertex};
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, VertexAttribSem)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Semantics)]
 pub enum Semantics {
   // reference vertex positions with the co variable in vertex shaders
   #[sem(name = "co", repr = "[f32; 2]", type_name = "VertexPosition")]

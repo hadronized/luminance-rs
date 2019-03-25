@@ -1,7 +1,7 @@
 use luminance::vertex::{
-  HasSemantics, Vertex, VertexAttrib, VertexBufferDesc, Semantics, VertexInstancing
+  HasSemantics, Semantics, Vertex, VertexAttrib, VertexBufferDesc, VertexInstancing
 };
-use luminance_derive::{Vertex, Semantics};
+use luminance_derive::{Semantics, Vertex};
 
 #[test]
 fn derive_simple_semantics() {
