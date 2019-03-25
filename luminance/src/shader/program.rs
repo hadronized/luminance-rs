@@ -68,7 +68,7 @@ pub struct RawProgram {
 }
 
 impl RawProgram {
-  /// Create a new program by linking shader stages.
+  /// Create a new program by attaching shader stages.
   fn new<'a, T, G>(tess: T, vertex: &Stage, geometry: G, fragment: &Stage) -> Result<Self, ProgramError>
   where
     T: Into<Option<(&'a Stage, &'a Stage)>>,
@@ -90,13 +90,23 @@ impl RawProgram {
 
       gl::AttachShader(handle, fragment.handle());
 
+      let program = RawProgram { handle };
+      program.link().map(move |_| program)
+    }
+  }
+
+  /// Link a program.
+  fn link(&self) -> Result<(), ProgramError> {
+    let handle = self.handle;
+
+    unsafe {
       gl::LinkProgram(handle);
 
       let mut linked: GLint = gl::FALSE as GLint;
       gl::GetProgramiv(handle, gl::LINK_STATUS, &mut linked);
 
       if linked == (gl::TRUE as GLint) {
-        Ok(RawProgram { handle })
+        Ok(())
       } else {
         let mut log_len: GLint = 0;
         gl::GetProgramiv(handle, gl::INFO_LOG_LENGTH, &mut log_len);
@@ -112,6 +122,7 @@ impl RawProgram {
       }
     }
   }
+
 
   #[inline]
   pub(crate) fn handle(&self) -> GLuint {
@@ -178,6 +189,9 @@ impl<S, Out, Uni> Program<S, Out, Uni> where S: Semantics {
     let raw = RawProgram::new(tess, vertex, geometry, fragment)?;
 
     let mut warnings = bind_vertex_attribs_locations::<S>(&raw);
+
+    raw.link()?;
+
     let (uni_iface, uniform_warnings) = create_uniform_interface(&raw, env)?;
     warnings.extend(uniform_warnings.into_iter().map(ProgramWarning::Uniform));
 
@@ -1180,6 +1194,7 @@ where S: Semantics {
   for desc in S::semantics_set() {
     match get_vertex_attrib_location(raw, &desc.name) {
       Ok(_) => {
+        println!("binding {:?}", desc);
         let index = desc.index as GLuint;
 
         // we are not interested in the location as we’re about to change it to what we’ve
@@ -1187,6 +1202,7 @@ where S: Semantics {
         #[cfg(feature = "std")]
         {
           let c_name = CString::new(desc.name.as_bytes()).unwrap();
+          println!("  gl::BindAttribLocation({}, {}, {})", raw.handle, index, desc.name);
           unsafe { gl::BindAttribLocation(raw.handle, index, c_name.as_ptr() as *const GLchar) };
         }
 
