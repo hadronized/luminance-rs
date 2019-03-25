@@ -2,6 +2,7 @@
 name = "vertex-instancing"
 version = "0.1.0"
 authors = ["Dimitri Sabadie <dimitri.sabadie@gmail.com>"]
+edition = "2018"
 
 [dependencies]
 luminance = { version = "0.30", path = "../.." }
