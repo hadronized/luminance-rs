@@ -54,10 +54,10 @@ use core::ops::Deref;
 #[cfg(not(feature = "std"))]
 use core::ptr::null_mut;
 
-use linear::{M22, M33, M44};
-use metagl::*;
-use shader::stage::{self, Stage, StageError};
-use vertex::Semantics;
+use crate::linear::{M22, M33, M44};
+use crate::metagl::*;
+use crate::shader::stage::{self, Stage, StageError};
+use crate::vertex::Semantics;
 
 /// A raw shader program.
 ///

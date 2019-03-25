@@ -104,12 +104,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(not(feature = "std"), feature(alloc))]
 
-#[cfg(not(feature = "std"))]
-#[macro_use(vec)]
-extern crate alloc;
-#[cfg(feature = "std")]
-extern crate gl;
-
 pub mod blending;
 pub mod buffer;
 pub mod context;

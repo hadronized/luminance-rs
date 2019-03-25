@@ -72,14 +72,14 @@ use core::ops::{Range, RangeFrom, RangeFull, RangeTo};
 #[cfg(not(feature = "std"))]
 use core::ptr;
 
-use buffer::{Buffer, BufferError, BufferSlice, BufferSliceMut, RawBuffer};
-use context::GraphicsContext;
-use metagl::*;
-use vertex::{
+use crate::buffer::{Buffer, BufferError, BufferSlice, BufferSliceMut, RawBuffer};
+use crate::context::GraphicsContext;
+use crate::metagl::*;
+use crate::vertex::{
   VertexBufferDesc, Vertex, VertexAttribDim, VertexAttribDesc, VertexAttribType, VertexDesc,
   VertexInstancing
 };
-use vertex_restart::VertexRestart;
+use crate::vertex_restart::VertexRestart;
 
 /// Vertices can be connected via several modes.
 #[derive(Copy, Clone, Debug)]

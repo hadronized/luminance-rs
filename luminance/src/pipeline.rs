@@ -115,19 +115,19 @@ use core::marker::PhantomData;
 #[cfg(not(feature = "std"))]
 use core::ops::Deref;
 
-use blending::BlendingState;
-use buffer::{Buffer, RawBuffer};
-use context::GraphicsContext;
-use face_culling::FaceCullingState;
-use framebuffer::{ColorSlot, DepthSlot, Framebuffer};
-use metagl::*;
-use pixel::{Pixel, SamplerType, Type as PxType};
-use render_state::RenderState;
-use shader::program::{Program, ProgramInterface, Type, Uniform, UniformInterface, Uniformable};
-use state::GraphicsState;
-use tess::TessSlice;
-use texture::{Dim, Dimensionable, Layerable, Texture};
-use vertex::Semantics;
+use crate::blending::BlendingState;
+use crate::buffer::{Buffer, RawBuffer};
+use crate::context::GraphicsContext;
+use crate::face_culling::FaceCullingState;
+use crate::framebuffer::{ColorSlot, DepthSlot, Framebuffer};
+use crate::metagl::*;
+use crate::pixel::{Pixel, SamplerType, Type as PxType};
+use crate::render_state::RenderState;
+use crate::shader::program::{Program, ProgramInterface, Type, Uniform, UniformInterface, Uniformable};
+use crate::state::GraphicsState;
+use crate::tess::TessSlice;
+use crate::texture::{Dim, Dimensionable, Layerable, Texture};
+use crate::vertex::Semantics;
 
 // A stack of bindings.
 //

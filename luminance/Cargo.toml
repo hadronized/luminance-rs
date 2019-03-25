@@ -10,6 +10,7 @@ homepage = "https://github.com/phaazon/luminance-rs"
 repository = "https://github.com/phaazon/luminance-rs"
 documentation = "https://docs.rs/luminance"
 readme = "README.md"
+edition = "2018"
 
 [badges]
 travis-ci = { repository = "phaazon/luminance-rs", branch = "master" }

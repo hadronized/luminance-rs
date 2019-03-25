@@ -40,10 +40,10 @@ use core::fmt;
 #[cfg(not(feature = "std"))]
 use core::marker::PhantomData;
 
-use context::GraphicsContext;
-use metagl::*;
-use pixel::{ColorPixel, DepthPixel, PixelFormat, RenderablePixel};
-use texture::{
+use crate::context::GraphicsContext;
+use crate::metagl::*;
+use crate::pixel::{ColorPixel, DepthPixel, PixelFormat, RenderablePixel};
+use crate::texture::{
   create_texture, opengl_target, Dim2, Dimensionable, Flat, Layerable, RawTexture, Texture, TextureError,
 };
 

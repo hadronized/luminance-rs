@@ -142,10 +142,10 @@ use core::ops::{Deref, DerefMut};
 #[cfg(not(feature = "std"))]
 use core::ptr;
 
-use context::GraphicsContext;
-use metagl::*;
-use pixel::{opengl_pixel_format, pixel_components, Pixel, PixelFormat};
-use state::GraphicsState;
+use crate::context::GraphicsContext;
+use crate::metagl::*;
+use crate::pixel::{opengl_pixel_format, pixel_components, Pixel, PixelFormat};
+use crate::state::GraphicsState;
 
 /// How to wrap texture coordinates while sampling textures?
 #[derive(Clone, Copy, Debug)]
