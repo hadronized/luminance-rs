@@ -1,10 +1,11 @@
 use luminance::vertex::{
-  HasSemantics, IndexedVertexAttribFmt, Vertex, VertexAttrib, VertexAttribSem, VertexInstancing
-}; use luminance_derive::{Vertex, VertexAttribSem};
+  HasSemantics, Vertex, VertexAttrib, VertexBufferDesc, Semantics, VertexInstancing
+};
+use luminance_derive::{Vertex, Semantics};
 
 #[test]
 fn derive_simple_semantics() {
-  #[derive(Clone, Copy, Debug, Eq, PartialEq, VertexAttribSem)]
+  #[derive(Clone, Copy, Debug, Eq, PartialEq, Semantics)]
   pub enum Semantics {
     #[sem(name = "position", repr = "[f32; 3]", type_name = "VertexPosition")]
     Position,
@@ -25,20 +26,20 @@ fn derive_simple_semantics() {
   assert_eq!(Semantics::Position.index(), 0);
   assert_eq!(Semantics::Normal.index(), 1);
   assert_eq!(Semantics::Color.index(), 2);
-  assert_eq!(<Semantics as VertexAttribSem>::parse("position"), Some(Semantics::Position));
-  assert_eq!(<Semantics as VertexAttribSem>::parse("normal"), Some(Semantics::Normal));
-  assert_eq!(<Semantics as VertexAttribSem>::parse("color"), Some(Semantics::Color));
-  assert_eq!(<Semantics as VertexAttribSem>::parse("bidule"), None);
+  assert_eq!("position".parse::<Semantics>(), Ok(Semantics::Position));
+  assert_eq!("normal".parse::<Semantics>(), Ok(Semantics::Normal));
+  assert_eq!("color".parse::<Semantics>(), Ok(Semantics::Color));
+  assert_eq!("bidule".parse::<Semantics>(), Err(()));
   assert_eq!(VertexPosition::SEMANTICS, Semantics::Position);
   assert_eq!(VertexNormal::SEMANTICS, Semantics::Normal);
   assert_eq!(VertexColor::SEMANTICS, Semantics::Color);
   assert_eq!(VertexPosition::new([1., 2., 3.]).repr, [1., 2., 3.]);
 
-  let expected_fmt = vec![
-    IndexedVertexAttribFmt::new(Semantics::Position, VertexInstancing::On, <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_DESC),
-    IndexedVertexAttribFmt::new(Semantics::Normal, VertexInstancing::On, <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_DESC),
-    IndexedVertexAttribFmt::new(Semantics::Color, VertexInstancing::On, <[f32; 4] as VertexAttrib>::VERTEX_ATTRIB_DESC),
+  let expected_desc = vec![
+    VertexBufferDesc::new(Semantics::Position, VertexInstancing::On, <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_DESC),
+    VertexBufferDesc::new(Semantics::Normal, VertexInstancing::On, <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_DESC),
+    VertexBufferDesc::new(Semantics::Color, VertexInstancing::On, <[f32; 4] as VertexAttrib>::VERTEX_ATTRIB_DESC),
   ];
 
-  assert_eq!(Vertex::vertex_fmt(), expected_fmt);
+  assert_eq!(Vertex::vertex_desc(), expected_desc);
 }

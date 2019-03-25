@@ -37,7 +37,7 @@ fn get_vertex_sem_attribs<'a, A>(var_name: &Ident, attrs: A) -> Result<(Ident, T
   Ok((sem_name, sem_repr, sem_type_name))
 }
 
-pub(crate) fn generate_enum_vertex_attrib_sem_impl(ident: Ident, enum_: DataEnum) -> Result<TokenStream, SemanticsImplError> {
+pub(crate) fn generate_enum_semantics_impl(ident: Ident, enum_: DataEnum) -> Result<TokenStream, SemanticsImplError> {
   let fields = enum_.variants.into_iter().map(|var| {
     get_vertex_sem_attribs(&var.ident, var.attrs.iter()).map(|attrs| {
       (var.ident, attrs.0, attrs.1, attrs.2)
@@ -130,6 +130,10 @@ pub(crate) fn generate_enum_vertex_attrib_sem_impl(ident: Ident, enum_: DataEnum
           #(#name_branches,)*
         }
       }
+
+      fn semantics_set() -> Vec<luminance::vertex::SemanticsDesc> {
+        Vec::new()
+      }
     }
 
     // easy parsing
@@ -138,7 +142,7 @@ pub(crate) fn generate_enum_vertex_attrib_sem_impl(ident: Ident, enum_: DataEnum
 
       fn from_str(name: &str) -> Result<Self, Self::Err> {
         match name {
-          #(#parse_branches),*
+          #(#parse_branches,)*
           _ => Err(())
         }
       }
