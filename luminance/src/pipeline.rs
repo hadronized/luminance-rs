@@ -427,12 +427,12 @@ impl<'a> RenderGate<'a> {
 
       match rdr_st.blending {
         Some((equation, src_factor, dst_factor)) => {
-          gfx_state.set_blending_state(BlendingState::Enabled);
+          gfx_state.set_blending_state(BlendingState::On);
           gfx_state.set_blending_equation(equation);
           gfx_state.set_blending_func(src_factor, dst_factor);
         }
         None => {
-          gfx_state.set_blending_state(BlendingState::Disabled);
+          gfx_state.set_blending_state(BlendingState::Off);
         }
       }
 
@@ -440,12 +440,12 @@ impl<'a> RenderGate<'a> {
 
       match rdr_st.face_culling {
         Some(face_culling) => {
-          gfx_state.set_face_culling_state(FaceCullingState::Enabled);
+          gfx_state.set_face_culling_state(FaceCullingState::On);
           gfx_state.set_face_culling_order(face_culling.order);
           gfx_state.set_face_culling_mode(face_culling.mode);
         }
         None => {
-          gfx_state.set_face_culling_state(FaceCullingState::Disabled);
+          gfx_state.set_face_culling_state(FaceCullingState::Off);
         }
       }
     }

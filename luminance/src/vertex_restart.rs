@@ -4,7 +4,7 @@
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum VertexRestart {
   /// Vertex restart is enabled.
-  Enabled,
+  On,
   /// Vertex restart is disabled.
-  Disabled,
+  Off,
 }

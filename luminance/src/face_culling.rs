@@ -22,8 +22,8 @@ impl Default for FaceCulling {
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) enum FaceCullingState {
-  Enabled,
-  Disabled,
+  On,
+  Off,
 }
 
 /// Face culling order.

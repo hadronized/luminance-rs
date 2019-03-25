@@ -11,8 +11,8 @@
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) enum BlendingState {
-  Enabled,
-  Disabled,
+  On,
+  Off,
 }
 
 /// Blending equation. Used to state how blending factors and pixel data should be blended.

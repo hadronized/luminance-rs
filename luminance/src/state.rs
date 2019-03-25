@@ -148,8 +148,8 @@ impl GraphicsState {
   pub(crate) unsafe fn set_blending_state(&mut self, state: BlendingState) {
     if self.blending_state != state {
       match state {
-        BlendingState::Enabled => gl::Enable(gl::BLEND),
-        BlendingState::Disabled => gl::Disable(gl::BLEND),
+        BlendingState::On => gl::Enable(gl::BLEND),
+        BlendingState::Off => gl::Disable(gl::BLEND),
       }
 
       self.blending_state = state;
@@ -173,8 +173,8 @@ impl GraphicsState {
   pub(crate) unsafe fn set_depth_test(&mut self, depth_test: DepthTest) {
     if self.depth_test != depth_test {
       match depth_test {
-        DepthTest::Enabled => gl::Enable(gl::DEPTH_TEST),
-        DepthTest::Disabled => gl::Disable(gl::DEPTH_TEST),
+        DepthTest::On => gl::Enable(gl::DEPTH_TEST),
+        DepthTest::Off => gl::Disable(gl::DEPTH_TEST),
       }
 
       self.depth_test = depth_test;
@@ -184,8 +184,8 @@ impl GraphicsState {
   pub(crate) unsafe fn set_face_culling_state(&mut self, state: FaceCullingState) {
     if self.face_culling_state != state {
       match state {
-        FaceCullingState::Enabled => gl::Enable(gl::CULL_FACE),
-        FaceCullingState::Disabled => gl::Disable(gl::CULL_FACE),
+        FaceCullingState::On => gl::Enable(gl::CULL_FACE),
+        FaceCullingState::Off => gl::Disable(gl::CULL_FACE),
       }
 
       self.face_culling_state = state;
@@ -218,8 +218,8 @@ impl GraphicsState {
   pub(crate) unsafe fn set_vertex_restart(&mut self, state: VertexRestart) {
     if self.vertex_restart != state {
       match state {
-        VertexRestart::Enabled => gl::Enable(gl::PRIMITIVE_RESTART),
-        VertexRestart::Disabled => gl::Disable(gl::PRIMITIVE_RESTART),
+        VertexRestart::On => gl::Enable(gl::PRIMITIVE_RESTART),
+        VertexRestart::Off => gl::Disable(gl::PRIMITIVE_RESTART),
       }
     }
   }
@@ -375,8 +375,8 @@ unsafe fn get_ctx_blending_state() -> Result<BlendingState, StateQueryError> {
   let state = gl::IsEnabled(gl::BLEND);
 
   match state {
-    gl::TRUE => Ok(BlendingState::Enabled),
-    gl::FALSE => Ok(BlendingState::Disabled),
+    gl::TRUE => Ok(BlendingState::On),
+    gl::FALSE => Ok(BlendingState::Off),
     _ => Err(StateQueryError::UnknownBlendingState(state)),
   }
 }
@@ -431,8 +431,8 @@ unsafe fn get_ctx_depth_test() -> Result<DepthTest, StateQueryError> {
   let state = gl::IsEnabled(gl::DEPTH_TEST);
 
   match state {
-    gl::TRUE => Ok(DepthTest::Enabled),
-    gl::FALSE => Ok(DepthTest::Disabled),
+    gl::TRUE => Ok(DepthTest::On),
+    gl::FALSE => Ok(DepthTest::Off),
     _ => Err(StateQueryError::UnknownDepthTestState(state)),
   }
 }
@@ -441,8 +441,8 @@ unsafe fn get_ctx_face_culling_state() -> Result<FaceCullingState, StateQueryErr
   let state = gl::IsEnabled(gl::CULL_FACE);
 
   match state {
-    gl::TRUE => Ok(FaceCullingState::Enabled),
-    gl::FALSE => Ok(FaceCullingState::Disabled),
+    gl::TRUE => Ok(FaceCullingState::On),
+    gl::FALSE => Ok(FaceCullingState::Off),
     _ => Err(StateQueryError::UnknownFaceCullingState(state)),
   }
 }
@@ -476,8 +476,8 @@ unsafe fn get_ctx_vertex_restart() -> Result<VertexRestart, StateQueryError> {
   let state = gl::IsEnabled(gl::PRIMITIVE_RESTART);
 
   match state {
-    gl::TRUE => Ok(VertexRestart::Enabled),
-    gl::FALSE => Ok(VertexRestart::Disabled),
+    gl::TRUE => Ok(VertexRestart::On),
+    gl::FALSE => Ok(VertexRestart::Off),
     _ => Err(StateQueryError::UnknownVertexRestartState(state)),
   }
 }

@@ -4,7 +4,7 @@
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum DepthTest {
   /// The depth test is enabled.
-  Enabled,
+  On,
   /// The depth test is disabled.
-  Disabled,
+  Off,
 }

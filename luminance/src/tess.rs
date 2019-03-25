@@ -490,10 +490,10 @@ impl Tess {
         let first = (index_state.index_type.bytes() * start_index) as *const c_void;
 
         if let Some(restart_index) = index_state.restart_index {
-          gfx_st.set_vertex_restart(VertexRestart::Enabled);
+          gfx_st.set_vertex_restart(VertexRestart::On);
           gl::PrimitiveRestartIndex(restart_index);
         } else {
-          gfx_st.set_vertex_restart(VertexRestart::Disabled);
+          gfx_st.set_vertex_restart(VertexRestart::Off);
         }
 
         if inst_nb <= 1 {

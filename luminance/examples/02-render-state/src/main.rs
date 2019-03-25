@@ -124,7 +124,7 @@ fn main() {
           let render_state = RenderState::default()
           // let’s disable the depth test so that every fragment (i.e. pixels) will rendered to every
           // time we have to draw a part of a triangle
-          .set_depth_test(DepthTest::Disabled)
+          .set_depth_test(DepthTest::Off)
           // set the blending we decided earlier
           .set_blending(blending);
 
