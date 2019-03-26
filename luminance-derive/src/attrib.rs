@@ -14,13 +14,13 @@ impl fmt::Display for AttrError {
   fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
     match *self {
       AttrError::Several(ref field, ref key, ref sub_key) =>
-        write!(f, "expected one pair {}({} = …) for {}, got several", key, sub_key, field),
+        write!(f, "expected one pair {}({}) for {}, got several", key, sub_key, field),
       AttrError::CannotFindAttribute(ref field, ref key, ref sub_key) =>
-        write!(f, "no attribute found {}({} = …) for {}", key, sub_key, field),
+        write!(f, "no attribute found {}({}) for {}", key, sub_key, field),
       AttrError::CannotParseAttribute(ref field, ref key, ref sub_key) =>
-        write!(f, "cannot parse attribute {}({} = …) for {}", key, sub_key, field),
+        write!(f, "cannot parse attribute {}({}) for {}", key, sub_key, field),
       AttrError::UnknownSubKey(ref field, ref key, ref sub_key) =>
-        write!(f, "unknown sub key “{}” in {}({} = …) for {}", sub_key, key, sub_key, field),
+        write!(f, "unknown sub key “{}” in {}({}) for {}", sub_key, key, sub_key, field),
     }
   }
 }
@@ -73,4 +73,52 @@ pub(crate) fn get_field_attr_once<'a, A, T>(
   }
 
   lit.ok_or(AttrError::CannotFindAttribute(field_ident.clone(), key.to_owned(), sub_key.to_owned()))
+}
+
+/// Get and parse an attribute on a field or a variant that must appear only once with the following
+/// syntax:
+///
+///   #[key(sub_key)]
+pub(crate) fn get_field_flag_once<'a, A>(
+  field_ident: &Ident,
+  attrs: A,
+  key: &str,
+  sub_key: &str,
+  known_subkeys: &[&str]
+) -> Result<bool, AttrError> where A: IntoIterator<Item = &'a Attribute> {
+  let mut flag = false;
+
+  for attr in attrs.into_iter() {
+    match attr.parse_meta() {
+      Ok(Meta::List(ref ml)) if ml.ident == key => {
+        let nested = &ml.nested;
+
+        for nested in nested.into_iter() {
+          match nested {
+            NestedMeta::Meta(Meta::Word(ref word)) => {
+              if word == sub_key {
+                if flag {
+                  return Err(AttrError::Several(field_ident.clone(), key.to_owned(), sub_key.to_owned()));
+                }
+
+                flag = true;
+              } else {
+                let ident_str = word.to_string();
+
+                if !known_subkeys.contains(&ident_str.as_str()) {
+                  return Err(AttrError::UnknownSubKey(field_ident.clone(), key.to_owned(), ident_str));
+                }
+              }
+            }
+
+            _ => ()
+          }
+        }
+      }
+
+      _ => () // ignore things that might not be ours
+    }
+  }
+
+  Ok(flag)
 }
