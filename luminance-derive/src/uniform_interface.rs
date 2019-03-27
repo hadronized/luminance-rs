@@ -3,12 +3,13 @@
 //! The procedural macro is very simple to use. You declare a struct as you would normally do:
 //!
 //! ```
+//! # use luminance::shader::program::Uniform;
 //! # use luminance_derive::UniformInterface;
 //!
 //! #[derive(Debug, UniformInterface)]
 //! struct MyIface {
-//!   time: f32,
-//!   resolution: [f32; 4]
+//!   time: Uniform<f32>,
+//!   resolution: Uniform<[f32; 4]>
 //! }
 //! ```
 //!
@@ -23,10 +24,14 @@
 //! attribute:
 //!
 //! ```
+//! # use luminance::shader::program::Uniform;
+//! # use luminance_derive::UniformInterface;
+//!
+//! #[derive(Debug, UniformInterface)]
 //! struct MyIface {
 //!   #[uniform(unbound)]
-//!   time: f32, // if this field cannot be mapped, it’ll be ignored
-//!   resolution: [f32; 4]
+//!   time: Uniform<f32>, // if this field cannot be mapped, it’ll be ignored
+//!   resolution: Uniform<[f32; 4]>
 //! }
 //! ```
 //!
@@ -35,10 +40,14 @@
 //! to be complete:
 //!
 //! ```
+//! # use luminance::shader::program::Uniform;
+//! # use luminance_derive::UniformInterface;
+//!
+//! #[derive(Debug, UniformInterface)]
 //! struct MyIface {
-//!   time: f32,
+//!   time: Uniform<f32>,
 //!   #[uniform(name = "res")]
-//!   resolution: [f32; 4] // must map "res" from the shader program
+//!   resolution: Uniform<[f32; 4]> // maps "res" from the shader program
 //! }
 //! ```
 //!
@@ -46,10 +55,14 @@
 //! uniform if it cannot be mapped:
 //!
 //! ```
+//! # use luminance::shader::program::Uniform;
+//! # use luminance_derive::UniformInterface;
+//!
+//! #[derive(Debug, UniformInterface)]
 //! struct MyIface {
-//!   time: f32,
+//!   time: Uniform<f32>,
 //!   #[uniform(name = "res", unbound)]
-//!   resolution: [f32; 4] // must map "res" from the shader program and ignored otherwise
+//!   resolution: Uniform<[f32; 4]> // must map "res" from the shader program and ignored otherwise
 //! }
 //! ```
 
