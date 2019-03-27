@@ -14,7 +14,6 @@
 //!
 //! https://docs.rs/luminance
 
-#[macro_use]
 extern crate luminance;
 extern crate luminance_derive;
 extern crate luminance_glfw;
@@ -25,8 +24,9 @@ use crate::common::{Semantics, Vertex, VertexPosition, VertexColor};
 use luminance::context::GraphicsContext;
 use luminance::framebuffer::Framebuffer;
 use luminance::render_state::RenderState;
-use luminance::shader::program::Program;
+use luminance::shader::program::{Program, Uniform};
 use luminance::tess::{Mode, TessBuilder};
+use luminance_derive::UniformInterface;
 use luminance_glfw::event::{Action, Key, WindowEvent};
 use luminance_glfw::surface::{GlfwSurface, Surface, WindowDim, WindowOpt};
 use std::time::Instant;
@@ -42,21 +42,19 @@ const TRI_VERTICES: [Vertex; 3] = [
 ];
 
 /// First uniform interface.
-uniform_interface! {
-  struct ShaderInterface1 {
-    #[as("t")]
-    time: f32,
-    triangle_size: f32
-  }
+#[derive(Debug, UniformInterface)]
+struct ShaderInterface1 {
+  #[uniform(name = "t")]
+  time: Uniform<f32>,
+  triangle_size: Uniform<f32>
 }
 
 /// Second uniform interface.
-uniform_interface! {
-  struct ShaderInterface2 {
-    #[as("t")]
-    time: f32,
-    triangle_pos: [f32; 2]
-  }
+#[derive(Debug, UniformInterface)]
+struct ShaderInterface2 {
+  #[uniform(name = "t")]
+  time: Uniform<f32>,
+  triangle_pos: Uniform<[f32; 2]>
 }
 
 // Which interface to use?

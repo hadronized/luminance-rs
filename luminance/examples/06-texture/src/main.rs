@@ -12,7 +12,6 @@
 //! https://docs.rs/luminance
 
 extern crate image;
-#[macro_use]
 extern crate luminance;
 extern crate luminance_glfw;
 
@@ -21,9 +20,10 @@ use luminance::framebuffer::Framebuffer;
 use luminance::pipeline::BoundTexture;
 use luminance::pixel::{RGB32F, Floating};
 use luminance::render_state::RenderState;
-use luminance::shader::program::Program;
+use luminance::shader::program::{Program, Uniform};
 use luminance::tess::{Mode, TessBuilder};
 use luminance::texture::{Dim2, Flat, Sampler, Texture};
+use luminance_derive::UniformInterface;
 use luminance_glfw::event::{Action, Key, WindowEvent};
 use luminance_glfw::surface::{GlfwSurface, Surface, WindowDim, WindowOpt};
 use std::env; // used to get the CLI arguments
@@ -41,11 +41,10 @@ fn main() {
 }
 
 // we also need a special uniform interface here to pass the texture to the shader
-uniform_interface! {
-  struct ShaderInterface {
-    // the 'static lifetime acts as “anything” here
-    tex: &'static BoundTexture<'static, Flat, Dim2, Floating>
-  }
+#[derive(UniformInterface)]
+struct ShaderInterface {
+  // the 'static lifetime acts as “anything” here
+  tex: Uniform<&'static BoundTexture<'static, Flat, Dim2, Floating>>
 }
 
 fn run(texture_path: &Path) {

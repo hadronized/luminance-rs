@@ -5,7 +5,6 @@
 //!
 //! https://docs.rs/luminance
 
-#[macro_use]
 extern crate luminance;
 extern crate luminance_derive;
 extern crate luminance_glfw;
@@ -18,9 +17,10 @@ use luminance::framebuffer::Framebuffer;
 use luminance::pipeline::BoundTexture;
 use luminance::pixel::{RGBA32F, Floating};
 use luminance::render_state::RenderState;
-use luminance::shader::program::Program;
+use luminance::shader::program::{Program, Uniform};
 use luminance::tess::{Mode, TessBuilder, TessSliceIndex};
 use luminance::texture::{Dim2, Flat};
+use luminance_derive::UniformInterface;
 use luminance_glfw::event::{Action, Key, WindowEvent};
 use luminance_glfw::surface::{GlfwSurface, Surface, WindowDim, WindowOpt};
 
@@ -41,12 +41,11 @@ const TRI_VERTICES: [Vertex; 3] = [
 ];
 
 // the shader uniform interface is defined there
-uniform_interface! {
-  struct ShaderInterface {
-    // we only need the source texture (from the framebuffer) to fetch from
-    #[unbound, as("source_texture")]
-    texture: &'static BoundTexture<'static, Flat, Dim2, Floating>
-  }
+#[derive(UniformInterface)]
+struct ShaderInterface {
+  // we only need the source texture (from the framebuffer) to fetch from
+  #[uniform(unbound, name = "source_texture")]
+  texture: Uniform<&'static BoundTexture<'static, Flat, Dim2, Floating>>
 }
 
 fn main() {
