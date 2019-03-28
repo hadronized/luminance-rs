@@ -29,10 +29,6 @@ unsafe impl GraphicsContext for GlfwSurface {
   fn state(&self) -> &Rc<RefCell<GraphicsState>> {
     &self.gfx_state
   }
-
-  fn swap_buffers(&mut self) {
-    self.window.swap_buffers();
-  }
 }
 
 impl Surface for GlfwSurface {
@@ -111,5 +107,9 @@ impl Surface for GlfwSurface {
   fn poll_events<'a>(&'a mut self) -> Box<dyn Iterator<Item = Self::Event> + 'a> {
     self.window.glfw.poll_events();
     Box::new(self.events_rx.try_iter().map(|(_, e)| e))
+  }
+
+  fn swap_buffers(&mut self) {
+    self.window.swap_buffers();
   }
 }

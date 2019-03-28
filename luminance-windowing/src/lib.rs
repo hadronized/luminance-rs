@@ -146,4 +146,7 @@ pub trait Surface: GraphicsContext + Sized {
   // FIXME: existential impl trait
   /// Get an iterator over events without blocking if no event is there.
   fn poll_events<'a>(&'a mut self) -> Box<dyn Iterator<Item = Self::Event> + 'a>;
+
+  /// Swap the back and front buffers.
+  fn swap_buffers(&mut self);
 }

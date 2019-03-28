@@ -45,9 +45,6 @@ pub unsafe trait GraphicsContext {
   /// objects to ensure consistency with its state.
   fn state(&self) -> &Rc<RefCell<GraphicsState>>;
 
-  /// Swap the back and front buffers.
-  fn swap_buffers(&mut self);
-
   /// Create a new pipeline builder.
   ///
   /// A pipeline builder is the only way to create new pipelines and issue draws. Feel free to dig
