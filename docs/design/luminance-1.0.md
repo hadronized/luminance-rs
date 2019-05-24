@@ -463,10 +463,10 @@ will occur only:
 
 ## Unresolved questions
 
-  - The [On distributing implementations] section is not completely certain and needs refinement.
-    Maybe it’s acceptable to have a public `unsafe` API for other crates to implement `luminance`.
-    Plus, `luminance-gl` already exists! — it is currently deprecated but I still have the rights
-    to push to it.
+  - The [On distributing implementations](#on-distributing-implementations) section is not
+    completely certain and needs refinement. Maybe it’s acceptable to have a public `unsafe` API for
+    other crates to implement `luminance`. Plus, `luminance-gl` already exists! — it is currently
+    deprecated but I still have the rights to push to it.
 
 [luminance]: https://crates.io/crates/luminance
 [OpenGL]: https://www.opengl.org
