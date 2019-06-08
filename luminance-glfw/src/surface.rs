@@ -47,6 +47,7 @@ impl Surface for GlfwSurface {
     glfw.window_hint(glfw::WindowHint::OpenGlForwardCompat(true));
     glfw.window_hint(glfw::WindowHint::ContextVersionMajor(3));
     glfw.window_hint(glfw::WindowHint::ContextVersionMinor(3));
+    glfw.window_hint(glfw::WindowHint::Samples(win_opt.num_samples()));
 
     // open a window in windowed or fullscreen mode
     let (mut window, events_rx) = match dim {

@@ -53,6 +53,7 @@ pub enum WindowDim {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct WindowOpt {
   hide_cursor: bool,
+  num_samples: Option<u32>,
 }
 
 impl Default for WindowOpt {
@@ -60,7 +61,10 @@ impl Default for WindowOpt {
   ///
   /// - `hide_cursor(false)`
   fn default() -> Self {
-    WindowOpt { hide_cursor: false }
+    WindowOpt {
+      hide_cursor: false,
+      num_samples: None,
+    }
   }
 }
 
@@ -77,6 +81,19 @@ impl WindowOpt {
   #[inline]
   pub fn is_cursor_hidden(&self) -> bool {
     self.hide_cursor
+  }
+
+  #[inline]
+  pub fn set_num_samples(self, samples: Option<u32>) -> Self {
+    WindowOpt {
+      num_samples: samples,
+      ..self
+    }
+  }
+
+  #[inline]
+  pub fn num_samples(&self) -> Option<u32> {
+    self.num_samples
   }
 }
 
