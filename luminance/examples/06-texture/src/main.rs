@@ -125,7 +125,7 @@ fn load_from_disk(surface: &mut GlfwSurface, path: &Path) -> Option<Texture<Flat
         .collect::<Vec<_>>();
 
       // create the luminance texture; the third argument is the number of mipmaps we want (leave it
-      // to 0 for now) and the latest is a the sampler to use when sampling the texels in the
+      // to 0 for now) and the latest is the sampler to use when sampling the texels in the
       // shader (we’ll just use the default one)
       let tex =
         Texture::new(surface, [width, height], 0, &Sampler::default()).expect("luminance texture creation");
