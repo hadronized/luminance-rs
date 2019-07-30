@@ -118,9 +118,9 @@ pub trait Surface: GraphicsContext + Sized {
 
   // FIXME: existential impl trait
   /// Get an iterator over events by blocking until the first event happens.
-  fn wait_events<'a>(&'a mut self) -> Box<Iterator<Item = Self::Event> + 'a>;
+  fn wait_events<'a>(&'a mut self) -> Box<dyn Iterator<Item = Self::Event> + 'a>;
 
   // FIXME: existential impl trait
   /// Get an iterator over events without blocking if no event is there.
-  fn poll_events<'a>(&'a mut self) -> Box<Iterator<Item = Self::Event> + 'a>;
+  fn poll_events<'a>(&'a mut self) -> Box<dyn Iterator<Item = Self::Event> + 'a>;
 }

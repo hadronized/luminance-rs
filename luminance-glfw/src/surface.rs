@@ -102,12 +102,12 @@ impl Surface for GlfwSurface {
     [x as u32, y as u32]
   }
 
-  fn wait_events<'a>(&'a mut self) -> Box<Iterator<Item = Self::Event> + 'a> {
+  fn wait_events<'a>(&'a mut self) -> Box<dyn Iterator<Item = Self::Event> + 'a> {
     self.window.glfw.wait_events();
     Box::new(self.events_rx.iter().map(|(_, e)| e))
   }
 
-  fn poll_events<'a>(&'a mut self) -> Box<Iterator<Item = Self::Event> + 'a> {
+  fn poll_events<'a>(&'a mut self) -> Box<dyn Iterator<Item = Self::Event> + 'a> {
     self.window.glfw.poll_events();
     Box::new(self.events_rx.try_iter().map(|(_, e)| e))
   }
