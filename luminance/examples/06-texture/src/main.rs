@@ -116,7 +116,7 @@ fn load_from_disk(surface: &mut GlfwSurface, path: &Path) -> Option<Texture<Flat
   // load the texture into memory as a whole bloc (i.e. no streaming)
   match image::open(&path) {
     Ok(img) => {
-      // convert the image to a RGB colorspace (this allocates a new copy of the image
+      // convert the image to a RGB colorspace (this allocates a new copy of the image)
       let rgb_img = img.flipv().to_rgb();
       let (width, height) = rgb_img.dimensions();
       let texels = rgb_img
