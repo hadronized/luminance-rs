@@ -43,9 +43,9 @@
 //! // visit the Semantics proc-macro documentation for further details
 //! #[derive(Clone, Copy, Debug, PartialEq, Semantics)]
 //! pub enum Semantics {
-//!   #[sem(name = "position", repr = "[f32; 3]", type_name = "VertexPosition")]
+//!   #[sem(name = "position", repr = "[f32; 3]", wrapper = "VertexPosition")]
 //!   Position,
-//!   #[sem(name = "color", repr = "[f32; 4]", type_name = "VertexColor")]
+//!   #[sem(name = "color", repr = "[f32; 4]", wrapper = "VertexColor")]
 //!   Color
 //! }
 //!

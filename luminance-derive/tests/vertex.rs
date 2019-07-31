@@ -7,11 +7,11 @@ use luminance_derive::{Semantics, Vertex};
 fn derive_simple_semantics() {
   #[derive(Clone, Copy, Debug, Eq, PartialEq, Semantics)]
   pub enum Semantics {
-    #[sem(name = "position", repr = "[f32; 3]", type_name = "VertexPosition")]
+    #[sem(name = "position", repr = "[f32; 3]", wrapper = "VertexPosition")]
     Position,
-    #[sem(name = "normal", repr = "[f32; 3]", type_name = "VertexNormal")]
+    #[sem(name = "normal", repr = "[f32; 3]", wrapper = "VertexNormal")]
     Normal,
-    #[sem(name = "color", repr = "[f32; 4]", type_name = "VertexColor")]
+    #[sem(name = "color", repr = "[f32; 4]", wrapper = "VertexColor")]
     Color
   }
 

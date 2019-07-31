@@ -29,10 +29,10 @@ const FS: &'static str = include_str!("simple-fs.glsl");
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Semantics)]
 pub enum Semantics {
   // reference vertex positions with the co variable in vertex shaders
-  #[sem(name = "co", repr = "[f32; 2]", type_name = "VertexPosition")]
+  #[sem(name = "co", repr = "[f32; 2]", wrapper = "VertexPosition")]
   Position,
   // reference vertex colors with the color variable in vertex shaders
-  #[sem(name = "color", repr = "[f32; 3]", type_name = "VertexColor")]
+  #[sem(name = "color", repr = "[f32; 3]", wrapper = "VertexColor")]
   Color
 }
 

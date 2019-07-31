@@ -4,7 +4,7 @@ use quote::quote;
 use std::fmt;
 use syn::{Attribute, DataEnum, Ident, Type};
 
-const KNOWN_SUBKEYS: &[&str] = &["name", "repr", "type_name"];
+const KNOWN_SUBKEYS: &[&str] = &["name", "repr", "wrapper"];
 
 #[derive(Debug)]
 pub(crate) enum SemanticsImplError {
@@ -28,13 +28,13 @@ impl fmt::Display for SemanticsImplError {
 
 /// Get vertex semantics attributes.
 ///
-///   (name, repr, type_name)
+///   (name, repr, wrapper)
 fn get_vertex_sem_attribs<'a, A>(var_name: &Ident, attrs: A) -> Result<(Ident, Type, Type), AttrError> where A: Iterator<Item = &'a Attribute> + Clone {
   let sem_name = get_field_attr_once::<_, Ident>(var_name, attrs.clone(), "sem", "name", KNOWN_SUBKEYS)?;
   let sem_repr = get_field_attr_once::<_, Type>(var_name, attrs.clone(), "sem", "repr", KNOWN_SUBKEYS)?;
-  let sem_type_name = get_field_attr_once::<_, Type>(var_name, attrs, "sem", "type_name", KNOWN_SUBKEYS)?;
+  let sem_wrapper = get_field_attr_once::<_, Type>(var_name, attrs, "sem", "wrapper", KNOWN_SUBKEYS)?;
 
-  Ok((sem_name, sem_repr, sem_type_name))
+  Ok((sem_name, sem_repr, sem_wrapper))
 }
 
 pub(crate) fn generate_enum_semantics_impl(ident: Ident, enum_: DataEnum) -> Result<TokenStream, SemanticsImplError> {

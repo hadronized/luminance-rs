@@ -3,16 +3,16 @@ use luminance_derive::{Semantics, Vertex};
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Semantics)]
 pub enum Semantics {
   // reference vertex positions with the co variable in vertex shaders
-  #[sem(name = "co", repr = "[f32; 2]", type_name = "VertexPosition")]
+  #[sem(name = "co", repr = "[f32; 2]", wrapper = "VertexPosition")]
   Position,
   // reference vertex colors with the color variable in vertex shaders
-  #[sem(name = "color", repr = "[f32; 3]", type_name = "VertexColor")]
+  #[sem(name = "color", repr = "[f32; 3]", wrapper = "VertexColor")]
   Color,
   // reference vertex instance’s position on screen
-  #[sem(name = "position", repr = "[f32; 2]", type_name = "VertexInstancePosition")]
+  #[sem(name = "position", repr = "[f32; 2]", wrapper = "VertexInstancePosition")]
   InstancePosition,
   // reference vertex size in vertex shaders (used for vertex instancing)
-  #[sem(name = "weight", repr = "f32", type_name = "VertexWeight")]
+  #[sem(name = "weight", repr = "f32", wrapper = "VertexWeight")]
   Weight,
 }
 
