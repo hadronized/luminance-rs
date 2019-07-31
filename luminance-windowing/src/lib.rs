@@ -59,7 +59,8 @@ pub struct WindowOpt {
 impl Default for WindowOpt {
   /// Defaults:
   ///
-  /// - `hide_cursor(false)`
+  /// - `hide_cursor` set to `false`.
+  /// - `num_samples` set to `None`.
   fn default() -> Self {
     WindowOpt {
       hide_cursor: false,
@@ -78,19 +79,24 @@ impl WindowOpt {
     }
   }
 
+  /// Check whether the cursor is hidden.
   #[inline]
   pub fn is_cursor_hidden(&self) -> bool {
     self.hide_cursor
   }
 
+  /// Set the number of samples to use for multisampling.
+  ///
+  /// Pass `None` to disable multisampling.
   #[inline]
-  pub fn set_num_samples(self, samples: Option<u32>) -> Self {
+  pub fn set_num_samples<S>(self, samples: S) -> Self where S: Into<Option<u32>> {
     WindowOpt {
-      num_samples: samples,
+      num_samples: samples.into(),
       ..self
     }
   }
 
+  /// Get the number of samples to use in multisampling, if any.
   #[inline]
   pub fn num_samples(&self) -> Option<u32> {
     self.num_samples
