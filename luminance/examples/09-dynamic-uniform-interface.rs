@@ -1,20 +1,17 @@
-//! This program shows how to render a triangle and change its position and color on the fly by
-//! updating “shader uniforms”. Those are values stored on the GPU that remain constant for the
-//! whole duration of a draw call (you typically change it between each draw call to customize each
-//! draw).
+//! > This program is a sequel to 08-shader-uniforms-adapt. Be sure to have read it first.
 //!
-//! This example demonstrate how to add time to your shader to start building moving and animated
-//! effects.
+//! This example shows you how to lookup dynamically uniforms into shaders to implement various kind
+//! of situations. This feature is very likely to be interesting for anyone who would like to
+//! implement a GUI, where the interface of the shader programs are not known statically, for
+//! instance.
+//!
+//! This example looks up the time and the triangle position on the fly, without using the uniform
+//! interface.
 //!
 //! Press the <a>, <s>, <d>, <z> or the arrow keys to move the triangle on the screen.
 //! Press <escape> to quit or close the window.
 //!
 //! https://docs.rs/luminance
-
-// we need the uniform_interface! macro
-extern crate luminance;
-extern crate luminance_derive;
-extern crate luminance_glfw;
 
 mod common;
 
@@ -22,15 +19,14 @@ use crate::common::{Semantics, Vertex, VertexPosition, VertexColor};
 use luminance::context::GraphicsContext;
 use luminance::framebuffer::Framebuffer;
 use luminance::render_state::RenderState;
-use luminance::shader::program::{Program, Uniform};
+use luminance::shader::program::Program;
 use luminance::tess::{Mode, TessBuilder};
-use luminance_derive::UniformInterface;
 use luminance_glfw::event::{Action, Key, WindowEvent};
 use luminance_glfw::surface::{GlfwSurface, Surface, WindowDim, WindowOpt};
 use std::time::Instant;
 
-const VS: &'static str = include_str!("vs.glsl");
-const FS: &'static str = include_str!("fs.glsl");
+const VS: &'static str = include_str!("displacement-vs.glsl");
+const FS: &'static str = include_str!("displacement-fs.glsl");
 
 // Only one triangle this time.
 const TRI_VERTICES: [Vertex; 3] = [
@@ -38,17 +34,6 @@ const TRI_VERTICES: [Vertex; 3] = [
   Vertex { pos: VertexPosition::new([0.0, 0.5]), rgb: VertexColor::new([0., 1., 0.]) },
   Vertex { pos: VertexPosition::new([-0.5, -0.5]), rgb: VertexColor::new([0., 0., 1.]) },
 ];
-
-// Create a uniform interface. This is a type that will be used to customize the shader. In our
-// case, we just want to pass the time and the position of the triangle, for instance.
-//
-// This macro only supports structs for now; you cannot use enums as uniform interfaces.
-#[derive(Debug, UniformInterface)]
-struct ShaderInterface {
-  #[uniform(name = "t")]
-  time: Uniform<f32>,
-  triangle_pos: Uniform<[f32; 2]>
-}
 
 fn main() {
   let mut surface = GlfwSurface::new(
@@ -58,9 +43,10 @@ fn main() {
   )
   .expect("GLFW surface creation");
 
-  // see the use of our uniform interface here as thirds type variable
-  let (program, _) =
-    Program::<Semantics, (), ShaderInterface>::from_strings(None, VS, None, FS).expect("program creation");
+  // notice that we don’t set a uniform interface here: we’re going to look it up on the fly
+  let program = Program::<Semantics, (), ()>::from_strings(None, VS, None, FS)
+    .expect("program creation")
+    .0;
 
   let triangle = TessBuilder::new(&mut surface)
     .add_vertices(TRI_VERTICES)
@@ -70,10 +56,8 @@ fn main() {
 
   let mut back_buffer = Framebuffer::back_buffer(surface.size());
 
-  // position of the triangle
   let mut triangle_pos = [0., 0.];
 
-  // reference time
   let start_t = Instant::now();
 
   'app: loop {
@@ -113,7 +97,6 @@ fn main() {
       }
     }
 
-    // get the current monotonic time
     let elapsed = start_t.elapsed();
     let t64 = elapsed.as_secs() as f64 + (elapsed.subsec_millis() as f64 * 1e-3);
     let t = t64 as f32;
@@ -121,14 +104,24 @@ fn main() {
     surface
       .pipeline_builder()
       .pipeline(&back_buffer, [0., 0., 0., 0.], |_, shd_gate| {
-        // notice the iface free variable, which type is &ShaderInterface
         shd_gate.shade(&program, |rdr_gate, iface| {
-          // update the time and triangle position on the GPU shader program
-          iface.time.update(t);
-          iface.triangle_pos.update(triangle_pos);
+          let query = iface.query();
+
+          if let Ok(time_u) = query.ask("t") {
+            time_u.update(t);
+          }
+
+          if let Ok(triangle_pos_u) = query.ask("triangle_pos") {
+            triangle_pos_u.update(triangle_pos);
+          }
+
+          // the `ask` function is type-safe: if you try to get a uniform which type is not
+          // correctly reified from the source, you get a TypeMismatch runtime error
+          //if let Err(e) = query.ask::<i32>("triangle_pos") {
+          //  eprintln!("{:?}", e);
+          //}
 
           rdr_gate.render(RenderState::default(), |tess_gate| {
-            // render the dynamically selected slice
             tess_gate.render(&mut surface, (&triangle).into());
           });
         });

@@ -8,9 +8,6 @@
 //!
 //! https://docs.rs/luminance
 
-extern crate luminance;
-extern crate luminance_glfw;
-
 use luminance::context::GraphicsContext;
 use luminance::framebuffer::Framebuffer;
 use luminance::render_state::RenderState;
@@ -19,8 +16,8 @@ use luminance::tess::{Mode, TessBuilder};
 use luminance_glfw::event::{Action, Key, WindowEvent};
 use luminance_glfw::surface::{GlfwSurface, Surface, WindowDim, WindowOpt};
 
-const VS: &'static str = include_str!("vs.glsl");
-const FS: &'static str = include_str!("fs.glsl");
+const VS: &'static str = include_str!("attributeless-vs.glsl");
+const FS: &'static str = include_str!("simple-fs.glsl");
 
 fn main() {
   let mut surface = GlfwSurface::new(

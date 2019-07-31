@@ -14,10 +14,6 @@
 //!
 //! https://docs.rs/luminance
 
-extern crate luminance;
-extern crate luminance_derive;
-extern crate luminance_glfw;
-
 mod common;
 
 use crate::common::{Semantics, Vertex, VertexPosition, VertexColor};
@@ -31,8 +27,8 @@ use luminance_glfw::event::{Action, Key, WindowEvent};
 use luminance_glfw::surface::{GlfwSurface, Surface, WindowDim, WindowOpt};
 use std::time::Instant;
 
-const VS: &'static str = include_str!("vs.glsl");
-const FS: &'static str = include_str!("fs.glsl");
+const VS: &'static str = include_str!("adapt-vs.glsl");
+const FS: &'static str = include_str!("displacement-fs.glsl");
 
 // Only one triangle this time.
 const TRI_VERTICES: [Vertex; 3] = [

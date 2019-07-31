@@ -5,14 +5,9 @@ members = [
   "luminance-derive",
   "luminance-glfw",
   "luminance-windowing",
-  "luminance/examples/01-hello-world",
-  "luminance/examples/02-render-state",
-  "luminance/examples/03-sliced-tess",
-  "luminance/examples/04-shader-uniforms",
-  "luminance/examples/05-attributeless",
-  "luminance/examples/06-texture",
-  "luminance/examples/07-offscreen",
-  "luminance/examples/08-shader-uniforms-adapt",
-  "luminance/examples/09-dynamic-uniform-interface",
-  "luminance/examples/10-vertex-instancing"
 ]
+
+[patch.crates-io]
+luminance-derive = { path = "./luminance-derive" }
+luminance-glfw = { path = "./luminance-glfw" }
+luminance-windowing = { path = "./luminance-windowing" }

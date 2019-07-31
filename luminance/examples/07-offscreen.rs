@@ -5,10 +5,6 @@
 //!
 //! https://docs.rs/luminance
 
-extern crate luminance;
-extern crate luminance_derive;
-extern crate luminance_glfw;
-
 mod common;
 
 use crate::common::{Semantics, Vertex, VertexPosition, VertexColor};
@@ -24,13 +20,13 @@ use luminance_derive::UniformInterface;
 use luminance_glfw::event::{Action, Key, WindowEvent};
 use luminance_glfw::surface::{GlfwSurface, Surface, WindowDim, WindowOpt};
 
-// we get the shader at compile time from ./vs.glsl and ./fs.glsl
-const VS: &'static str = include_str!("vs.glsl");
-const FS: &'static str = include_str!("fs.glsl");
+// we get the shader at compile time from local files
+const VS: &'static str = include_str!("simple-vs.glsl");
+const FS: &'static str = include_str!("simple-fs.glsl");
 
 // copy shader, at compile time as well
-const COPY_VS: &'static str = include_str!("copy_vs.glsl");
-const COPY_FS: &'static str = include_str!("copy_fs.glsl");
+const COPY_VS: &'static str = include_str!("copy-vs.glsl");
+const COPY_FS: &'static str = include_str!("copy-fs.glsl");
 
 // a single triangle is enough here
 const TRI_VERTICES: [Vertex; 3] = [

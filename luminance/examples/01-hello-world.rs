@@ -8,10 +8,6 @@
 //!
 //! https://docs.rs/luminance
 
-extern crate luminance;
-extern crate luminance_derive;
-extern crate luminance_glfw;
-
 use luminance::context::GraphicsContext;
 use luminance::framebuffer::Framebuffer;
 use luminance::render_state::RenderState;
@@ -21,9 +17,9 @@ use luminance_derive::{Semantics, Vertex};
 use luminance_glfw::event::{Action, Key, WindowEvent};
 use luminance_glfw::surface::{GlfwSurface, Surface, WindowDim, WindowOpt};
 
-// We get the shader at compile time from ./vs.glsl and ./fs.glsl.
-const VS: &'static str = include_str!("vs.glsl");
-const FS: &'static str = include_str!("fs.glsl");
+// We get the shader at compile time from local files
+const VS: &'static str = include_str!("simple-vs.glsl");
+const FS: &'static str = include_str!("simple-fs.glsl");
 
 // Vertex semantics. Those are needed to instruct the GPU how to select vertex’s attributes from
 // the memory we fill at render time, in shader. You don’t have to worry about them; just keep in

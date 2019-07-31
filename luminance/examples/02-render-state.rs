@@ -9,10 +9,6 @@
 //!
 //! https://docs.rs/luminance
 
-extern crate luminance;
-extern crate luminance_derive;
-extern crate luminance_glfw;
-
 mod common;
 
 use crate::common::{Semantics, Vertex, VertexPosition, VertexColor};
@@ -26,8 +22,8 @@ use luminance::tess::{Mode, TessBuilder};
 use luminance_glfw::event::{Action, Key, WindowEvent};
 use luminance_glfw::surface::{GlfwSurface, Surface, WindowDim, WindowOpt};
 
-const VS: &'static str = include_str!("vs.glsl");
-const FS: &'static str = include_str!("fs.glsl");
+const VS: &'static str = include_str!("simple-vs.glsl");
+const FS: &'static str = include_str!("simple-fs.glsl");
 
 pub const TRI_RED_BLUE_VERTICES: [Vertex; 6] = [
   // first triangle – a red one

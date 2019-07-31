@@ -8,7 +8,7 @@ pub enum Semantics {
   // reference vertex colors with the color variable in vertex shaders
   #[sem(name = "color", repr = "[f32; 3]", type_name = "VertexColor")]
   Color,
-  // reference verteex instance’s position on screen
+  // reference vertex instance’s position on screen
   #[sem(name = "position", repr = "[f32; 2]", type_name = "VertexInstancePosition")]
   InstancePosition,
   // reference vertex size in vertex shaders (used for vertex instancing)
@@ -20,7 +20,7 @@ pub enum Semantics {
 #[vertex(sem = "Semantics")]
 pub struct Vertex {
   pub pos: VertexPosition,
-  pub rgb: VertexColor,
+  pub rgb: VertexColor
 }
 
 // definition of a single instance

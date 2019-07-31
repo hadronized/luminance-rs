@@ -1,25 +1,14 @@
-//! > This program is a sequel to 08-shader-uniforms-adapt. Be sure to have read it first.
+//! This program shows you how to do *vertex instancing*, the easy way.
 //!
-//! This example shows you how to lookup dynamically uniforms into shaders to implement various kind
-//! of situations. This feature is very likely to be interesting for anyone who would like to
-//! implement a GUI, where the interface of the shader programs are not known statically, for
-//! instance.
-//!
-//! This example looks up the time and the triangle position on the fly, without using the uniform
-//! interface.
-//!
-//! Press the <a>, <s>, <d>, <z> or the arrow keys to move the triangle on the screen.
 //! Press <escape> to quit or close the window.
 //!
 //! https://docs.rs/luminance
 
-extern crate luminance;
-extern crate luminance_derive;
-extern crate luminance_glfw;
-
 mod common;
 
-use crate::common::{Semantics, Vertex, VertexPosition, VertexColor};
+use crate::common::{
+  Instance, Semantics, Vertex, VertexPosition, VertexColor, VertexInstancePosition, VertexWeight
+};
 use luminance::context::GraphicsContext;
 use luminance::framebuffer::Framebuffer;
 use luminance::render_state::RenderState;
@@ -29,14 +18,23 @@ use luminance_glfw::event::{Action, Key, WindowEvent};
 use luminance_glfw::surface::{GlfwSurface, Surface, WindowDim, WindowOpt};
 use std::time::Instant;
 
-const VS: &'static str = include_str!("vs.glsl");
-const FS: &'static str = include_str!("fs.glsl");
+const VS: &'static str = include_str!("instancing-vs.glsl");
+const FS: &'static str = include_str!("instancing-fs.glsl");
 
 // Only one triangle this time.
 const TRI_VERTICES: [Vertex; 3] = [
   Vertex { pos: VertexPosition::new([0.5, -0.5]), rgb: VertexColor::new([1., 0., 0.]) },
   Vertex { pos: VertexPosition::new([0.0, 0.5]), rgb: VertexColor::new([0., 1., 0.]) },
   Vertex { pos: VertexPosition::new([-0.5, -0.5]), rgb: VertexColor::new([0., 0., 1.]) },
+];
+
+// Instances. We’ll be using five triangles.
+const INSTANCES: [Instance; 5] = [
+  Instance { pos: VertexInstancePosition::new([0., 0.]), w: VertexWeight::new(0.1) },
+  Instance { pos: VertexInstancePosition::new([-0.5, 0.5]), w: VertexWeight::new(0.5) },
+  Instance { pos: VertexInstancePosition::new([-0.25, -0.1]), w: VertexWeight::new(0.1) },
+  Instance { pos: VertexInstancePosition::new([0.45, 0.25]), w: VertexWeight::new(0.75) },
+  Instance { pos: VertexInstancePosition::new([0.6, -0.3]), w: VertexWeight::new(0.3) },
 ];
 
 fn main() {
@@ -54,6 +52,7 @@ fn main() {
 
   let triangle = TessBuilder::new(&mut surface)
     .add_vertices(TRI_VERTICES)
+    .add_instances(INSTANCES)
     .set_mode(Mode::Triangle)
     .build()
     .unwrap();
@@ -114,16 +113,6 @@ fn main() {
           if let Ok(time_u) = query.ask("t") {
             time_u.update(t);
           }
-
-          if let Ok(triangle_pos_u) = query.ask("triangle_pos") {
-            triangle_pos_u.update(triangle_pos);
-          }
-
-          // the `ask` function is type-safe: if you try to get a uniform which type is not
-          // correctly reified from the source, you get a TypeMismatch runtime error
-          //if let Err(e) = query.ask::<i32>("triangle_pos") {
-          //  eprintln!("{:?}", e);
-          //}
 
           rdr_gate.render(RenderState::default(), |tess_gate| {
             tess_gate.render(&mut surface, (&triangle).into());

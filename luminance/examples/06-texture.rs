@@ -11,10 +11,6 @@
 //!
 //! https://docs.rs/luminance
 
-extern crate image;
-extern crate luminance;
-extern crate luminance_glfw;
-
 use luminance::context::GraphicsContext;
 use luminance::framebuffer::Framebuffer;
 use luminance::pipeline::BoundTexture;
@@ -29,8 +25,8 @@ use luminance_glfw::surface::{GlfwSurface, Surface, WindowDim, WindowOpt};
 use std::env; // used to get the CLI arguments
 use std::path::Path;
 
-const VS: &'static str = include_str!("vs.glsl");
-const FS: &'static str = include_str!("fs.glsl");
+const VS: &'static str = include_str!("texture-vs.glsl");
+const FS: &'static str = include_str!("texture-fs.glsl");
 
 fn main() {
   if let Some(texture_path) = env::args().skip(1).next() {
