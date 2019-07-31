@@ -11,9 +11,18 @@ os:
 
 install:
   - if [ $TRAVIS_OS_NAME = linux ]; then sudo apt-get update -qq && sudo apt-get install -y libxrandr-dev xorg-dev; fi
+  - cargo install --force cargo-sync-readme
 
 script:
   - rustc --version
   - cargo --version
   - cargo build
   - cargo test
+  - cd $TRAVIS_BUILD_DIR/luminance
+  - if [ "$TRAVIS_OS_NAME" == "windows" ]; then cargo sync-readme -c -f bin --crlf; else cargo sync-readme -c -f bin; fi
+  - cd $TRAVIS_BUILD_DIR/luminance-derive
+  - if [ "$TRAVIS_OS_NAME" == "windows" ]; then cargo sync-readme -c -f bin --crlf; else cargo sync-readme -c -f bin; fi
+  - cd $TRAVIS_BUILD_DIR/luminance-glfw
+  - if [ "$TRAVIS_OS_NAME" == "windows" ]; then cargo sync-readme -c -f bin --crlf; else cargo sync-readme -c -f bin; fi
+  - cd $TRAVIS_BUILD_DIR/luminance-windowing
+  - if [ "$TRAVIS_OS_NAME" == "windows" ]; then cargo sync-readme -c -f bin --crlf; else cargo sync-readme -c -f bin; fi
