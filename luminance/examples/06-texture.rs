@@ -18,7 +18,7 @@ use luminance::pixel::{RGB32F, Floating};
 use luminance::render_state::RenderState;
 use luminance::shader::program::{Program, Uniform};
 use luminance::tess::{Mode, TessBuilder};
-use luminance::texture::{Dim2, Flat, Sampler, Texture};
+use luminance::texture::{Dim2, Flat, GenMipmaps, Sampler, Texture};
 use luminance_derive::UniformInterface;
 use luminance_glfw::event::{Action, Key, WindowEvent};
 use luminance_glfw::surface::{GlfwSurface, Surface, WindowDim, WindowOpt};
@@ -127,7 +127,7 @@ fn load_from_disk(surface: &mut GlfwSurface, path: &Path) -> Option<Texture<Flat
         Texture::new(surface, [width, height], 0, &Sampler::default()).expect("luminance texture creation");
 
       // the first argument disables mipmap generation (we don’t care so far)
-      tex.upload(false, &texels);
+      tex.upload(GenMipmaps::No, &texels);
 
       Some(tex)
     }

@@ -608,7 +608,13 @@ where L: Layerable,
   /// The part being cleared is defined by a rectangle in which the `offset` represents the
   /// left-upper corner and the `size` gives the dimension of the rectangle. All the covered texels
   /// by this rectangle will be cleared to the `pixel` value.
-  pub fn clear_part(&self, gen_mipmaps: bool, offset: D::Offset, size: D::Size, pixel: P::Encoding)
+  pub fn clear_part(
+    &self,
+    gen_mipmaps: GenMipmaps,
+    offset: D::Offset,
+    size: D::Size,
+    pixel: P::Encoding
+  )
   where P::Encoding: Copy {
     self.upload_part(
       gen_mipmaps,
@@ -619,7 +625,7 @@ where L: Layerable,
   }
 
   /// Clear a whole texture with a `pixel` value.
-  pub fn clear(&self, gen_mipmaps: bool, pixel: P::Encoding)
+  pub fn clear(&self, gen_mipmaps: GenMipmaps, pixel: P::Encoding)
   where P::Encoding: Copy {
     self.clear_part(gen_mipmaps, D::zero_offset(), self.size, pixel)
   }
@@ -631,7 +637,7 @@ where L: Layerable,
   /// by this rectangle will be updated by the `texels` slice.
   pub fn upload_part(
     &self,
-    gen_mipmaps: bool, // TODO: proper typing instead of bool
+    gen_mipmaps: GenMipmaps,
     offset: D::Offset,
     size: D::Size,
     texels: &[P::Encoding],
@@ -643,7 +649,7 @@ where L: Layerable,
 
       upload_texels::<L, D, P, P::Encoding>(self.target, offset, size, texels);
 
-      if gen_mipmaps {
+      if gen_mipmaps == GenMipmaps::Yes {
         gl::GenerateMipmap(self.target);
       }
 
@@ -654,7 +660,7 @@ where L: Layerable,
   /// Upload `texels` to the whole texture.
   pub fn upload(
     &self,
-    gen_mipmaps: bool,
+    gen_mipmaps: GenMipmaps,
     texels: &[P::Encoding],
   ) {
     self.upload_part(gen_mipmaps, D::zero_offset(), self.size, texels)
@@ -667,7 +673,7 @@ where L: Layerable,
   /// components of the texels.
   pub fn upload_part_raw(
     &self,
-    gen_mipmaps: bool,
+    gen_mipmaps: GenMipmaps,
     offset: D::Offset,
     size: D::Size,
     texels: &[P::RawEncoding],
@@ -679,7 +685,7 @@ where L: Layerable,
 
       upload_texels::<L, D, P, P::RawEncoding>(self.target, offset, size, texels);
 
-      if gen_mipmaps {
+      if gen_mipmaps == GenMipmaps::Yes {
         gl::GenerateMipmap(self.target);
       }
 
@@ -688,7 +694,7 @@ where L: Layerable,
   }
 
   /// Upload raw `texels` to the whole texture.
-  pub fn upload_raw(&self, gen_mipmaps: bool, texels: &[P::RawEncoding]) {
+  pub fn upload_raw(&self, gen_mipmaps: GenMipmaps, texels: &[P::RawEncoding]) {
     self.upload_part_raw(gen_mipmaps, D::zero_offset(), self.size, texels)
   }
 
@@ -724,6 +730,13 @@ where L: Layerable,
   pub fn size(&self) -> D::Size {
     self.size
   }
+}
+
+/// Whether mipmaps should be generated.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum GenMipmaps {
+  Yes,
+  No
 }
 
 pub(crate) fn opengl_target(l: Layering, d: Dim) -> GLenum {
