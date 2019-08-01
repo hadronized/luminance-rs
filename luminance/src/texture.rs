@@ -254,7 +254,7 @@ pub trait Dimensionable {
   }
 
   /// Zero offset.
-  fn zero_offset() -> Self::Offset;
+  const ZERO_OFFSET: Self::Offset;
 }
 
 // Capacity of the dimension, which is the product of the width, height and depth.
@@ -295,9 +295,7 @@ impl Dimensionable for Dim1 {
     off
   }
 
-  fn zero_offset() -> Self::Offset {
-    0
-  }
+  const ZERO_OFFSET: Self::Offset = 0;
 }
 
 /// 2D dimension.
@@ -328,9 +326,7 @@ impl Dimensionable for Dim2 {
     off[1]
   }
 
-  fn zero_offset() -> Self::Offset {
-    [0, 0]
-  }
+  const ZERO_OFFSET: Self::Offset = [0, 0];
 }
 
 /// 3D dimension.
@@ -369,9 +365,7 @@ impl Dimensionable for Dim3 {
     off[2]
   }
 
-  fn zero_offset() -> Self::Offset {
-    [0, 0, 0]
-  }
+  const ZERO_OFFSET: Self::Offset = [0, 0, 0];
 }
 
 /// Cubemap dimension.
@@ -417,9 +411,7 @@ impl Dimensionable for Cubemap {
     }
   }
 
-  fn zero_offset() -> Self::Offset {
-    ([0, 0], CubeFace::PositiveX)
-  }
+  const ZERO_OFFSET: Self::Offset = ([0, 0], CubeFace::PositiveX);
 }
 
 /// Faces of a cubemap.
@@ -627,7 +619,7 @@ where L: Layerable,
   /// Clear a whole texture with a `pixel` value.
   pub fn clear(&self, gen_mipmaps: GenMipmaps, pixel: P::Encoding)
   where P::Encoding: Copy {
-    self.clear_part(gen_mipmaps, D::zero_offset(), self.size, pixel)
+    self.clear_part(gen_mipmaps, D::ZERO_OFFSET, self.size, pixel)
   }
 
   /// Upload texels to a part of a texture.
@@ -663,7 +655,7 @@ where L: Layerable,
     gen_mipmaps: GenMipmaps,
     texels: &[P::Encoding],
   ) {
-    self.upload_part(gen_mipmaps, D::zero_offset(), self.size, texels)
+    self.upload_part(gen_mipmaps, D::ZERO_OFFSET, self.size, texels)
   }
 
   /// Upload raw `texels` to a part of a texture.
@@ -695,7 +687,7 @@ where L: Layerable,
 
   /// Upload raw `texels` to the whole texture.
   pub fn upload_raw(&self, gen_mipmaps: GenMipmaps, texels: &[P::RawEncoding]) {
-    self.upload_part_raw(gen_mipmaps, D::zero_offset(), self.size, texels)
+    self.upload_part_raw(gen_mipmaps, D::ZERO_OFFSET, self.size, texels)
   }
 
   // FIXME: cubemaps?
