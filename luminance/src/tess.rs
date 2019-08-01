@@ -103,8 +103,12 @@ pub enum Mode {
 pub enum TessMapError {
   /// The CPU mapping failed due to buffer errors.
   VertexBufferMapFailed(BufferError),
-  /// Target type is not the same as the one stored in the buffer.
-  TypeMismatch(VertexDesc, VertexDesc),
+  /// The CPU mapping failed due to buffer errors.
+  IndexBufferMapFailed(BufferError),
+  /// Vertex target type is not the same as the one stored in the buffer.
+  VertexTypeMismatch(VertexDesc, VertexDesc),
+  /// Index target type is not the same as the one stored in the buffer.
+  IndexTypeMismatch(TessIndexType, TessIndexType),
   /// The CPU mapping failed because you cannot map an attributeless tessellation since it doesn’t
   /// have any vertex attribute.
   ForbiddenAttributelessMapping,
@@ -116,13 +120,17 @@ pub enum TessMapError {
 impl fmt::Display for TessMapError {
   fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
     match *self {
-      TessMapError::VertexBufferMapFailed(ref e) => write!(f, "cannot map tessellation buffer: {}", e),
-      TessMapError::TypeMismatch(ref a, ref b) =>
-       write!(f, "cannot map tessellation: type mismatch between {:?} and {:?}", a, b),
+      TessMapError::VertexBufferMapFailed(ref e) =>
+        write!(f, "cannot map tessellation vertex buffer: {}", e),
+      TessMapError::IndexBufferMapFailed(ref e) =>
+        write!(f, "cannot map tessellation index buffer: {}", e),
+      TessMapError::VertexTypeMismatch(ref a, ref b) =>
+       write!(f, "cannot map tessellation: vertex type mismatch between {:?} and {:?}", a, b),
+      TessMapError::IndexTypeMismatch(ref a, ref b) =>
+       write!(f, "cannot map tessellation: index type mismatch between {:?} and {:?}", a, b),
       TessMapError::ForbiddenAttributelessMapping => f.write_str("cannot map an attributeless buffer"),
-      TessMapError::ForbiddenDeinterleavedMapping => {
+      TessMapError::ForbiddenDeinterleavedMapping =>
         f.write_str("cannot map a deinterleaved buffer as interleaved")
-      }
     }
   }
 }
@@ -520,7 +528,7 @@ impl Tess {
     }
   }
 
-  pub fn as_slice<'a, V>(&'a self) -> Result<BufferSlice<V>, TessMapError> where V: Vertex {
+  pub fn as_slice<V>(&self) -> Result<BufferSlice<V>, TessMapError> where V: Vertex {
     match self.vertex_buffers.len() {
       0 => Err(TessMapError::ForbiddenAttributelessMapping),
 
@@ -529,7 +537,7 @@ impl Tess {
         let target_fmt = V::vertex_desc(); // costs a bit
 
         if vb.fmt != target_fmt {
-          Err(TessMapError::TypeMismatch(vb.fmt.clone(), target_fmt))
+          Err(TessMapError::VertexTypeMismatch(vb.fmt.clone(), target_fmt))
         } else {
           vb.buf.as_slice().map_err(TessMapError::VertexBufferMapFailed)
         }
@@ -539,7 +547,7 @@ impl Tess {
     }
   }
 
-  pub fn as_slice_mut<'a, V>(&mut self) -> Result<BufferSliceMut<V>, TessMapError> where V: Vertex {
+  pub fn as_slice_mut<V>(&mut self) -> Result<BufferSliceMut<V>, TessMapError> where V: Vertex {
     match self.vertex_buffers.len() {
       0 => Err(TessMapError::ForbiddenAttributelessMapping),
 
@@ -548,7 +556,7 @@ impl Tess {
         let target_fmt = V::vertex_desc(); // costs a bit
 
         if vb.fmt != target_fmt {
-          Err(TessMapError::TypeMismatch(vb.fmt.clone(), target_fmt))
+          Err(TessMapError::VertexTypeMismatch(vb.fmt.clone(), target_fmt))
         } else {
           vb.buf.as_slice_mut().map_err(TessMapError::VertexBufferMapFailed)
         }
@@ -558,7 +566,42 @@ impl Tess {
     }
   }
 
-  pub fn as_inst_slice<'a, V>(&'a self) -> Result<BufferSlice<V>, TessMapError> where V: Vertex {
+  pub fn as_index_slice<I>(&self) -> Result<BufferSlice<I>, TessMapError> where I: TessIndex {
+    match self.index_state {
+      Some(IndexedDrawState { ref _buffer, ref index_type, .. }) => {
+        let target_fmt = I::INDEX_TYPE;
+
+        if *index_type != target_fmt {
+          Err(TessMapError::IndexTypeMismatch(*index_type, target_fmt))
+        } else {
+          _buffer.as_slice().map_err(TessMapError::IndexBufferMapFailed)
+        }
+      }
+
+      None => Err(TessMapError::ForbiddenAttributelessMapping)
+    }
+  }
+
+  pub fn as_index_slice_mut<I>(
+    &mut self
+  ) -> Result<BufferSliceMut<I>, TessMapError>
+  where I: TessIndex {
+    match self.index_state {
+      Some(IndexedDrawState { ref mut _buffer, ref index_type, .. }) => {
+        let target_fmt = I::INDEX_TYPE;
+
+        if *index_type != target_fmt {
+          Err(TessMapError::IndexTypeMismatch(*index_type, target_fmt))
+        } else {
+          _buffer.as_slice_mut().map_err(TessMapError::IndexBufferMapFailed)
+        }
+      }
+
+      None => Err(TessMapError::ForbiddenAttributelessMapping)
+    }
+  }
+
+  pub fn as_inst_slice<V>(&self) -> Result<BufferSlice<V>, TessMapError> where V: Vertex {
     match self.instance_buffers.len() {
       0 => Err(TessMapError::ForbiddenAttributelessMapping),
 
@@ -567,7 +610,7 @@ impl Tess {
         let target_fmt = V::vertex_desc(); // costs a bit
 
         if vb.fmt != target_fmt {
-          Err(TessMapError::TypeMismatch(vb.fmt.clone(), target_fmt))
+          Err(TessMapError::VertexTypeMismatch(vb.fmt.clone(), target_fmt))
         } else {
           vb.buf.as_slice().map_err(TessMapError::VertexBufferMapFailed)
         }
@@ -577,7 +620,7 @@ impl Tess {
     }
   }
 
-  pub fn as_inst_slice_mut<'a, V>(&mut self) -> Result<BufferSliceMut<V>, TessMapError> where V: Vertex {
+  pub fn as_inst_slice_mut<V>(&mut self) -> Result<BufferSliceMut<V>, TessMapError> where V: Vertex {
     match self.instance_buffers.len() {
       0 => Err(TessMapError::ForbiddenAttributelessMapping),
 
@@ -586,7 +629,7 @@ impl Tess {
         let target_fmt = V::vertex_desc(); // costs a bit
 
         if vb.fmt != target_fmt {
-          Err(TessMapError::TypeMismatch(vb.fmt.clone(), target_fmt))
+          Err(TessMapError::VertexTypeMismatch(vb.fmt.clone(), target_fmt))
         } else {
           vb.buf.as_slice_mut().map_err(TessMapError::VertexBufferMapFailed)
         }
