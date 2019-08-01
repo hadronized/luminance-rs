@@ -29,7 +29,11 @@ impl fmt::Display for SemanticsImplError {
 /// Get vertex semantics attributes.
 ///
 ///   (name, repr, wrapper)
-fn get_vertex_sem_attribs<'a, A>(var_name: &Ident, attrs: A) -> Result<(Ident, Type, Type), AttrError> where A: Iterator<Item = &'a Attribute> + Clone {
+fn get_vertex_sem_attribs<'a, A>(
+  var_name: &Ident,
+  attrs: A
+) -> Result<(Ident, Type, Type), AttrError>
+where A: Iterator<Item = &'a Attribute> + Clone {
   let sem_name = get_field_attr_once::<_, Ident>(var_name, attrs.clone(), "sem", "name", KNOWN_SUBKEYS)?;
   let sem_repr = get_field_attr_once::<_, Type>(var_name, attrs.clone(), "sem", "repr", KNOWN_SUBKEYS)?;
   let sem_wrapper = get_field_attr_once::<_, Type>(var_name, attrs, "sem", "wrapper", KNOWN_SUBKEYS)?;
@@ -37,7 +41,10 @@ fn get_vertex_sem_attribs<'a, A>(var_name: &Ident, attrs: A) -> Result<(Ident, T
   Ok((sem_name, sem_repr, sem_wrapper))
 }
 
-pub(crate) fn generate_enum_semantics_impl(ident: Ident, enum_: DataEnum) -> Result<TokenStream, SemanticsImplError> {
+pub(crate) fn generate_enum_semantics_impl(
+  ident: Ident,
+  enum_: DataEnum
+) -> Result<TokenStream, SemanticsImplError> {
   let fields = enum_.variants.into_iter().map(|var| {
     get_vertex_sem_attribs(&var.ident, var.attrs.iter()).map(|attrs| {
       (var.ident, attrs.0, attrs.1, attrs.2)
