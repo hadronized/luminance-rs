@@ -70,10 +70,8 @@ pub struct RawProgram {
 impl RawProgram {
   /// Create a new program by attaching shader stages.
   fn new<'a, T, G>(tess: T, vertex: &Stage, geometry: G, fragment: &Stage) -> Result<Self, ProgramError>
-  where
-    T: Into<Option<(&'a Stage, &'a Stage)>>,
-    G: Into<Option<&'a Stage>>,
-  {
+  where T: Into<Option<(&'a Stage, &'a Stage)>>,
+        G: Into<Option<&'a Stage>> {
     unsafe {
       let handle = gl::CreateProgram();
 
@@ -437,8 +435,7 @@ impl<'a> UniformBuilder<'a> {
   ///
   /// Use that function when you need a uniform to complete a uniform interface but you’re sure you
   /// won’t use it.
-  pub fn unbound<T>(&self) -> Uniform<T>
-  where T: Uniformable {
+  pub fn unbound<T>(&self) -> Uniform<T> where T: Uniformable {
     Uniform::unbound(self.raw.handle)
   }
 }
@@ -559,8 +556,7 @@ pub struct Uniform<T> {
   _t: PhantomData<*const T>,
 }
 
-impl<T> Uniform<T>
-where T: Uniformable {
+impl<T> Uniform<T> where T: Uniformable {
   fn new(program: GLuint, index: GLint) -> Self {
     Uniform {
       program,
@@ -1111,7 +1107,6 @@ fn uniform_type_match(program: GLuint, name: &str, ty: Type) -> Result<(), Strin
     );
   }
 
-  // FIXME
   // early-return if array – we don’t support them yet
   if size != 1 {
     return Ok(());
@@ -1177,9 +1172,7 @@ fn create_uniform_interface<Uni, E>(
   raw: &RawProgram,
   env: E,
 ) -> Result<(Uni, Vec<UniformWarning>), ProgramError>
-where
-  Uni: UniformInterface<E>,
-{
+where Uni: UniformInterface<E> {
   let mut builder = UniformBuilder::new(raw);
   let iface = Uni::uniform_interface(&mut builder, env)?;
   Ok((iface, builder.warnings))

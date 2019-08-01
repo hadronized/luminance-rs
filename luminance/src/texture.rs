@@ -218,49 +218,60 @@ pub enum DepthComparison {
 
 /// Reify a type into a `Dim`.
 pub trait Dimensionable {
+  /// Size type of a dimension (used to caracterize dimensions’ areas).
   type Size: Copy;
+
+  /// Offset type of a dimension (used to caracterize addition and subtraction of sizes, mostly).
   type Offset: Copy;
 
   /// Dimension.
   fn dim() -> Dim;
+
   /// Width of the associated `Size`.
   fn width(size: Self::Size) -> u32;
+
   /// Height of the associated `Size`. If it doesn’t have one, set it to 1.
   fn height(_: Self::Size) -> u32 {
     1
   }
+
   /// Depth of the associated `Size`. If it doesn’t have one, set it to 1.
   fn depth(_: Self::Size) -> u32 {
     1
   }
+
   /// X offset.
   fn x_offset(offset: Self::Offset) -> u32;
+
   /// Y offset. If it doesn’t have one, set it to 0.
   fn y_offset(_: Self::Offset) -> u32 {
     1
   }
+
   /// Z offset. If it doesn’t have one, set it to 0.
   fn z_offset(_: Self::Offset) -> u32 {
     1
   }
+
   /// Zero offset.
   fn zero_offset() -> Self::Offset;
 }
 
 // Capacity of the dimension, which is the product of the width, height and depth.
-fn dim_capacity<D>(size: D::Size) -> u32
-where
-  D: Dimensionable,
-{
+fn dim_capacity<D>(size: D::Size) -> u32 where D: Dimensionable {
   D::width(size) * D::height(size) * D::depth(size)
 }
 
 /// Dimension of a texture.
 #[derive(Clone, Copy, Debug)]
 pub enum Dim {
+  /// 1D.
   Dim1,
+  /// 2D.
   Dim2,
+  /// 3D.
   Dim3,
+  /// Cubemap (i.e. a cube defining 6 faces — akin to 4D).
   Cubemap,
 }
 
@@ -471,7 +482,11 @@ pub struct RawTexture {
 }
 
 impl RawTexture {
-  pub(crate) unsafe fn new(state: Rc<RefCell<GraphicsState>>, handle: GLuint, target: GLenum) -> Self {
+  pub(crate) unsafe fn new(
+    state: Rc<RefCell<GraphicsState>>,
+    handle: GLuint,
+    target: GLenum
+  ) -> Self {
     RawTexture {
       handle,
       target,
@@ -495,11 +510,9 @@ impl RawTexture {
 /// `L` refers to the layering type; `D` refers to the dimension; `P` is the pixel format for the
 /// texels.
 pub struct Texture<L, D, P>
-where
-  L: Layerable,
-  D: Dimensionable,
-  P: Pixel,
-{
+where L: Layerable,
+      D: Dimensionable,
+      P: Pixel {
   raw: RawTexture,
   size: D::Size,
   mipmaps: usize, // number of mipmaps
@@ -508,11 +521,9 @@ where
 }
 
 impl<L, D, P> Deref for Texture<L, D, P>
-where
-  L: Layerable,
-  D: Dimensionable,
-  P: Pixel,
-{
+where L: Layerable,
+      D: Dimensionable,
+      P: Pixel {
   type Target = RawTexture;
 
   fn deref(&self) -> &Self::Target {
@@ -521,37 +532,29 @@ where
 }
 
 impl<L, D, P> DerefMut for Texture<L, D, P>
-where
-  L: Layerable,
-  D: Dimensionable,
-  P: Pixel,
-{
+where L: Layerable,
+      D: Dimensionable,
+      P: Pixel {
   fn deref_mut(&mut self) -> &mut Self::Target {
     &mut self.raw
   }
 }
 
 impl<L, D, P> Drop for Texture<L, D, P>
-where
-  L: Layerable,
-  D: Dimensionable,
-  P: Pixel,
-{
+where L: Layerable,
+      D: Dimensionable,
+      P: Pixel {
   fn drop(&mut self) {
     unsafe { gl::DeleteTextures(1, &self.handle) }
   }
 }
 
 impl<L, D, P> Texture<L, D, P>
-where
-  L: Layerable,
-  D: Dimensionable,
-  P: Pixel,
-{
+where L: Layerable,
+      D: Dimensionable,
+      P: Pixel {
   pub fn new<C>(ctx: &mut C, size: D::Size, mipmaps: usize, sampler: &Sampler) -> Result<Self, TextureError>
-  where
-    C: GraphicsContext,
-  {
+  where C: GraphicsContext {
     let mipmaps = mipmaps + 1; // + 1 prevent having 0 mipmaps
     let mut texture = 0;
     let target = opengl_target(L::layering(), D::dim());
@@ -606,9 +609,7 @@ where
   /// left-upper corner and the `size` gives the dimension of the rectangle. All the covered texels
   /// by this rectangle will be cleared to the `pixel` value.
   pub fn clear_part(&self, gen_mipmaps: bool, offset: D::Offset, size: D::Size, pixel: P::Encoding)
-  where
-    P::Encoding: Copy,
-  {
+  where P::Encoding: Copy {
     self.upload_part(
       gen_mipmaps,
       offset,
@@ -619,9 +620,7 @@ where
 
   /// Clear a whole texture with a `pixel` value.
   pub fn clear(&self, gen_mipmaps: bool, pixel: P::Encoding)
-  where
-    P::Encoding: Copy,
-  {
+  where P::Encoding: Copy {
     self.clear_part(gen_mipmaps, D::zero_offset(), self.size, pixel)
   }
 
@@ -655,7 +654,7 @@ where
   /// Upload `texels` to the whole texture.
   pub fn upload(
     &self,
-    gen_mipmaps: bool, // FIXME: bool typing
+    gen_mipmaps: bool,
     texels: &[P::Encoding],
   ) {
     self.upload_part(gen_mipmaps, D::zero_offset(), self.size, texels)
@@ -695,11 +694,7 @@ where
 
   // FIXME: cubemaps?
   /// Get the raw texels associated with this texture.
-  pub fn get_raw_texels(&self) -> Vec<P::RawEncoding>
-  where
-    P: Pixel,
-    P::RawEncoding: Copy,
-  {
+  pub fn get_raw_texels(&self) -> Vec<P::RawEncoding> where P: Pixel, P::RawEncoding: Copy {
     let mut texels = Vec::new();
     let pf = P::pixel_format();
     let (format, _, ty) = opengl_pixel_format(pf).unwrap();
@@ -755,20 +750,16 @@ pub(crate) unsafe fn create_texture<L, D>(
   pf: PixelFormat,
   sampler: &Sampler,
 ) -> Result<(), TextureError>
-where
-  L: Layerable,
-  D: Dimensionable,
-{
+where L: Layerable,
+      D: Dimensionable {
   set_texture_levels(target, mipmaps);
   apply_sampler_to_texture(target, sampler);
   create_texture_storage::<L, D>(size, mipmaps, pf)
 }
 
 fn create_texture_storage<L, D>(size: D::Size, mipmaps: usize, pf: PixelFormat) -> Result<(), TextureError>
-where
-  L: Layerable,
-  D: Dimensionable,
-{
+where L: Layerable,
+      D: Dimensionable {
   match opengl_pixel_format(pf) {
     Some(glf) => {
       let (format, iformat, encoding) = glf;
@@ -851,8 +842,14 @@ where
   }
 }
 
-fn create_texture_1d_storage(format: GLenum, iformat: GLenum, encoding: GLenum, w: u32, mipmaps: usize) {
-  for level in 0..mipmaps {
+fn create_texture_1d_storage(
+  format: GLenum,
+  iformat: GLenum,
+  encoding: GLenum,
+  w: u32,
+  mipmaps: usize
+) {
+  for level in 0 .. mipmaps {
     let w = w / 2u32.pow(level as u32);
 
     unsafe {
@@ -931,7 +928,13 @@ fn create_texture_3d_storage(
   }
 }
 
-fn create_cubemap_storage(format: GLenum, iformat: GLenum, encoding: GLenum, s: u32, mipmaps: usize) {
+fn create_cubemap_storage(
+  format: GLenum,
+  iformat: GLenum,
+  encoding: GLenum,
+  s: u32,
+  mipmaps: usize
+) {
   for level in 0..mipmaps {
     let s = s / 2u32.pow(level as u32);
 
@@ -1034,11 +1037,9 @@ fn opengl_depth_comparison(fun: DepthComparison) -> GLenum {
 
 // Upload texels into the texture’s memory. Becareful of the type of texels you send down.
 fn upload_texels<L, D, P, T>(target: GLenum, off: D::Offset, size: D::Size, texels: &[T])
-where
-  L: Layerable,
-  D: Dimensionable,
-  P: Pixel,
-{
+where L: Layerable,
+      D: Dimensionable,
+      P: Pixel {
   let pf = P::pixel_format();
 
   match opengl_pixel_format(pf) {

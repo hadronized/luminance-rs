@@ -44,7 +44,8 @@ use crate::context::GraphicsContext;
 use crate::metagl::*;
 use crate::pixel::{ColorPixel, DepthPixel, PixelFormat, RenderablePixel};
 use crate::texture::{
-  create_texture, opengl_target, Dim2, Dimensionable, Flat, Layerable, RawTexture, Texture, TextureError,
+  create_texture, opengl_target, Dim2, Dimensionable, Flat, Layerable, RawTexture, Texture,
+  TextureError,
 };
 
 /// Framebuffer error.
@@ -108,13 +109,11 @@ impl fmt::Display for IncompleteReason {
 /// *T* argets), enabling to render to several textures at once.
 #[derive(Debug)]
 pub struct Framebuffer<L, D, CS, DS>
-where
-  L: Layerable,
-  D: Dimensionable,
-  D::Size: Copy,
-  CS: ColorSlot<L, D>,
-  DS: DepthSlot<L, D>,
-{
+where L: Layerable,
+      D: Dimensionable,
+      D::Size: Copy,
+      CS: ColorSlot<L, D>,
+      DS: DepthSlot<L, D> {
   handle: GLuint,
   renderbuffer: Option<GLuint>,
   w: u32,
@@ -142,26 +141,22 @@ impl Framebuffer<Flat, Dim2, (), ()> {
 }
 
 impl<L, D, CS, DS> Drop for Framebuffer<L, D, CS, DS>
-where
-  L: Layerable,
-  D: Dimensionable,
-  D::Size: Copy,
-  CS: ColorSlot<L, D>,
-  DS: DepthSlot<L, D>,
-{
+where L: Layerable,
+      D: Dimensionable,
+      D::Size: Copy,
+      CS: ColorSlot<L, D>,
+      DS: DepthSlot<L, D> {
   fn drop(&mut self) {
     self.destroy();
   }
 }
 
 impl<L, D, CS, DS> Framebuffer<L, D, CS, DS>
-where
-  L: Layerable,
-  D: Dimensionable,
-  D::Size: Copy,
-  CS: ColorSlot<L, D>,
-  DS: DepthSlot<L, D>,
-{
+where L: Layerable,
+      D: Dimensionable,
+      D::Size: Copy,
+      CS: ColorSlot<L, D>,
+      DS: DepthSlot<L, D> {
   /// Create a new farmebuffer.
   ///
   /// You’re always handed at least the base level of the texture. If you require any *additional*
@@ -171,9 +166,7 @@ where
     size: D::Size,
     mipmaps: usize,
   ) -> Result<Framebuffer<L, D, CS, DS>, FramebufferError>
-  where
-    C: GraphicsContext,
-  {
+  where C: GraphicsContext {
     let mipmaps = mipmaps + 1;
     let mut handle: GLuint = 0;
     let color_formats = CS::color_formats();
@@ -260,9 +253,9 @@ where
       match get_status() {
         Ok(_) => {
           ctx.state().borrow_mut().bind_draw_framebuffer(0); // FIXME: see whether really needed
-
           Ok(framebuffer)
         }
+
         Err(reason) => {
           ctx.state().borrow_mut().bind_draw_framebuffer(0); // FIXME: see whether really needed
 
@@ -333,11 +326,9 @@ fn get_status() -> Result<(), IncompleteReason> {
 /// A framebuffer has a color slot. A color slot can either be empty (the *unit* type is used,`()`)
 /// or several color formats.
 pub unsafe trait ColorSlot<L, D>
-where
-  L: Layerable,
-  D: Dimensionable,
-  D::Size: Copy,
-{
+where L: Layerable,
+      D: Dimensionable,
+      D::Size: Copy {
   /// Textures associated with this color slot.
   type ColorTextures;
 
@@ -357,11 +348,9 @@ where
 }
 
 unsafe impl<L, D> ColorSlot<L, D> for ()
-where
-  L: Layerable,
-  D: Dimensionable,
-  D::Size: Copy,
-{
+where L: Layerable,
+      D: Dimensionable,
+      D::Size: Copy {
   type ColorTextures = ();
 
   fn color_formats() -> Vec<PixelFormat> {
@@ -378,12 +367,10 @@ where
 }
 
 unsafe impl<L, D, P> ColorSlot<L, D> for P
-where
-  L: Layerable,
-  D: Dimensionable,
-  D::Size: Copy,
-  Self: ColorPixel + RenderablePixel,
-{
+where L: Layerable,
+      D: Dimensionable,
+      D::Size: Copy,
+      Self: ColorPixel + RenderablePixel {
   type ColorTextures = Texture<L, D, P>;
 
   fn color_formats() -> Vec<PixelFormat> {
@@ -391,10 +378,8 @@ where
   }
 
   fn reify_textures<C, I>(ctx: &mut C, size: D::Size, mipmaps: usize, textures: &mut I) -> Self::ColorTextures
-  where
-    C: GraphicsContext,
-    I: Iterator<Item = GLuint>,
-  {
+  where C: GraphicsContext,
+        I: Iterator<Item = GLuint> {
     let color_texture = textures.next().unwrap();
 
     unsafe {
@@ -429,8 +414,8 @@ macro_rules! impl_color_slot_tuple {
         mipmaps: usize,
         textures: &mut I
       ) -> Self::ColorTextures
-        where C: GraphicsContext,
-              I: Iterator<Item = GLuint> {
+      where C: GraphicsContext,
+            I: Iterator<Item = GLuint> {
         ($($pf::reify_textures(ctx, size, mipmaps, textures)),*)
       }
     }
@@ -456,11 +441,9 @@ impl_color_slot_tuples!(P0, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11);
 /// A framebuffer has a depth slot. A depth slot can either be empty (the *unit* type is used, `()`)
 /// or a single depth format.
 pub unsafe trait DepthSlot<L, D>
-where
-  L: Layerable,
-  D: Dimensionable,
-  D::Size: Copy,
-{
+where L: Layerable,
+      D: Dimensionable,
+      D::Size: Copy {
   /// Texture associated with this color slot.
   type DepthTexture;
 
@@ -469,17 +452,14 @@ where
 
   /// Reify a raw textures into a depth slot.
   fn reify_texture<C, T>(ctx: &mut C, size: D::Size, mipmaps: usize, texture: T) -> Self::DepthTexture
-  where
-    C: GraphicsContext,
-    T: Into<Option<GLuint>>;
+  where C: GraphicsContext,
+        T: Into<Option<GLuint>>;
 }
 
 unsafe impl<L, D> DepthSlot<L, D> for ()
-where
-  L: Layerable,
-  D: Dimensionable,
-  D::Size: Copy,
-{
+where L: Layerable,
+      D: Dimensionable,
+      D::Size: Copy {
   type DepthTexture = ();
 
   fn depth_format() -> Option<PixelFormat> {
@@ -487,21 +467,17 @@ where
   }
 
   fn reify_texture<C, T>(_: &mut C, _: D::Size, _: usize, _: T) -> Self::DepthTexture
-  where
-    C: GraphicsContext,
-    T: Into<Option<GLuint>>,
-  {
+  where C: GraphicsContext,
+        T: Into<Option<GLuint>> {
     ()
   }
 }
 
 unsafe impl<L, D, P> DepthSlot<L, D> for P
-where
-  L: Layerable,
-  D: Dimensionable,
-  D::Size: Copy,
-  P: DepthPixel,
-{
+where L: Layerable,
+      D: Dimensionable,
+      D::Size: Copy,
+      P: DepthPixel {
   type DepthTexture = Texture<L, D, P>;
 
   fn depth_format() -> Option<PixelFormat> {
@@ -509,10 +485,8 @@ where
   }
 
   fn reify_texture<C, T>(ctx: &mut C, size: D::Size, mipmaps: usize, texture: T) -> Self::DepthTexture
-  where
-    C: GraphicsContext,
-    T: Into<Option<GLuint>>,
-  {
+  where C: GraphicsContext,
+        T: Into<Option<GLuint>> {
     unsafe {
       let raw = RawTexture::new(
         ctx.state().clone(),

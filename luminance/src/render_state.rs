@@ -20,9 +20,7 @@ pub struct RenderState {
 
 impl RenderState {
   pub fn set_blending<B>(self, blending: B) -> Self
-  where
-    B: Into<Option<(Equation, Factor, Factor)>>,
-  {
+  where B: Into<Option<(Equation, Factor, Factor)>> {
     RenderState {
       blending: blending.into(),
       ..self
@@ -42,9 +40,7 @@ impl RenderState {
   }
 
   pub fn set_face_culling<FC>(self, face_culling: FC) -> Self
-  where
-    FC: Into<Option<FaceCulling>>,
-  {
+  where FC: Into<Option<FaceCulling>> {
     RenderState {
       face_culling: face_culling.into(),
       ..self

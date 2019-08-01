@@ -45,7 +45,8 @@ impl VertexBufferDesc {
     sem: S,
     instancing: VertexInstancing,
     attrib_desc: VertexAttribDesc
-  ) -> Self where S: Semantics {
+  ) -> Self
+  where S: Semantics {
     let index = sem.index();
     let name = sem.name();
     VertexBufferDesc { index, name, instancing, attrib_desc }

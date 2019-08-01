@@ -53,9 +53,7 @@ mod meta {
 
   #[inline(always)]
   pub unsafe fn with_cstring<F, A>(s: &str, f: F) -> Result<A, NulError>
-  where
-    F: FnOnce(*const GLchar) -> A,
-  {
+  where F: FnOnce(*const GLchar) -> A {
     let bytes = s.as_bytes();
 
     if bytes.contains(&b'\0') {
@@ -266,174 +264,217 @@ mod meta {
       #[inline]
       #[link_name = "glActiveTexture"]
       pub fn ActiveTexture(_: GLenum);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glAttachShader"]
       pub fn AttachShader(_: GLuint, _: GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glBindBuffer"]
       pub fn BindBuffer(_: GLenum, _: GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glBindBufferBase"]
       pub fn BindBufferBase(_: GLenum, _: GLuint, _: GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glBindFramebuffer"]
       pub fn BindFramebuffer(_: GLenum, _: GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glBindRenderbuffer"]
       pub fn BindRenderbuffer(_: GLenum, _: GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glBindTexture"]
       pub fn BindTexture(_: GLenum, _: GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glBindVertexArray"]
       pub fn BindVertexArray(_: GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glBlendEquation"]
       pub fn BlendEquation(_: GLenum);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glBlendFunc"]
       pub fn BlendFunc(_: GLenum, _: GLenum);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glBufferData"]
       pub fn BufferData(_: GLenum, _: GLsizeiptr, _: *const c_void, _: GLenum);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glCheckFramebufferStatus"]
       pub fn CheckFramebufferStatus(_: GLenum) -> GLenum;
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glClear"]
       pub fn Clear(_: GLbitfield);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glClearColor"]
       pub fn ClearColor(_: GLfloat, _: GLfloat, _: GLfloat, _: GLfloat);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glCompileShader"]
       pub fn CompileShader(_: GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glCreateProgram"]
       pub fn CreateProgram() -> GLuint;
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glCreateShader"]
       pub fn CreateShader(_: GLenum) -> GLuint;
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glCullFace"]
       pub fn CullFace(_: GLenum);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glDeleteBuffers"]
       pub fn DeleteBuffers(_: GLsizei, _: *const GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glDeleteFramebuffers"]
       pub fn DeleteFramebuffers(_: GLsizei, _: *const GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glDeleteProgram"]
       pub fn DeleteProgram(_: GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glDeleteRenderbuffers"]
       pub fn DeleteRenderbuffers(_: GLsizei, _: *const GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glDeleteShader"]
       pub fn DeleteShader(_: GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glDeleteTextures"]
       pub fn DeleteTextures(_: GLsizei, _: *const GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glDeleteVertexArrays"]
       pub fn DeleteVertexArrays(_: GLsizei, _: *const GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glDisable"]
       pub fn Disable(_: GLenum);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glDrawArrays"]
       pub fn DrawArrays(_: GLenum, _: GLint, _: GLsizei);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glDrawArraysInstanced"]
       pub fn DrawArraysInstanced(_: GLenum, _: GLint, _: GLsizei, _: GLsizei);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glDrawElements"]
       pub fn DrawElements(_: GLenum, _: GLsizei, _: GLenum, _: *const c_void);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glDrawElementsInstanced"]
       pub fn DrawElementsInstanced(_: GLenum, _: GLsizei, _: GLenum, _: *const c_void, _: GLsizei);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glDrawBuffer"]
       pub fn DrawBuffer(_: GLenum);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glDrawBuffers"]
       pub fn DrawBuffers(_: GLsizei, _: *const GLenum);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glEnable"]
       pub fn Enable(_: GLenum);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glEnableVertexAttribArray"]
       pub fn EnableVertexAttribArray(_: GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glFramebufferRenderbuffer"]
       pub fn FramebufferRenderbuffer(_: GLenum, _: GLenum, _: GLenum, _: GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glFramebufferTexture"]
       pub fn FramebufferTexture(_: GLenum, _: GLenum, _: GLuint, _: GLint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glFrontFace"]
       pub fn FrontFace(_: GLenum);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glGenBuffers"]
       pub fn GenBuffers(_: GLsizei, _: *mut GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glGenFramebuffers"]
       pub fn GenFramebuffers(_: GLsizei, _: *mut GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glGenRenderbuffers"]
       pub fn GenRenderbuffers(_: GLsizei, _: *mut GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glGenTextures"]
       pub fn GenTextures(_: GLsizei, _: *mut GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glGenVertexArrays"]
       pub fn GenVertexArrays(_: GLsizei, _: *mut GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glGenerateMipmap"]
       pub fn GenerateMipmap(_: GLenum);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glGetActiveUniform"]
@@ -446,66 +487,82 @@ mod meta {
         _: *mut GLenum,
         _: *mut GLchar,
       );
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glGetIntegerv"]
       pub fn GetIntegerv(_: GLenum, _: *mut GLint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glGetProgramInfoLog"]
       pub fn GetProgramInfoLog(_: GLuint, _: GLsizei, _: *mut GLsizei, _: *mut GLchar);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glGetProgramiv"]
       pub fn GetProgramiv(_: GLuint, _: GLenum, _: *mut GLint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glGetShaderInfoLog"]
       pub fn GetShaderInfoLog(_: GLuint, _: GLsizei, _: *mut GLsizei, _: *mut GLchar);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glGetShaderiv"]
       pub fn GetShaderiv(_: GLuint, _: GLenum, _: *mut GLint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glGetTexImage"]
       pub fn GetTexImage(_: GLenum, _: GLint, _: GLenum, _: GLenum, _: *mut c_void);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glGetTexLevelParameteriv"]
       pub fn GetTexLevelParameteriv(_: GLenum, _: GLint, _: GLenum, _: *mut GLint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glGetUniformBlockIndex"]
       pub fn GetUniformBlockIndex(_: GLuint, _: *const GLchar) -> GLuint;
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glGetUniformLocation"]
       pub fn GetUniformLocation(_: GLuint, _: *const GLchar) -> GLint;
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glGetUniformIndices"]
       pub fn GetUniformIndices(_: GLuint, _: GLsizei, _: *const *const GLchar, _: *mut GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glIsEnabled"]
       pub fn IsEnabled(_: GLenum) -> GLboolean;
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glLinkProgram"]
       pub fn LinkProgram(_: GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glMapBuffer"]
       pub fn MapBuffer(_: GLenum, _: GLenum) -> *mut c_void;
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glRenderbufferStorage"]
       pub fn RenderbufferStorage(_: GLenum, _: GLenum, _: GLsizei, _: GLsizei);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glShaderSource"]
       pub fn ShaderSource(_: GLuint, _: GLsizei, _: *const *const GLchar, _: *const GLint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glTexImage1D"]
@@ -519,6 +576,7 @@ mod meta {
         _: GLenum,
         _: *const c_void,
       );
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glTexImage2D"]
@@ -533,6 +591,7 @@ mod meta {
         _: GLenum,
         _: *const c_void,
       );
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glTexImage3D"]
@@ -548,14 +607,17 @@ mod meta {
         _: GLenum,
         _: *const c_void,
       );
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glTexParameteri"]
       pub fn TexParameteri(_: GLenum, _: GLenum, _: GLint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glTexSubImage1D"]
       pub fn TexSubImage1D(_: GLenum, _: GLint, _: GLint, _: GLsizei, _: GLenum, _: GLenum, _: *const c_void);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glTexSubImage2D"]
@@ -570,6 +632,7 @@ mod meta {
         _: GLenum,
         _: *const c_void,
       );
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glTexSubImage3D"]
@@ -586,98 +649,122 @@ mod meta {
         _: GLenum,
         _: *const c_void,
       );
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glUniform1f"]
       pub fn Uniform1f(_: GLint, _: GLfloat);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glUniform1i"]
       pub fn Uniform1i(_: GLint, _: GLint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glUniform1ui"]
       pub fn Uniform1ui(_: GLint, _: GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glUniform1iv"]
       pub fn Uniform1iv(_: GLint, _: GLsizei, _: *const GLint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glUniform1fv"]
       pub fn Uniform1fv(_: GLint, _: GLsizei, _: *const GLfloat);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glUniform1uiv"]
       pub fn Uniform1uiv(_: GLint, _: GLsizei, _: *const GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glUniform2fv"]
       pub fn Uniform2fv(_: GLint, _: GLsizei, _: *const GLfloat);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glUniform2iv"]
       pub fn Uniform2iv(_: GLint, _: GLsizei, _: *const GLint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glUniform2uiv"]
       pub fn Uniform2uiv(_: GLint, _: GLsizei, _: *const GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glUniform3fv"]
       pub fn Uniform3fv(_: GLint, _: GLsizei, _: *const GLfloat);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glUniform3iv"]
       pub fn Uniform3iv(_: GLint, _: GLsizei, _: *const GLint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glUniform3uiv"]
       pub fn Uniform3uiv(_: GLint, _: GLsizei, _: *const GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glUniform4fv"]
       pub fn Uniform4fv(_: GLint, _: GLsizei, _: *const GLfloat);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glUniform4iv"]
       pub fn Uniform4iv(_: GLint, _: GLsizei, _: *const GLint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glUniform4uiv"]
       pub fn Uniform4uiv(_: GLint, _: GLsizei, _: *const GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glUniformBlockBinding"]
       pub fn UniformBlockBinding(_: GLuint, _: GLuint, _: GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glUniformMatrix2fv"]
       pub fn UniformMatrix2fv(_: GLint, _: GLsizei, _: GLboolean, _: *const GLfloat);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glUniformMatrix3fv"]
       pub fn UniformMatrix3fv(_: GLint, _: GLsizei, _: GLboolean, _: *const GLfloat);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glUniformMatrix4fv"]
       pub fn UniformMatrix4fv(_: GLint, _: GLsizei, _: GLboolean, _: *const GLfloat);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glUnmapBuffer"]
       pub fn UnmapBuffer(_: GLenum) -> GLboolean;
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glUseProgram"]
       pub fn UseProgram(_: GLuint);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glVertexAttribPointer"]
       pub fn VertexAttribPointer(_: GLuint, _: GLint, _: GLenum, _: GLboolean, _: GLsizei, _: *const c_void);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glVertexAttribIPointer"]
       pub fn VertexAttribIPointer(_: GLuint, _: GLint, _: GLenum, _: GLsizei, _: *const c_void);
+
       #[allow(non_snake_case)]
       #[inline]
       #[link_name = "glViewport"]

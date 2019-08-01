@@ -161,10 +161,7 @@ impl<'a, C> TessBuilder<'a, C> {
   }
 }
 
-impl<'a, C> TessBuilder<'a, C>
-where
-  C: GraphicsContext,
-{
+impl<'a, C> TessBuilder<'a, C> where C: GraphicsContext {
   /// Add vertices to be part of the tessellation.
   ///
   /// This method can be used in several ways. First, you can decide to use interleaved memory, in
@@ -172,11 +169,7 @@ where
   /// buffer. Second, you can opt-in to use deinterleaved memory, in which case you will have
   /// several, smaller buffers of borrowed data and you will issue a call to this method for all of
   /// them.
-  pub fn add_vertices<V, W>(mut self, vertices: W) -> Self
-  where
-    W: AsRef<[V]>,
-    V: Vertex
-  {
+  pub fn add_vertices<V, W>(mut self, vertices: W) -> Self where W: AsRef<[V]>, V: Vertex {
     let vertices = vertices.as_ref();
 
     let vb = VertexBuffer {
@@ -189,9 +182,7 @@ where
     self
   }
 
-  pub fn add_instances<V, W>(mut self, instances: W) -> Self
-  where W: AsRef<[V]>,
-        V: Vertex {
+  pub fn add_instances<V, W>(mut self, instances: W) -> Self where W: AsRef<[V]>, V: Vertex {
     let instances = instances.as_ref();
 
     let vb = VertexBuffer {
@@ -205,10 +196,7 @@ where
   }
 
   /// Set vertex indices in order to specify how vertices should be picked by the GPU pipeline.
-  pub fn set_indices<T, I>(mut self, indices: T) -> Self
-  where
-    T: AsRef<[I]>,
-    I: TessIndex  {
+  pub fn set_indices<T, I>(mut self, indices: T) -> Self where T: AsRef<[I]>, I: TessIndex  {
     let indices = indices.as_ref();
 
     // create a new raw buffer containing the indices and turn it into a vertex buffer
@@ -352,7 +340,8 @@ where
   }
 
   /// Check whether any vertex buffer is incoherent in its length according to the input length.
-  fn check_incoherent_buffers<'b, B>(mut buffers: B, len: usize) -> bool where B: Iterator<Item = &'b VertexBuffer> {
+  fn check_incoherent_buffers<'b, B>(mut buffers: B, len: usize) -> bool
+  where B: Iterator<Item = &'b VertexBuffer> {
     !buffers.all(|vb| vb.buf.len() == len)
   }
 

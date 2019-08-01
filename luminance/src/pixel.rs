@@ -556,75 +556,33 @@ pub(crate) fn opengl_pixel_format(pf: PixelFormat) -> Option<(GLenum, GLenum, GL
     (Format::R(Size::ThirtyTwo), Type::Floating) => Some((gl::RED, gl::R32F, gl::FLOAT)),
 
     (Format::RG(Size::Eight, Size::Eight), Type::Integral) => Some((gl::RG_INTEGER, gl::RG8I, gl::BYTE)),
-    (Format::RG(Size::Eight, Size::Eight), Type::Unsigned) => {
-      Some((gl::RG_INTEGER, gl::RG8UI, gl::UNSIGNED_BYTE))
-    }
-    (Format::RG(Size::Sixteen, Size::Sixteen), Type::Integral) => {
-      Some((gl::RG_INTEGER, gl::RG16I, gl::SHORT))
-    }
-    (Format::RG(Size::Sixteen, Size::Sixteen), Type::Unsigned) => {
-      Some((gl::RG_INTEGER, gl::RG16UI, gl::UNSIGNED_SHORT))
-    }
-    (Format::RG(Size::ThirtyTwo, Size::ThirtyTwo), Type::Integral) => {
-      Some((gl::RG_INTEGER, gl::RG32I, gl::INT))
-    }
-    (Format::RG(Size::ThirtyTwo, Size::ThirtyTwo), Type::Unsigned) => {
-      Some((gl::RG_INTEGER, gl::RG32UI, gl::UNSIGNED_INT))
-    }
+    (Format::RG(Size::Eight, Size::Eight), Type::Unsigned) => Some((gl::RG_INTEGER, gl::RG8UI, gl::UNSIGNED_BYTE)),
+    (Format::RG(Size::Sixteen, Size::Sixteen), Type::Integral) => Some((gl::RG_INTEGER, gl::RG16I, gl::SHORT)),
+    (Format::RG(Size::Sixteen, Size::Sixteen), Type::Unsigned) => Some((gl::RG_INTEGER, gl::RG16UI, gl::UNSIGNED_SHORT)),
+    (Format::RG(Size::ThirtyTwo, Size::ThirtyTwo), Type::Integral) => Some((gl::RG_INTEGER, gl::RG32I, gl::INT)),
+    (Format::RG(Size::ThirtyTwo, Size::ThirtyTwo), Type::Unsigned) => Some((gl::RG_INTEGER, gl::RG32UI, gl::UNSIGNED_INT)),
     (Format::RG(Size::ThirtyTwo, Size::ThirtyTwo), Type::Floating) => Some((gl::RG, gl::RG32F, gl::FLOAT)),
 
-    (Format::RGB(Size::Eight, Size::Eight, Size::Eight), Type::Integral) => {
-      Some((gl::RGB_INTEGER, gl::RGB8I, gl::BYTE))
-    }
-    (Format::RGB(Size::Eight, Size::Eight, Size::Eight), Type::Unsigned) => {
-      Some((gl::RGB_INTEGER, gl::RGB8UI, gl::UNSIGNED_BYTE))
-    }
-    (Format::RGB(Size::Sixteen, Size::Sixteen, Size::Sixteen), Type::Integral) => {
-      Some((gl::RGB_INTEGER, gl::RGB16I, gl::SHORT))
-    }
-    (Format::RGB(Size::Sixteen, Size::Sixteen, Size::Sixteen), Type::Unsigned) => {
-      Some((gl::RGB_INTEGER, gl::RGB16UI, gl::UNSIGNED_SHORT))
-    }
-    (Format::RGB(Size::Eleven, Size::Eleven, Size::Ten), Type::Floating) => {
-      Some((gl::RGB, gl::R11F_G11F_B10F, gl::FLOAT))
-    }
-    (Format::RGB(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo), Type::Integral) => {
-      Some((gl::RGB_INTEGER, gl::RGB32I, gl::INT))
-    }
-    (Format::RGB(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo), Type::Unsigned) => {
-      Some((gl::RGB_INTEGER, gl::RGB32UI, gl::UNSIGNED_INT))
-    }
-    (Format::RGB(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo), Type::Floating) => {
-      Some((gl::RGB, gl::RGB32F, gl::FLOAT))
-    }
+    (Format::RGB(Size::Eight, Size::Eight, Size::Eight), Type::Integral) => Some((gl::RGB_INTEGER, gl::RGB8I, gl::BYTE)),
+    (Format::RGB(Size::Eight, Size::Eight, Size::Eight), Type::Unsigned) => Some((gl::RGB_INTEGER, gl::RGB8UI, gl::UNSIGNED_BYTE)),
+    (Format::RGB(Size::Sixteen, Size::Sixteen, Size::Sixteen), Type::Integral) => Some((gl::RGB_INTEGER, gl::RGB16I, gl::SHORT)),
+    (Format::RGB(Size::Sixteen, Size::Sixteen, Size::Sixteen), Type::Unsigned) => Some((gl::RGB_INTEGER, gl::RGB16UI, gl::UNSIGNED_SHORT)),
+    (Format::RGB(Size::Eleven, Size::Eleven, Size::Ten), Type::Floating) => Some((gl::RGB, gl::R11F_G11F_B10F, gl::FLOAT)),
+    (Format::RGB(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo), Type::Integral) => Some((gl::RGB_INTEGER, gl::RGB32I, gl::INT)),
+    (Format::RGB(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo), Type::Unsigned) => Some((gl::RGB_INTEGER, gl::RGB32UI, gl::UNSIGNED_INT)),
+    (Format::RGB(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo), Type::Floating) => Some((gl::RGB, gl::RGB32F, gl::FLOAT)),
 
-    (Format::RGBA(Size::Eight, Size::Eight, Size::Eight, Size::Eight), Type::Integral) => {
-      Some((gl::RGBA_INTEGER, gl::RGBA8I, gl::BYTE))
-    }
-    (Format::RGBA(Size::Eight, Size::Eight, Size::Eight, Size::Eight), Type::Unsigned) => {
-      Some((gl::RGBA_INTEGER, gl::RGBA8UI, gl::UNSIGNED_BYTE))
-    }
-    (Format::RGBA(Size::Sixteen, Size::Sixteen, Size::Sixteen, Size::Sixteen), Type::Integral) => {
-      Some((gl::RGBA_INTEGER, gl::RGBA16I, gl::SHORT))
-    }
-    (Format::RGBA(Size::Sixteen, Size::Sixteen, Size::Sixteen, Size::Sixteen), Type::Unsigned) => {
-      Some((gl::RGBA_INTEGER, gl::RGBA16UI, gl::UNSIGNED_SHORT))
-    }
-    (Format::RGBA(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo), Type::Integral) => {
-      Some((gl::RGBA_INTEGER, gl::RGBA32I, gl::INT))
-    }
-    (Format::RGBA(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo), Type::Unsigned) => {
-      Some((gl::RGBA_INTEGER, gl::RGBA32UI, gl::UNSIGNED_INT))
-    }
-    (Format::RGBA(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo), Type::Floating) => {
-      Some((gl::RGBA, gl::RGBA32F, gl::FLOAT))
-    }
+    (Format::RGBA(Size::Eight, Size::Eight, Size::Eight, Size::Eight), Type::Integral) => Some((gl::RGBA_INTEGER, gl::RGBA8I, gl::BYTE)),
+    (Format::RGBA(Size::Eight, Size::Eight, Size::Eight, Size::Eight), Type::Unsigned) => Some((gl::RGBA_INTEGER, gl::RGBA8UI, gl::UNSIGNED_BYTE)),
+    (Format::RGBA(Size::Sixteen, Size::Sixteen, Size::Sixteen, Size::Sixteen), Type::Integral) => Some((gl::RGBA_INTEGER, gl::RGBA16I, gl::SHORT)),
+    (Format::RGBA(Size::Sixteen, Size::Sixteen, Size::Sixteen, Size::Sixteen), Type::Unsigned) => Some((gl::RGBA_INTEGER, gl::RGBA16UI, gl::UNSIGNED_SHORT)),
+    (Format::RGBA(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo), Type::Integral) => Some((gl::RGBA_INTEGER, gl::RGBA32I, gl::INT)),
+    (Format::RGBA(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo), Type::Unsigned) => Some((gl::RGBA_INTEGER, gl::RGBA32UI, gl::UNSIGNED_INT)),
+    (Format::RGBA(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo), Type::Floating) => Some((gl::RGBA, gl::RGBA32F, gl::FLOAT)),
 
-    (Format::Depth(Size::ThirtyTwo), Type::Floating) => {
-      Some((gl::DEPTH_COMPONENT, gl::DEPTH_COMPONENT32F, gl::FLOAT))
-    }
+    (Format::Depth(Size::ThirtyTwo), Type::Floating) => Some((gl::DEPTH_COMPONENT, gl::DEPTH_COMPONENT32F, gl::FLOAT)),
 
-    _ => panic!("unsupported pixel format {:?}", pf),
+    _ => None
   }
 }
 

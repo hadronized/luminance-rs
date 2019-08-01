@@ -188,13 +188,12 @@ impl Builder {
     framebuffer: &Framebuffer<L, D, CS, DS>,
     clear_color: [f32; 4],
     f: F,
-  ) where
-    L: Layerable,
-    D: Dimensionable,
-    CS: ColorSlot<L, D>,
-    DS: DepthSlot<L, D>,
-    F: FnOnce(Pipeline, ShadingGate),
-  {
+  )
+  where L: Layerable,
+        D: Dimensionable,
+        CS: ColorSlot<L, D>,
+        DS: DepthSlot<L, D>,
+        F: FnOnce(Pipeline, ShadingGate) {
     let binding_stack = &self.binding_stack;
 
     unsafe {
@@ -231,11 +230,9 @@ impl<'a> Pipeline<'a> {
     &'a self,
     texture: &'a Texture<L, D, P>,
   ) -> BoundTexture<'a, L, D, P::SamplerType>
-  where
-    L: 'a + Layerable,
-    D: 'a + Dimensionable,
-    P: 'a + Pixel,
-  {
+  where L: 'a + Layerable,
+        D: 'a + Dimensionable,
+        P: 'a + Pixel {
     let mut bstack = self.binding_stack.borrow_mut();
 
     let unit = bstack.free_texture_units.pop().unwrap_or_else(|| {
@@ -258,9 +255,7 @@ impl<'a> Pipeline<'a> {
   ///
   /// The buffer remains bound as long as the return value lives.
   pub fn bind_buffer<T>(&'a self, buffer: &'a T) -> BoundBuffer<'a, T>
-  where
-    T: Deref<Target = RawBuffer>,
-  {
+  where T: Deref<Target = RawBuffer> {
     let mut bstack = self.binding_stack.borrow_mut();
 
     let binding = bstack.free_buffer_bindings.pop().unwrap_or_else(|| {
@@ -284,21 +279,18 @@ impl<'a> Pipeline<'a> {
 /// An opaque type representing a bound texture in a `Builder`. You may want to pass such an object
 /// to a shader’s uniform’s update.
 pub struct BoundTexture<'a, L, D, S>
-where
-  L: 'a + Layerable,
-  D: 'a + Dimensionable,
-  S: 'a + SamplerType, {
+where L: 'a + Layerable,
+      D: 'a + Dimensionable,
+      S: 'a + SamplerType, {
   unit: u32,
   binding_stack: &'a Rc<RefCell<BindingStack>>,
   _t: PhantomData<&'a (L, D, S)>,
 }
 
 impl<'a, L, D, S> BoundTexture<'a, L, D, S>
-where
-  L: 'a + Layerable,
-  D: 'a + Dimensionable,
-  S: 'a + SamplerType,
-{
+where L: 'a + Layerable,
+      D: 'a + Dimensionable,
+      S: 'a + SamplerType {
   fn new(binding_stack: &'a Rc<RefCell<BindingStack>>, unit: u32) -> Self {
     BoundTexture {
       unit,
@@ -309,11 +301,9 @@ where
 }
 
 impl<'a, L, D, S> Drop for BoundTexture<'a, L, D, S>
-where
-  L: 'a + Layerable,
-  D: 'a + Dimensionable,
-  S: 'a + SamplerType,
-{
+where L: 'a + Layerable,
+      D: 'a + Dimensionable,
+      S: 'a + SamplerType {
   fn drop(&mut self) {
     let mut bstack = self.binding_stack.borrow_mut();
     // place the unit into the free list
@@ -322,11 +312,9 @@ where
 }
 
 unsafe impl<'a, 'b, L, D, S> Uniformable for &'b BoundTexture<'a, L, D, S>
-where
-  L: 'a + Layerable,
-  D: 'a + Dimensionable,
-  S: 'a + SamplerType,
-{
+where L: 'a + Layerable,
+      D: 'a + Dimensionable,
+      S: 'a + SamplerType {
   fn update(self, u: &Uniform<Self>) {
     unsafe { gl::Uniform1i(u.index(), self.unit as GLint) }
   }
@@ -351,10 +339,7 @@ where
 
 /// An opaque type representing a bound buffer in a `Builder`. You may want to pass such an object
 /// to a shader’s uniform’s update.
-pub struct BoundBuffer<'a, T>
-where
-  T: 'a,
-{
+pub struct BoundBuffer<'a, T> where T: 'a {
   binding: u32,
   binding_stack: &'a Rc<RefCell<BindingStack>>,
   _t: PhantomData<&'a Buffer<T>>,
