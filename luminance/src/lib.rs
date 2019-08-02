@@ -187,7 +187,7 @@
 //!
 //! A function is a perfect candidate to modelize a dependency. When you look at:
 //!
-//! ```rust
+//! ```ignore
 //! fn tronfibulate(x: Foo) -> Bar;
 //! ```
 //!
