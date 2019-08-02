@@ -3,10 +3,10 @@
 //! This module exports the `GlfwSurface` as an implementation of `Surface`.
 
 use gl;
-use glfw::{self, Context, CursorMode, SwapInterval, Window, WindowMode};
+use glfw::{self, Context, CursorMode as GlfwCursorMode, SwapInterval, Window, WindowMode};
 use luminance::context::GraphicsContext;
 use luminance::state::GraphicsState;
-pub use luminance_windowing::{Surface, WindowDim, WindowOpt};
+pub use luminance_windowing::{CursorMode, Surface, WindowDim, WindowOpt};
 use std::cell::RefCell;
 use std::os::raw::c_void;
 use std::rc::Rc;
@@ -75,8 +75,10 @@ impl Surface for GlfwSurface {
 
     window.make_current();
 
-    if win_opt.is_cursor_hidden() {
-      window.set_cursor_mode(CursorMode::Disabled);
+    match win_opt.cursor_mode() {
+      CursorMode::Visible => window.set_cursor_mode(GlfwCursorMode::Normal),
+      CursorMode::Invisible =>  window.set_cursor_mode(GlfwCursorMode::Hidden),
+      CursorMode::Disabled =>  window.set_cursor_mode(GlfwCursorMode::Disabled),
     }
 
     window.set_all_polling(true);
@@ -100,14 +102,14 @@ impl Surface for GlfwSurface {
     &self.opts
   }
 
-  fn hide_cursor(&mut self, hide: bool) -> &mut Self {
-    if hide {
-      self.window.set_cursor_mode(CursorMode::Disabled);
-    } else {
-      self.window.set_cursor_mode(CursorMode::Normal);
+  fn set_cursor_mode(&mut self, mode: CursorMode) -> &mut Self {
+    match mode {
+      CursorMode::Visible => self.window.set_cursor_mode(GlfwCursorMode::Normal),
+      CursorMode::Invisible =>  self.window.set_cursor_mode(GlfwCursorMode::Hidden),
+      CursorMode::Disabled =>  self.window.set_cursor_mode(GlfwCursorMode::Disabled),
     }
 
-    self.opts = self.opts.hide_cursor(hide);
+    self.opts = self.opts.set_cursor_mode(mode);
     self
   }
 

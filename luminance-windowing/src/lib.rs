@@ -46,43 +46,54 @@ pub enum WindowDim {
   FullscreenRestricted(u32, u32),
 }
 
+/// Cursor mode.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CursorMode {
+  /// The cursor is always visible.
+  Visible,
+  /// The cursor exists yet has been disabled.
+  Invisible,
+  /// The cursor is disabled.
+  Disabled
+}
+
 /// Different window options.
 ///
 /// Feel free to look at the different methods available to tweak the options. You may want to start
 /// with `default()` though.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct WindowOpt {
-  hide_cursor: bool,
+  cursor_mode: CursorMode,
   num_samples: Option<u32>,
 }
 
 impl Default for WindowOpt {
   /// Defaults:
   ///
-  /// - `hide_cursor` set to `false`.
+  /// - `cursor_mode` set to `CursorMode::Visible`.
   /// - `num_samples` set to `None`.
   fn default() -> Self {
     WindowOpt {
-      hide_cursor: false,
+      cursor_mode: CursorMode::Visible,
       num_samples: None,
     }
   }
 }
 
 impl WindowOpt {
-  /// Hide or unhide the cursor. Default to `false`.
+  /// Hide, unhide or disable the cursor. Default to `CursorMode::Visible`.
   #[inline]
-  pub fn hide_cursor(self, hide: bool) -> Self {
+  pub fn set_cursor_mode(self, mode: CursorMode) -> Self {
     WindowOpt {
-      hide_cursor: hide,
+      cursor_mode: mode,
       ..self
     }
   }
 
-  /// Check whether the cursor is hidden.
+  /// Get the cursor mode.
   #[inline]
-  pub fn is_cursor_hidden(&self) -> bool {
-    self.hide_cursor
+  pub fn cursor_mode(&self) -> CursorMode {
+    self.cursor_mode
   }
 
   /// Set the number of samples to use for multisampling.
@@ -121,8 +132,8 @@ pub trait Surface: GraphicsContext + Sized {
   /// Retrieve opitions and allow editing them.
   fn opts(&self) -> &WindowOpt;
 
-  /// Change the cursor state.
-  fn hide_cursor(&mut self, hide: bool) -> &mut Self;
+  /// Change the cursor mode.
+  fn set_cursor_mode(&mut self, mode: CursorMode) -> &mut Self;
 
   /// Change the multisampling state.
   fn set_num_samples<S>(&mut self, samples: S) -> &mut Self where S: Into<Option<u32>>;
