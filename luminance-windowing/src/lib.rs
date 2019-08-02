@@ -115,8 +115,17 @@ pub trait Surface: GraphicsContext + Sized {
   type Error;
 
   /// Create a surface along with its associated event stream and bootstrap a luminance environment
-  /// that it lives as long as the surface lives.
+  /// that lives as long as the surface lives.
   fn new(dim: WindowDim, title: &str, win_opt: WindowOpt) -> Result<Self, Self::Error>;
+
+  /// Retrieve opitions and allow editing them.
+  fn opts(&self) -> &WindowOpt;
+
+  /// Change the cursor state.
+  fn hide_cursor(&mut self, hide: bool) -> &mut Self;
+
+  /// Change the multisampling state.
+  fn set_num_samples<S>(&mut self, samples: S) -> &mut Self where S: Into<Option<u32>>;
 
   /// Size of the surface’s framebuffer.
   fn size(&self) -> [u32; 2];

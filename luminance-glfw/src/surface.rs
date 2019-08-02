@@ -23,6 +23,7 @@ pub struct GlfwSurface {
   window: Window,
   events_rx: Receiver<(f64, WindowEvent)>,
   gfx_state: Rc<RefCell<GraphicsState>>,
+  opts: WindowOpt
 }
 
 unsafe impl GraphicsContext for GlfwSurface {
@@ -89,9 +90,32 @@ impl Surface for GlfwSurface {
       window,
       events_rx,
       gfx_state: Rc::new(RefCell::new(gfx_state)),
+      opts: win_opt
     };
 
     Ok(surface)
+  }
+
+  fn opts(&self) -> &WindowOpt {
+    &self.opts
+  }
+
+  fn hide_cursor(&mut self, hide: bool) -> &mut Self {
+    if hide {
+      self.window.set_cursor_mode(CursorMode::Disabled);
+    } else {
+      self.window.set_cursor_mode(CursorMode::Normal);
+    }
+
+    self.opts = self.opts.hide_cursor(hide);
+    self
+  }
+
+  fn set_num_samples<S>(&mut self, samples: S) -> &mut Self where S: Into<Option<u32>> {
+    let samples = samples.into();
+    self.window.glfw.window_hint(glfw::WindowHint::Samples(samples));
+    self.opts = self.opts.set_num_samples(samples);
+    self
   }
 
   fn size(&self) -> [u32; 2] {
