@@ -267,7 +267,52 @@
 //! );
 //! ```
 //!
-//! That is a complete pipeline.
+//! The **luminance** equivalent is a bit more complex because it implies some objects that need
+//! to be introduced first.
+//!
+//! ### [`Pipeline`]
+//!
+//! A [`Pipeline`] represents a whole [AST] as seen as just above. It is created by a
+//! [`GraphicsContext`] when you ask to create a pipeline and is destroyed as soon as the render has
+//! happened. A [`Pipeline`] is a special object you can use to bind some specific scarce resources,
+//! such as _textures_ and _buffers_.
+//!
+//! Creating a [`Pipeline`] requires at least one resource: a [`Framebuffer`] to render to.
+//!
+//! When you create a pipeline, you’re also handed a [`ShadingGate`]. A [`ShadingGate`] is an object
+//! that allows you to create _shader_ nodes in the [AST] you’re building. You have no other way
+//! to go deeper in the [AST]. The concept of _gates_ is very important and you should try to
+//! familiarize yourself with it.
+//!
+//! ### [`ShadingGate`]
+//!
+//! As said above, a [`ShadingGate`] allows you to create a _shader node_ in the graphics pipeline.
+//! That node will typically borrow a shader [`Program`] and will move you one level lower in the
+//! graph ([AST]). At that level (i.e. in that closure), you are given two objects:
+//!
+//!   - A [`RenderGate`], discussed below.
+//!   - A [`ProgramInterface`], which is parametered by the type of uniform your shader [`Program`]
+//!     defines.
+//!
+//! The [`ProgramInterface`] is the only way for you to access your _uniform interface_. More on
+//! this in the dedicated section. It also provides you with the [`ProgramInterface::query`]
+//! method, that allows you to perform _dynamic uniform lookup_.
+//!
+//! ### [`RenderGate`]
+//!
+//! A [`RenderGate`] is the second to last gate you will be handling. It allows you to create
+//! _render state_ nodes in your [AST], creating a new level for you to render tessellations with
+//! an obvious, final gate: the [`TessGate`].
+//!
+//! ### [`TessGate`]
+//!
+//! The [`TessGate`] is the final gate you use in an [AST]. It’s used to create _tessellation
+//! nodes_. Those are used to render actual [`Tess`]. You cannot go any deeper in the [AST] at that
+//! stage.
+//!
+//! [`TessGate`]s don’t immediately use [`Tess]` as inputs. They use [`TessSlice`]. That type is
+//! a simple GPU slice into a GPU tessellation ([`Tess`]). It can be obtained from a [`Tess`] via
+//! the [`TessSliceIndex`] trait.
 //!
 //! ## Contributor-guide
 //!
@@ -290,9 +335,17 @@
 //! [`GraphicsState`]: crate::state::GraphicsState
 //! [`GraphicsState::new`]: crate::state::GraphicsState::new
 //! [`Tess`]: crate::tess::Tess
+//! [`TessSlice`]: crate::tess::TessSlice
+//! [`TessSliceIndex`]: crate::tess::TessSliceIndex
 //! [`Program`]: crate::shader::program::Program
 //! [`Framebuffer`]: crate::framebuffer::Framebuffer
 //! [`RenderState`]: crate::render_state::RenderState
+//! [`Pipeline`]: crate::pipeline::Pipeline
+//! [`ShadingGate`]: crate::pipeline::ShadingGate
+//! [`RenderGate`]: crate::pipeline::RenderGate
+//! [`ProgramInterface`]: crate::shader::program::ProgramInterface
+//! [`ProgramInterface::query`]: crate::shader::program::ProgramInterface::query
+//! [`TessGate`]: crate::pipeline::TessGate
 //! [AST]: https://en.wikipedia.org/wiki/Abstract_syntax_tree
 
 #![cfg_attr(not(feature = "std"), no_std)]
