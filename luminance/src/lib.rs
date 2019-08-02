@@ -114,7 +114,7 @@
 //!
 //! > If you really want several contexts, you will need several OS threads.
 //!
-//! [`GraphicsContext]` is the entry-point of everything **luminance** provides. Feel free to dig in
+//! [`GraphicsContext`] is the entry-point of everything **luminance** provides. Feel free to dig in
 //! its documentation for further information on how to use **luminance**. Most objects you can
 //! create will need a mutable reference to such a context object. Even though **luminance** is
 //! stateless in terms of global state, it still requires to have an object representing the GPU
