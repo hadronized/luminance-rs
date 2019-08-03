@@ -18,7 +18,7 @@ maintenance = { status = "actively-developed" }
 
 [dependencies]
 gl = "0.13"
-glfw = { version = "0.30", default-features = false }
+glfw = { version = "0.31", default-features = false }
 luminance = { version = "0.30", path = "../luminance" }
 luminance-windowing = { version = "0.2", path = "../luminance-windowing" }
 
