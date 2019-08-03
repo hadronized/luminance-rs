@@ -156,6 +156,14 @@ macro_rules! impl_RenderablePixel {
   };
 }
 
+/// A red 8-bit unsigned integral pixel format, accessed as floats.
+#[derive(Clone, Copy, Debug)]
+pub struct R;
+
+impl_Pixel!(R, u8, u8, Floating, Format::R(Size::Eight));
+impl_ColorPixel!(R);
+impl_RenderablePixel!(R);
+
 /// A red 8-bit signed integral pixel format.
 #[derive(Clone, Copy, Debug)]
 pub struct R8I;
@@ -217,6 +225,20 @@ impl_ColorPixel!(R32F);
 impl_RenderablePixel!(R32F);
 
 // --------------------
+
+/// A red and green 8-bit unsigned integral pixel format, accessed as floats.
+#[derive(Clone, Copy, Debug)]
+pub struct RG;
+
+impl_Pixel!(
+  RG,
+  (u8, u8),
+  u8,
+  Floating,
+  Format::RG(Size::Eight, Size::Eight)
+);
+impl_ColorPixel!(RG);
+impl_RenderablePixel!(RG);
 
 /// A red and green 8-bit signed integral pixel format.
 #[derive(Clone, Copy, Debug)]
@@ -315,6 +337,20 @@ impl_ColorPixel!(RG32F);
 impl_RenderablePixel!(RG32F);
 
 // --------------------
+
+/// A red, green and blue 8-bit unsigned integral pixel format, accessed as floats.
+#[derive(Clone, Copy, Debug)]
+pub struct RGB;
+
+impl_Pixel!(
+  RGB,
+  (u8, u8, u8),
+  u8,
+  Floating,
+  Format::RGB(Size::Eight, Size::Eight, Size::Eight)
+);
+impl_ColorPixel!(RGB);
+impl_RenderablePixel!(RGB);
 
 /// A red, green and blue 8-bit signed integral pixel format.
 #[derive(Clone, Copy, Debug)]
@@ -419,6 +455,20 @@ impl_ColorPixel!(RGB32F);
 impl_RenderablePixel!(RGB32F);
 
 // --------------------
+
+/// A red, green, blue and alpha 8-bit unsigned integral pixel format, accessed as floats.
+#[derive(Clone, Copy, Debug)]
+pub struct RGBA;
+
+impl_Pixel!(
+  RGBA,
+  (u8, u8, u8, u8),
+  u8,
+  Floating,
+  Format::RGBA(Size::Eight, Size::Eight, Size::Eight, Size::Eight)
+);
+impl_ColorPixel!(RGBA);
+impl_RenderablePixel!(RGBA);
 
 /// A red, green, blue and alpha 8-bit signed integral pixel format.
 #[derive(Clone, Copy, Debug)]
