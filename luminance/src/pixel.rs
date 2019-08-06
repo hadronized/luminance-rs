@@ -589,9 +589,10 @@ pub(crate) fn opengl_pixel_format(pf: PixelFormat) -> Option<(GLenum, GLenum, GL
 // Return the number of components.
 pub(crate) fn pixel_components(pf: PixelFormat) -> usize {
   match pf.format {
+    Format::R(_) => 1,
+    Format::RG(_, _) => 2,
     Format::RGB(_, _, _) => 3,
     Format::RGBA(_, _, _, _) => 4,
     Format::Depth(_) => 1,
-    _ => panic!("unsupported pixel format"),
   }
 }
