@@ -12,7 +12,7 @@ pub unsafe trait Pixel {
   /// texture memory. It should match the `PixelFormat` mapping.
   type RawEncoding;
 
-  /// The type of sampler required to access this pixel format
+  /// The type of sampler required to access this pixel format.
   type SamplerType: SamplerType;
 
   /// Reify to `PixelFormat`.
@@ -91,7 +91,7 @@ pub fn is_depth_pixel(f: PixelFormat) -> bool {
   !is_color_pixel(f)
 }
 
-/// The integral sample type
+/// The integral sample type.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Integral;
 
@@ -101,7 +101,7 @@ unsafe impl SamplerType for Integral {
   }
 }
 
-/// The integral sample type
+/// The unsigned integral sample type.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Unsigned;
 
@@ -111,7 +111,7 @@ unsafe impl SamplerType for Unsigned {
   }
 }
 
-/// The integral sample type
+/// The floating sample type.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Floating;
 
@@ -172,13 +172,13 @@ impl_Pixel!(R8UI, u8, u8, Unsigned, Format::R(Size::Eight));
 impl_ColorPixel!(R8UI);
 impl_RenderablePixel!(R8UI);
 
-/// A red 8-bit unsigned integral pixel format, accessed as floating pixel format.
+/// A red 8-bit unsigned integral pixel format, accessed as normalized floating pixels.
 #[derive(Clone, Copy, Debug)]
-pub struct R8UIF;
+pub struct NormR8UI;
 
-impl_Pixel!(R8UIF, u8, u8, Floating, Format::R(Size::Eight));
-impl_ColorPixel!(R8UIF);
-impl_RenderablePixel!(R8UIF);
+impl_Pixel!(NormR8UI, u8, u8, Floating, Format::R(Size::Eight));
+impl_ColorPixel!(NormR8UI);
+impl_RenderablePixel!(NormR8UI);
 
 // --------------------
 
@@ -248,19 +248,19 @@ impl_Pixel!(
 impl_ColorPixel!(RG8UI);
 impl_RenderablePixel!(RG8UI);
 
-/// A red and green 8-bit unsigned integral pixel format, accessed as floating pixel format.
+/// A red and green 8-bit unsigned integral pixel format, accessed as normalized floating pixels.
 #[derive(Clone, Copy, Debug)]
-pub struct RG8UIF;
+pub struct NormRG8UI;
 
 impl_Pixel!(
-  RG8UIF,
+  NormRG8UI,
   (u8, u8),
   u8,
   Floating,
   Format::RG(Size::Eight, Size::Eight)
 );
-impl_ColorPixel!(RG8UIF);
-impl_RenderablePixel!(RG8UIF);
+impl_ColorPixel!(NormRG8UI);
+impl_RenderablePixel!(NormRG8UI);
 
 // --------------------
 
@@ -366,19 +366,20 @@ impl_Pixel!(
 impl_ColorPixel!(RGB8UI);
 impl_RenderablePixel!(RGB8UI);
 
-/// A red, green and blue 8-bit unsigned integral pixel format, accessed as floating pixel format.
+/// A red, green and blue 8-bit unsigned integral pixel format, accessed as normalized floating
+/// pixels.
 #[derive(Clone, Copy, Debug)]
-pub struct RGB8UIF;
+pub struct NormRGB8UI;
 
 impl_Pixel!(
-  RGB8UIF,
+  NormRGB8UI,
   (u8, u8, u8),
   u8,
   Floating,
   Format::RGB(Size::Eight, Size::Eight, Size::Eight)
 );
-impl_ColorPixel!(RGB8UIF);
-impl_RenderablePixel!(RGB8UIF);
+impl_ColorPixel!(NormRGB8UI);
+impl_RenderablePixel!(NormRGB8UI);
 
 // --------------------
 
@@ -484,20 +485,20 @@ impl_Pixel!(
 impl_ColorPixel!(RGBA8UI);
 impl_RenderablePixel!(RGBA8UI);
 
-/// A red, green, blue and alpha 8-bit unsigned integral pixel format, accessed as floating pixel
-/// format.
+/// A red, green, blue and alpha 8-bit unsigned integral pixel format, accessed as normalized
+/// floating pixels.
 #[derive(Clone, Copy, Debug)]
-pub struct RGBA8UIF;
+pub struct NormRGBA8UI;
 
 impl_Pixel!(
-  RGBA8UIF,
+  NormRGBA8UI,
   (u8, u8, u8, u8),
   u8,
   Floating,
   Format::RGBA(Size::Eight, Size::Eight, Size::Eight, Size::Eight)
 );
-impl_ColorPixel!(RGBA8UIF);
-impl_RenderablePixel!(RGBA8UIF);
+impl_ColorPixel!(NormRGBA8UI);
+impl_RenderablePixel!(NormRGBA8UI);
 
 // --------------------
 

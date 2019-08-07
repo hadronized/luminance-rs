@@ -14,7 +14,7 @@
 use luminance::context::GraphicsContext;
 use luminance::framebuffer::Framebuffer;
 use luminance::pipeline::BoundTexture;
-use luminance::pixel::{RGB32F, Floating};
+use luminance::pixel::{NormRGB8UI, Floating};
 use luminance::render_state::RenderState;
 use luminance::shader::program::{Program, Uniform};
 use luminance::tess::{Mode, TessBuilder};
@@ -108,26 +108,23 @@ fn run(texture_path: &Path) {
   }
 }
 
-fn load_from_disk(surface: &mut GlfwSurface, path: &Path) -> Option<Texture<Flat, Dim2, RGB32F>> {
+fn load_from_disk(surface: &mut GlfwSurface, path: &Path) -> Option<Texture<Flat, Dim2, NormRGB8UI>> {
   // load the texture into memory as a whole bloc (i.e. no streaming)
   match image::open(&path) {
     Ok(img) => {
-      // convert the image to a RGB colorspace (this allocates a new copy of the image)
+      // convert the image to a RGB colorspace
       let rgb_img = img.flipv().to_rgb();
       let (width, height) = rgb_img.dimensions();
-      let texels = rgb_img
-        .pixels()
-        .map(|rgb| (rgb[0] as f32 / 255., rgb[1] as f32 / 255., rgb[2] as f32 / 255.))
-        .collect::<Vec<_>>();
+      let texels = rgb_img.into_raw();
 
       // create the luminance texture; the third argument is the number of mipmaps we want (leave it
       // to 0 for now) and the latest is the sampler to use when sampling the texels in the
       // shader (we’ll just use the default one)
-      let tex =
-        Texture::new(surface, [width, height], 0, &Sampler::default()).expect("luminance texture creation");
+      let tex = Texture::new(surface, [width, height], 0, &Sampler::default())
+        .expect("luminance texture creation");
 
       // the first argument disables mipmap generation (we don’t care so far)
-      tex.upload(GenMipmaps::No, &texels);
+      tex.upload_raw(GenMipmaps::No, &texels);
 
       Some(tex)
     }
