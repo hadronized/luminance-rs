@@ -76,8 +76,8 @@ use crate::buffer::{Buffer, BufferError, BufferSlice, BufferSliceMut, RawBuffer}
 use crate::context::GraphicsContext;
 use crate::metagl::*;
 use crate::vertex::{
-  VertexBufferDesc, Vertex, VertexAttribDim, VertexAttribDesc, VertexAttribType, VertexDesc,
-  VertexInstancing
+  Normalized, VertexBufferDesc, Vertex, VertexAttribDim, VertexAttribDesc, VertexAttribType,
+  VertexDesc, VertexInstancing
 };
 use crate::vertex_restart::VertexRestart;
 
@@ -719,17 +719,32 @@ fn set_component_format(stride: GLsizei, off: usize, desc: &VertexBufferDesc) {
           gl::FALSE,
           stride,
           ptr::null::<c_void>().offset(off as isize),
-          );
-      },
-      VertexAttribType::Integral | VertexAttribType::Unsigned | VertexAttribType::Boolean => {
+        );
+      }
+
+      VertexAttribType::Integral(Normalized::No) | VertexAttribType::Unsigned(Normalized::No) |
+      VertexAttribType::Boolean => {
+        // non-normalized integrals / booleans
         gl::VertexAttribIPointer(
           index,
           dim_as_size(&attrib_desc.dim),
           opengl_sized_type(&attrib_desc),
           stride,
           ptr::null::<c_void>().offset(off as isize),
-          );
-      },
+        );
+      }
+
+      _ => {
+        // normalized integrals
+        gl::VertexAttribPointer(
+          index,
+          dim_as_size(&attrib_desc.dim),
+          opengl_sized_type(&attrib_desc),
+          gl::TRUE,
+          stride,
+          ptr::null::<c_void>().offset(off as isize),
+        );
+      }
     }
 
     // set vertex attribute divisor based on the vertex instancing configuration
@@ -745,12 +760,12 @@ fn set_component_format(stride: GLsizei, off: usize, desc: &VertexBufferDesc) {
 
 fn opengl_sized_type(f: &VertexAttribDesc) -> GLenum {
   match (f.ty, f.unit_size) {
-    (VertexAttribType::Integral, 1) => gl::BYTE,
-    (VertexAttribType::Integral, 2) => gl::SHORT,
-    (VertexAttribType::Integral, 4) => gl::INT,
-    (VertexAttribType::Unsigned, 1) | (VertexAttribType::Boolean, 1) => gl::UNSIGNED_BYTE,
-    (VertexAttribType::Unsigned, 2) => gl::UNSIGNED_SHORT,
-    (VertexAttribType::Unsigned, 4) => gl::UNSIGNED_INT,
+    (VertexAttribType::Integral(_), 1) => gl::BYTE,
+    (VertexAttribType::Integral(_), 2) => gl::SHORT,
+    (VertexAttribType::Integral(_), 4) => gl::INT,
+    (VertexAttribType::Unsigned(_), 1) | (VertexAttribType::Boolean, 1) => gl::UNSIGNED_BYTE,
+    (VertexAttribType::Unsigned(_), 2) => gl::UNSIGNED_SHORT,
+    (VertexAttribType::Unsigned(_), 4) => gl::UNSIGNED_INT,
     (VertexAttribType::Floating, 4) => gl::FLOAT,
     _ => panic!("unsupported vertex component format: {:?}", f),
   }

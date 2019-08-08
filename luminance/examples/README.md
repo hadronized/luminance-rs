@@ -14,7 +14,9 @@ If you think a specific feature is missing, feel free to open a PR and add new e
 ## [01 — Hello World](./01-hello-world.rs)
 
 Learn how to draw two colored triangles by using vertex colors (comes in *direct* and *indexed*
-geometry versions).
+geometry versions). This first example is really important as it shows off lots of features that
+are necessary to wrap your fingers around, especially _vertex semantics_, _buffer formats_, _derive
+procedural macros_, _graphics pipelines_, etc. etc.
 
 ![](../../docs/imgs/01-screenshot.png)
 

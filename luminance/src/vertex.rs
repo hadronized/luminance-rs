@@ -86,22 +86,54 @@ pub struct VertexAttribDesc {
   pub align: usize,
 }
 
+impl VertexAttribDesc {
+  /// Normalize a vertex attribute format’s type.
+  pub fn normalize(self) -> Self {
+    VertexAttribDesc { ty: self.ty.normalize(), ..self }
+  }
+}
+
 /// Possible type of vertex attributes.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum VertexAttribType {
   /// An integral type.
   ///
   /// Typically, `i32` is integral but not `u32`.
-  Integral,
+  Integral(Normalized),
   /// An unsigned integral type.
   ///
   /// Typically, `u32` is unsigned but not `i32`.
-  Unsigned,
+  Unsigned(Normalized),
   /// A floating point integral type.
   Floating,
   /// A boolean integral type.
   Boolean,
 }
+
+impl VertexAttribType {
+  /// Normalize a vertex attribute type if it’s integral.
+  ///
+  /// Return the normalized integer vertex attribute type if non-normalized. Otherwise, return the
+  /// vertex attribute type directly.
+  pub fn normalize(self) -> Self {
+    match self {
+      VertexAttribType::Integral(Normalized::No) => VertexAttribType::Integral(Normalized::Yes),
+      VertexAttribType::Unsigned(Normalized::No) => VertexAttribType::Unsigned(Normalized::Yes),
+      _ => self
+    }
+  }
+}
+
+/// Whether an integral vertex type should be normalized when fetched from a shader program.
+///
+/// The default implementation is not to normalize anything. You have to explicitly ask for
+/// normalized integers (that will, then, be accessed as floating vertex attributes).
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum Normalized {
+  Yes,
+  No
+}
+
 
 /// Possible dimension of vertex attributes.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -217,32 +249,32 @@ const fn align_of<T>() -> usize {
 
 // Macro to quickly implement VertexAttrib for a given type.
 macro_rules! impl_vertex_attribute {
-  ($t:ty, $q:ty, $attr_ty:ident, $dim:ident) => {
+  ($t:ty, $q:ty, $attr_ty:expr, $dim:expr) => {
     unsafe impl VertexAttrib for $t {
       const VERTEX_ATTRIB_DESC: VertexAttribDesc = VertexAttribDesc {
-        ty: VertexAttribType::$attr_ty,
-        dim: VertexAttribDim::$dim,
+        ty: $attr_ty,
+        dim: $dim,
         unit_size: $crate::vertex::size_of::<$q>(),
         align: $crate::vertex::align_of::<$q>(),
       };
     }
   };
 
-  ($t:ty, $attr_ty:ident) => {
-    impl_vertex_attribute!($t, $t, $attr_ty, Dim1);
-    impl_vertex_attribute!([$t; 1], $t, $attr_ty, Dim1);
-    impl_vertex_attribute!([$t; 2], $t, $attr_ty, Dim2);
-    impl_vertex_attribute!([$t; 3], $t, $attr_ty, Dim3);
-    impl_vertex_attribute!([$t; 4], $t, $attr_ty, Dim4);
+  ($t:ty, $attr_ty:expr) => {
+    impl_vertex_attribute!($t, $t, $attr_ty, VertexAttribDim::Dim1);
+    impl_vertex_attribute!([$t; 1], $t, $attr_ty, VertexAttribDim::Dim1);
+    impl_vertex_attribute!([$t; 2], $t, $attr_ty, VertexAttribDim::Dim2);
+    impl_vertex_attribute!([$t; 3], $t, $attr_ty, VertexAttribDim::Dim3);
+    impl_vertex_attribute!([$t; 4], $t, $attr_ty, VertexAttribDim::Dim4);
   };
 }
 
-impl_vertex_attribute!(i8, Integral);
-impl_vertex_attribute!(i16, Integral);
-impl_vertex_attribute!(i32, Integral);
-impl_vertex_attribute!(u8, Unsigned);
-impl_vertex_attribute!(u16, Unsigned);
-impl_vertex_attribute!(u32, Unsigned);
-impl_vertex_attribute!(f32, Floating);
-impl_vertex_attribute!(f64, Floating);
-impl_vertex_attribute!(bool, Floating);
+impl_vertex_attribute!(i8, VertexAttribType::Integral(Normalized::No));
+impl_vertex_attribute!(i16, VertexAttribType::Integral(Normalized::No));
+impl_vertex_attribute!(i32, VertexAttribType::Integral(Normalized::No));
+impl_vertex_attribute!(u8,  VertexAttribType::Unsigned(Normalized::No));
+impl_vertex_attribute!(u16, VertexAttribType::Unsigned(Normalized::No));
+impl_vertex_attribute!(u32, VertexAttribType::Unsigned(Normalized::No));
+impl_vertex_attribute!(f32, VertexAttribType::Floating);
+impl_vertex_attribute!(f64, VertexAttribType::Floating);
+impl_vertex_attribute!(bool, VertexAttribType::Floating);

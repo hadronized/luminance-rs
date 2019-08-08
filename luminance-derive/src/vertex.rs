@@ -76,7 +76,7 @@ use std::fmt;
 use syn::{Attribute, DataStruct, Fields, Ident, LitBool, Type};
 
 // accepted sub keys for the "vertex" key
-const KNOWN_SUBKEYS: &[&str] = &["sem", "instanced"];
+const KNOWN_SUBKEYS: &[&str] = &["sem", "instanced", "normalized"];
 
 #[derive(Debug)]
 pub(crate) enum StructImplError {
@@ -118,7 +118,7 @@ where A: Iterator<Item = &'a Attribute> + Clone {
   // search for the instancing argument; if not there, we don’t use vertex instancing
   let instancing = get_field_attr_once(
     &ident,
-    attrs,
+    attrs.clone(),
     "vertex",
     "instanced",
     KNOWN_SUBKEYS
@@ -144,11 +144,34 @@ where A: Iterator<Item = &'a Attribute> + Clone {
       // partition and generate VertexBufferDesc
       for field in named_fields.named {
         let field_ty = field.ty;
+        let ident = field.ident.unwrap();
+
+        // search for the normalized argument; if not there, we don’t normalize anything
+        let normalized = get_field_attr_once(
+          &ident,
+          &field.attrs,
+          "vertex",
+          "normalized",
+          KNOWN_SUBKEYS
+        )
+          .map(|b: LitBool| b.value)
+          .or_else(|e| match e {
+            AttrError::CannotFindAttribute(..) => Ok(false),
+            _ => Err(e)
+          })
+          .map_err(StructImplError::FieldError)?;
+
+        let vertex_attrib_desc = if normalized {
+          quote!{ (<#field_ty as luminance::vertex::VertexAttrib>::VERTEX_ATTRIB_DESC).normalize() }
+        } else {
+          quote!{ <#field_ty as luminance::vertex::VertexAttrib>::VERTEX_ATTRIB_DESC }
+        };
+
         let indexed_vertex_attrib_desc_q = quote!{
           luminance::vertex::VertexBufferDesc::new::<#sem_type>(
             <#field_ty as luminance::vertex::HasSemantics>::SEMANTICS,
             #instancing,
-            <#field_ty as luminance::vertex::VertexAttrib>::VERTEX_ATTRIB_DESC
+            #vertex_attrib_desc,
           )
         };
 
