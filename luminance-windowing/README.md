@@ -1,3 +1,5 @@
+<!-- cargo-sync-readme start -->
+
 # luminance windowing
 
 This is the base, abstract crate for windowing common types and functions in luminance. The
@@ -14,10 +16,10 @@ manage events. In theory, you could even have a `luminance-gtk` or `luminance-qt
 
 This crate exposes several important types that all backends must use. Among them, you’ll find:
 
-- `WindowDim`: abstraction over the dimension of a window and its mode (windowed, fullscreen,
-  fullscreen restricted).
-- `WindowOpt`: an opaque type giving access to hints to customize the window integration, such
-  as whether the cursor should be hidden or not.
+- `WindowDim`: abstraction over the dimension of a window and its mode (windowed, fullscreen, fullscreen
+  restricted).
+- `WindowOpt`: an opaque type giving access to hints to customize the window integration, such as whether
+  the cursor should be hidden or not.
 
 The `Device` trait must be implemented by a backend so that an application is completely
 agnostic of the backend. This trait defines several basic methods that will help you to:
@@ -25,3 +27,5 @@ agnostic of the backend. This trait defines several basic methods that will help
 - Retrieve the dimension of the window / framebuffer.
 - Iterate over the system events captured by your application.
 - Draw and swap the buffer chain.
+
+<!-- cargo-sync-readme end -->
