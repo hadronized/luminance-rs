@@ -16,8 +16,8 @@ edition = "2018"
 proc-macro = true
 
 [dependencies]
-quote = "0.6"
-syn = "0.15"
+quote = "1"
+syn = "1"
 
 [dev-dependencies]
 luminance = { version = "0.30", path = "../luminance" }
