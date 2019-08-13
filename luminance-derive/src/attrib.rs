@@ -40,13 +40,13 @@ pub(crate) fn get_field_attr_once<'a, A, T>(
 
   for attr in attrs.into_iter() {
     match attr.parse_meta() {
-      Ok(Meta::List(ref ml)) if ml.ident == key => {
+      Ok(Meta::List(ref ml)) if ml.path.is_ident(key) => {
         let nested = &ml.nested;
 
         for nested in nested.into_iter() {
           match nested {
             NestedMeta::Meta(Meta::NameValue(ref mnv)) => {
-              if mnv.ident == sub_key {
+              if mnv.path.is_ident(sub_key) {
                 if lit.is_some() {
                   return Err(AttrError::Several(field_ident.clone(), key.to_owned(), sub_key.to_owned()));
                 }
@@ -55,7 +55,7 @@ pub(crate) fn get_field_attr_once<'a, A, T>(
                   lit = Some(strlit.parse().map_err(|_| AttrError::CannotParseAttribute(field_ident.clone(), key.to_owned(), sub_key.to_owned()))?);
                 }
               } else {
-                let ident_str = mnv.ident.to_string();
+                let ident_str = mnv.path.segments.first().map(|seg| seg.ident.to_string()).unwrap_or_else(|| String::new());
 
                 if !known_subkeys.contains(&ident_str.as_str()) {
                   return Err(AttrError::UnknownSubKey(field_ident.clone(), key.to_owned(), ident_str));
@@ -90,20 +90,20 @@ pub(crate) fn get_field_flag_once<'a, A>(
 
   for attr in attrs.into_iter() {
     match attr.parse_meta() {
-      Ok(Meta::List(ref ml)) if ml.ident == key => {
+      Ok(Meta::List(ref ml)) if ml.path.is_ident(key) => {
         let nested = &ml.nested;
 
         for nested in nested.into_iter() {
           match nested {
-            NestedMeta::Meta(Meta::Word(ref word)) => {
-              if word == sub_key {
+            NestedMeta::Meta(Meta::Path(ref path)) => {
+              if path.is_ident(sub_key) {
                 if flag {
                   return Err(AttrError::Several(field_ident.clone(), key.to_owned(), sub_key.to_owned()));
                 }
 
                 flag = true;
               } else {
-                let ident_str = word.to_string();
+                let ident_str = path.segments.first().map(|seg| seg.ident.to_string()).unwrap_or_else(|| String::new());
 
                 if !known_subkeys.contains(&ident_str.as_str()) {
                   return Err(AttrError::UnknownSubKey(field_ident.clone(), key.to_owned(), ident_str));
