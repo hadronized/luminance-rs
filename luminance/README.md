@@ -1,5 +1,3 @@
-# luminance, the typesafe, stateless, elegant **and simple** Rust graphics API
-
 <!-- cargo-sync-readme start -->
 
 # What is this?
