@@ -7,7 +7,7 @@
 
 mod common;
 
-use common::{Semantics, VertexColor, VertexPosition};
+use common::{Semantics, Vertex, VertexColor, VertexPosition};
 use image::{ColorType, save_buffer};
 use luminance::context::GraphicsContext;
 use luminance::framebuffer::Framebuffer;
@@ -23,17 +23,6 @@ use luminance_glfw::surface::{GlfwSurface, Surface, WindowDim, WindowOpt};
 // We get the shader at compile time from local files
 const VS: &'static str = include_str!("simple-vs.glsl");
 const FS: &'static str = include_str!("simple-fs-unsigned.glsl");
-
-// Our vertex type.
-//
-// We derive the Vertex trait automatically and we associate to each field the semantics that must
-// be used on the GPU.
-#[derive(Clone, Copy, Debug, PartialEq, Vertex)]
-#[vertex(sem = "Semantics")]
-struct Vertex {
-  pos: VertexPosition,
-  rgb: VertexColor
-}
 
 // The vertices. We define two triangles.
 const TRI_VERTICES: [Vertex; 6] = [

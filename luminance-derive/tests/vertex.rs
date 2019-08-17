@@ -16,6 +16,7 @@ fn derive_simple_semantics() {
   }
 
   #[derive(Clone, Copy, Debug, Vertex)]
+  #[repr(C)]
   #[vertex(sem = "Semantics", instanced = "true")]
   struct Vertex {
     pos: VertexPosition,

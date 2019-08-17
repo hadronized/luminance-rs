@@ -40,6 +40,7 @@ pub enum Semantics {
 //
 // We derive the Vertex trait automatically and we associate to each field the semantics that must
 // be used on the GPU.
+#[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Vertex)]
 #[vertex(sem = "Semantics")]
 struct Vertex {
@@ -63,12 +64,14 @@ const TRI_VERTICES: [Vertex; 6] = [
   Vertex { pos: VertexPosition::new([0.5, 0.5]), rgb: VertexColor::new([51, 51, 255]) },
 ];
 
+#[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Vertex)]
 #[vertex(sem = "Semantics")]
 struct Positions {
   pos: VertexPosition
 }
 
+#[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Vertex)]
 #[vertex(sem = "Semantics")]
 struct Colors {

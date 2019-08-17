@@ -16,6 +16,7 @@ pub enum Semantics {
   Weight,
 }
 
+#[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Vertex)]
 #[vertex(sem = "Semantics")]
 pub struct Vertex {
@@ -24,6 +25,7 @@ pub struct Vertex {
 }
 
 // definition of a single instance
+#[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Vertex)]
 #[vertex(sem = "Semantics", instanced = "true")]
 pub struct Instance {
