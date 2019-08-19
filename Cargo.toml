@@ -4,10 +4,13 @@ members = [
   "luminance",
   "luminance-derive",
   "luminance-glfw",
+  "luminance-glutin",
   "luminance-windowing",
 ]
 
 [patch.crates-io]
+luminance = { path = "./luminance" }
 luminance-derive = { path = "./luminance-derive" }
 luminance-glfw = { path = "./luminance-glfw" }
+luminance-glutin = { path = "./luminance-glutin" }
 luminance-windowing = { path = "./luminance-windowing" }

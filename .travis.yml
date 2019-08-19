@@ -24,5 +24,7 @@ script:
   - if [ "$TRAVIS_OS_NAME" == "windows" ]; then cargo sync-readme -c -f bin --crlf; else cargo sync-readme -c -f bin; fi
   - cd $TRAVIS_BUILD_DIR/luminance-glfw
   - if [ "$TRAVIS_OS_NAME" == "windows" ]; then cargo sync-readme -c -f bin --crlf; else cargo sync-readme -c -f bin; fi
+  - cd $TRAVIS_BUILD_DIR/luminance-glutin
+  - if [ "$TRAVIS_OS_NAME" == "windows" ]; then cargo sync-readme -c -f bin --crlf; else cargo sync-readme -c -f bin; fi
   - cd $TRAVIS_BUILD_DIR/luminance-windowing
   - if [ "$TRAVIS_OS_NAME" == "windows" ]; then cargo sync-readme -c -f bin --crlf; else cargo sync-readme -c -f bin; fi
