@@ -30,3 +30,4 @@ optional = true
 image = "0.22"
 luminance-derive = "0.1"
 luminance-glfw = "0.5"
+luminance-glutin = "0.1"

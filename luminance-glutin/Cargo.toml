@@ -16,6 +16,7 @@ travis-ci = { repository = "phaazon/luminance-glutin", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [dependencies]
+gl = "0.13"
 glutin = { version = "0.21", default-features = false }
 luminance = "0.30"
 luminance-windowing = "0.2"

@@ -3,15 +3,22 @@
 //! [glutin]: https://crates.io/crates/glutin
 //! [luminance-windowing]: https://crates.io/crates/luminance-windowing
 
+use gl;
+pub use glutin::{
+  ContextError, CreationError, DeviceEvent, DeviceId, ElementState, Event, KeyboardInput,
+  ModifiersState, MouseScrollDelta, Touch, TouchPhase, VirtualKeyCode, WindowEvent, WindowId
+};
+pub use glutin::dpi::{LogicalPosition, LogicalSize};
+pub use luminance_windowing::{CursorMode, Surface, WindowDim, WindowOpt};
+
 use glutin::{
-  Api, ContextBuilder, ContextError, CreationError, Event, EventsLoop, GlProfile, GlRequest, PossiblyCurrent,
+  Api, ContextBuilder, EventsLoop, GlProfile, GlRequest, PossiblyCurrent,
   WindowBuilder, WindowedContext
 };
-use glutin::dpi::LogicalSize;
 use luminance::context::GraphicsContext;
 use luminance::state::{GraphicsState, StateQueryError};
-use luminance_windowing::{CursorMode, Surface, WindowDim, WindowOpt};
 use std::cell::RefCell;
+use std::os::raw::c_void;
 use std::rc::Rc;
 
 #[derive(Debug)]
@@ -94,6 +101,9 @@ impl Surface for GlutinSurface {
       .build_windowed(window_builder, &event_loop)?;
 
     let ctx = unsafe { windowed_ctx.make_current().map_err(|(_, e)| e)? };
+
+    // init OpenGL
+    gl::load_with(|s| ctx.get_proc_address(s) as *const c_void);
 
     match win_opt.cursor_mode() {
       CursorMode::Visible => ctx.window().hide_cursor(false),
