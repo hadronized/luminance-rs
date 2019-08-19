@@ -901,7 +901,7 @@ impl TessSliceIndex<RangeTo<usize>> for Tess {
 
 impl TessSliceIndex<RangeFrom<usize>> for Tess {
   fn slice(&self, from: RangeFrom<usize>) -> TessSlice {
-    TessSlice::one_slice(self, from.start, self.vert_nb)
+    TessSlice::one_slice(self, from.start, self.vert_nb - from.start)
   }
 }
 
