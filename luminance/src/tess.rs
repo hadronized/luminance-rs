@@ -57,7 +57,7 @@
 #[cfg(feature = "std")]
 use std::fmt;
 #[cfg(feature = "std")]
-use std::ops::{Range, RangeFrom, RangeFull, RangeTo};
+use std::ops::{Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive};
 #[cfg(feature = "std")]
 use std::os::raw::c_void;
 #[cfg(feature = "std")]
@@ -907,6 +907,20 @@ impl TessSliceIndex<RangeFrom<usize>> for Tess {
 
 impl TessSliceIndex<Range<usize>> for Tess {
   fn slice(&self, range: Range<usize>) -> TessSlice {
-    TessSlice::one_slice(self, range.start, range.end)
+    TessSlice::one_slice(self, range.start, range.end - range.start)
+  }
+}
+
+impl TessSliceIndex<RangeInclusive<usize>> for Tess {
+  fn slice(&self, range: RangeInclusive<usize>) -> TessSlice {
+    let start = *range.start();
+    let end = *range.end();
+    TessSlice::one_slice(self, start, end - start + 1)
+  }
+}
+
+impl TessSliceIndex<RangeToInclusive<usize>> for Tess {
+  fn slice(&self, to: RangeToInclusive<usize>) -> TessSlice {
+    TessSlice::one_sub(self, to.end + 1)
   }
 }

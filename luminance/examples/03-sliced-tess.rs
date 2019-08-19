@@ -104,7 +104,8 @@ fn main() {
           rdr_gate.render(RenderState::default(), |tess_gate| {
             let slice = match slice_method {
               // the red triangle is at slice [..3]; you can also use the TessSlice::one_sub
-              // combinator if the start element is 0
+              // combinator if the start element is 0; it’s also possible to use [..=2] for
+              // inclusive ranges
               SliceMethod::Red => triangles.slice(..3), // TessSlice::one_slice(&triangles, 0, 3),
               // the blue triangle is at slice [3..]
               SliceMethod::Blue => triangles.slice(3..), // TessSlice::one_slice(&triangles, 3, 6),
