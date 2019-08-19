@@ -15,6 +15,7 @@ use glutin::{
   Api, ContextBuilder, EventsLoop, GlProfile, GlRequest, PossiblyCurrent,
   WindowBuilder, WindowedContext
 };
+use glutin::dpi::PhysicalSize;
 use luminance::context::GraphicsContext;
 use luminance::state::{GraphicsState, StateQueryError};
 use std::cell::RefCell;
@@ -45,9 +46,6 @@ pub struct GlutinSurface {
   event_loop: EventsLoop,
   gfx_state: Rc<RefCell<GraphicsState>>,
   opts: WindowOpt,
-  // this is unfortunate but glutin returns an Option<LogicalSize> and hence we will store the
-  // dimensions here instead of guessing when we want to get the size
-  dimensions: [u32; 2],
   // a list of event that has happened
   event_queue: Vec<Event>
 }
@@ -66,31 +64,13 @@ impl Surface for GlutinSurface {
     let event_loop = EventsLoop::new();
 
     let window_builder = WindowBuilder::new().with_title(title);
-    let (window_builder, dimensions) = match dim {
-      WindowDim::Windowed(w, h) => {
-        let wb = window_builder.with_dimensions(LogicalSize::new(w as f64, h as f64));
-        let dims = [w, h];
-        (wb, dims)
-      }
-
-      WindowDim::Fullscreen => {
-        let prim_mon = event_loop.get_primary_monitor();
-        let (w, h) = prim_mon.get_dimensions().into();
-        let dims = [w, h];
-        let wb = window_builder.with_fullscreen(Some(prim_mon));
-
-        (wb, dims)
-      }
-
-      WindowDim::FullscreenRestricted(w, h) => {
-        let prim_mon = event_loop.get_primary_monitor();
-        let dims = [w, h];
-        let wb = window_builder
-          .with_dimensions(LogicalSize::new(w as f64, h as f64))
-          .with_fullscreen(Some(prim_mon));
-
-        (wb, dims)
-      }
+    let window_builder = match dim {
+      WindowDim::Windowed(w, h) => window_builder.with_dimensions((w, h).into()),
+      WindowDim::Fullscreen => window_builder.with_fullscreen(Some(event_loop.get_primary_monitor())),
+      WindowDim::FullscreenRestricted(w, h) =>
+        window_builder
+          .with_dimensions((w, h).into())
+          .with_fullscreen(Some(event_loop.get_primary_monitor()))
     };
 
     let windowed_ctx = ContextBuilder::new()
@@ -119,7 +99,6 @@ impl Surface for GlutinSurface {
       event_loop,
       gfx_state: Rc::new(RefCell::new(gfx_state)),
       opts: win_opt,
-      dimensions,
       event_queue: Vec::new()
     };
 
@@ -145,7 +124,9 @@ impl Surface for GlutinSurface {
   }
 
   fn size(&self) -> [u32; 2] {
-    self.dimensions
+    let logical = self.ctx.window().get_inner_size().unwrap();
+    let (w, h) = PhysicalSize::from_logical(logical, self.ctx.window().get_hidpi_factor()).into();
+    [w, h]
   }
 
   fn wait_events<'a>(&'a mut self) -> Box<dyn Iterator<Item = Self::Event> + 'a> {

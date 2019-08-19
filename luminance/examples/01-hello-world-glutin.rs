@@ -189,6 +189,7 @@ fn main() {
   let mut demo = TessMethod::Direct;
   println!("now rendering {:?}", demo);
 
+  let mut resized = false;
   'app: loop {
     // For all the events on the surface.
     for event in surface.poll_events() {
@@ -203,7 +204,7 @@ fn main() {
               ..
             },
             ..
-          } => break,
+          } => break 'app,
 
           // If we hit the spacebar, change the kind of tessellation.
           WindowEvent::KeyboardInput {
@@ -219,16 +220,19 @@ fn main() {
           }
 
           // Handle window resizing.
-          WindowEvent::Resized(size) => {
-            let (width, height) = size.into();
-
-            // Simply ask another backbuffer at the right dimension (no allocation / reallocation).
-            back_buffer = Framebuffer::back_buffer([width, height]);
+          WindowEvent::Resized(_) | WindowEvent::HiDpiFactorChanged(_) => {
+            resized = true;
           }
 
           _ => (),
         }
       }
+    }
+
+    if resized {
+      // Simply ask another backbuffer at the right dimension (no allocation / reallocation).
+      back_buffer = Framebuffer::back_buffer(surface.size());
+      resized = false;
     }
 
     // Create a new dynamic pipeline that will render to the back buffer and must clear it with
