@@ -22,16 +22,20 @@ const VS: &'static str = include_str!("simple-vs.glsl");
 const FS: &'static str = include_str!("simple-fs.glsl");
 
 // Vertex semantics. Those are needed to instruct the GPU how to select vertex’s attributes from
-// the memory we fill at render time, in shader. You don’t have to worry about them; just keep in
+// the memory we fill at render time, in shaders. You don’t have to worry about them; just keep in
 // mind they’re mandatory and act as “protocol” between GPU’s memory regions and shaders.
 //
-// We derive VertexAttribSem automatically and provide the mapping as field attributes.
+// We derive Semantics automatically and provide the mapping as field attributes.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Semantics)]
 pub enum Semantics {
-  // reference vertex positions with the co variable in vertex shaders
+  // - Reference vertex positions with the "co" variable in vertex shaders.
+  // - The underlying representation is [f32; 2], which is a vec2 in GLSL.
+  // - The wrapper type you can use to handle such a semantics is VertexPosition.
   #[sem(name = "co", repr = "[f32; 2]", wrapper = "VertexPosition")]
   Position,
-  // reference vertex colors with the color variable in vertex shaders
+  // - Reference vertex colors with the "color" variable in vertex shaders.
+  // - The underlying representation is [u8; 3], which is a uvec3 in GLSL.
+  // - The wrapper type you can use to handle such a semantics is VertexColor.
   #[sem(name = "color", repr = "[u8; 3]", wrapper = "VertexColor")]
   Color
 }
@@ -39,15 +43,19 @@ pub enum Semantics {
 // Our vertex type.
 //
 // We derive the Vertex trait automatically and we associate to each field the semantics that must
-// be used on the GPU.
+// be used on the GPU. The proc-macro derive Vertex will make sur for us every field we use have a
+// mapping to the type you specified as semantics.
+//
+// Currently, we need to use #[repr(C))] to ensure Rust is not going to move struct’s fields around.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Vertex)]
 #[vertex(sem = "Semantics")]
 struct Vertex {
   pos: VertexPosition,
-  // Here, we can use the special normalize = <bool> construct to state whether we want integral
+  // Here, we can use the special normalized = <bool> construct to state whether we want integral
   // vertex attributes to be available as normalized floats in the shaders, when fetching them from
-  // the vertex buffers.
+  // the vertex buffers. If you set it to "false" or ignore it, you will get non-normalized integer
+  // values (i.e. value ranging from 0 to 255 for u8, for instance).
   #[vertex(normalized = "true")]
   rgb: VertexColor
 }
@@ -64,6 +72,7 @@ const TRI_VERTICES: [Vertex; 6] = [
   Vertex { pos: VertexPosition::new([0.5, 0.5]), rgb: VertexColor::new([51, 51, 255]) },
 ];
 
+// A small struct wrapper used to deinterleave positions.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Vertex)]
 #[vertex(sem = "Semantics")]
@@ -71,6 +80,7 @@ struct Positions {
   pos: VertexPosition
 }
 
+// A small struct wrapper used to deinterleave colors.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Vertex)]
 #[vertex(sem = "Semantics")]

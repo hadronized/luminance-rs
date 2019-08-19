@@ -36,12 +36,14 @@ const TRI_VERTICES: [Vertex; 6] = [
   Vertex { pos: VertexPosition::new([0.5, 0.5]), rgb: VertexColor::new([0.2, 0.2, 1.]) },
 ];
 
+#[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Vertex)]
 #[vertex(sem = "Semantics")]
 struct Positions {
   pos: VertexPosition
 }
 
+#[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Vertex)]
 #[vertex(sem = "Semantics")]
 struct Colors {
