@@ -14,14 +14,13 @@
 mod common;
 
 use crate::common::{Semantics, Vertex, VertexPosition, VertexColor};
-use luminance::context::GraphicsContext;
+use luminance::context::GraphicsContext as _;
 use luminance::framebuffer::Framebuffer;
 use luminance::render_state::RenderState;
 use luminance::shader::program::{Program, Uniform};
 use luminance::tess::{Mode, TessBuilder};
 use luminance_derive::UniformInterface;
-use luminance_glfw::event::{Action, Key, WindowEvent};
-use luminance_glfw::surface::{GlfwSurface, Surface, WindowDim, WindowOpt};
+use luminance_glfw::{Action, GlfwSurface, Key, Surface, WindowEvent, WindowDim, WindowOpt};
 use std::time::Instant;
 
 const VS: &'static str = include_str!("displacement-vs.glsl");

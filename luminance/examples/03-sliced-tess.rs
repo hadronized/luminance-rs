@@ -17,13 +17,12 @@
 mod common;
 
 use crate::common::{Semantics, Vertex, VertexPosition, VertexColor};
-use luminance::context::GraphicsContext;
+use luminance::context::GraphicsContext as _;
 use luminance::framebuffer::Framebuffer;
 use luminance::render_state::RenderState;
 use luminance::shader::program::Program;
 use luminance::tess::{Mode, TessBuilder, TessSliceIndex};
-use luminance_glfw::event::{Action, Key, WindowEvent};
-use luminance_glfw::surface::{GlfwSurface, Surface, WindowDim, WindowOpt};
+use luminance_glfw::{Action, GlfwSurface, Key, Surface, WindowEvent, WindowDim, WindowOpt};
 
 const VS: &'static str = include_str!("simple-vs.glsl");
 const FS: &'static str = include_str!("simple-fs.glsl");

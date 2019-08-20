@@ -9,7 +9,7 @@ mod common;
 
 use common::{Semantics, Vertex, VertexColor, VertexPosition};
 use image::{ColorType, save_buffer};
-use luminance::context::GraphicsContext;
+use luminance::context::GraphicsContext as _;
 use luminance::framebuffer::Framebuffer;
 use luminance::render_state::RenderState;
 use luminance::shader::program::Program;
@@ -17,8 +17,7 @@ use luminance::tess::{Mode, TessBuilder};
 use luminance::texture::{Flat, Dim2};
 use luminance::pixel::RGB8UI;
 use luminance_derive::Vertex;
-use luminance_glfw::event::{Action, Key, WindowEvent};
-use luminance_glfw::surface::{GlfwSurface, Surface, WindowDim, WindowOpt};
+use luminance_glfw::{Action, GlfwSurface, Key, Surface, WindowEvent, WindowDim, WindowOpt};
 
 // We get the shader at compile time from local files
 const VS: &'static str = include_str!("simple-vs.glsl");
