@@ -9,6 +9,7 @@ categories = ["rendering::graphics-api"]
 homepage = "https://github.com/phaazon/luminance"
 repository = "https://github.com/phaazon/luminance"
 documentation = "https://docs.rs/luminance-glfw"
+edition = "2018"
 
 [badges]
 travis-ci = { repository = "phaazon/luminance", branch = "master" }

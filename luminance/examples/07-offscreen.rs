@@ -8,7 +8,7 @@
 mod common;
 
 use crate::common::{Semantics, Vertex, VertexPosition, VertexColor};
-use luminance::context::GraphicsContext;
+use luminance::context::GraphicsContext as _;
 use luminance::framebuffer::Framebuffer;
 use luminance::pipeline::BoundTexture;
 use luminance::pixel::{RGBA32F, Floating};
@@ -17,8 +17,7 @@ use luminance::shader::program::{Program, Uniform};
 use luminance::tess::{Mode, TessBuilder, TessSliceIndex};
 use luminance::texture::{Dim2, Flat};
 use luminance_derive::UniformInterface;
-use luminance_glfw::event::{Action, Key, WindowEvent};
-use luminance_glfw::surface::{GlfwSurface, Surface, WindowDim, WindowOpt};
+use luminance_glfw::{Action, GlfwSurface, Key, Surface, WindowEvent, WindowDim, WindowOpt};
 
 // we get the shader at compile time from local files
 const VS: &'static str = include_str!("simple-vs.glsl");
