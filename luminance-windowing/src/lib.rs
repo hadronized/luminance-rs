@@ -26,8 +26,6 @@
 //! - Iterate over the system events captured by your application.
 //! - Draw and swap the buffer chain.
 
-extern crate luminance;
-
 use luminance::context::GraphicsContext;
 
 /// Dimension metrics.
