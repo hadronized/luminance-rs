@@ -373,6 +373,15 @@ impl<'a> UniformBuilder<'a> {
     Ok(uniform)
   }
 
+  /// Get an unbound [`Uniform`].
+  ///
+  /// Unbound [`Uniform`]s are not any different from typical [`Uniform`]s but when resolving
+  /// mapping in the _shader program_, if the [`Uniform`] is found inactive or doesn’t exist,
+  /// instead of returning an error, this function will return an _unbound uniform_, which is a
+  /// uniform that does nothing interesting.
+  ///
+  /// That function is useful if you don’t really care about silently sending values down a shader
+  /// program and getting them ignored. It might be the case for optional uniforms, for instance.
   pub fn ask_unbound<T>(&mut self, name: &str) -> Uniform<T>
   where T: Uniformable {
     match self.ask(name) {
@@ -460,6 +469,7 @@ impl<'a, Uni> Deref for ProgramInterface<'a, Uni> {
 }
 
 impl<'a, Uni> ProgramInterface<'a, Uni> {
+  /// Get a [`UniformBuilder`] in order to perform dynamic uniform lookup.
   pub fn query(&'a self) -> UniformBuilder<'a> {
     UniformBuilder::new(self.raw_program)
   }
@@ -468,6 +478,7 @@ impl<'a, Uni> ProgramInterface<'a, Uni> {
 /// Errors that a `Program` can generate.
 #[derive(Debug)]
 pub enum ProgramError {
+  /// A shader stage failed to compile or validate its state.
   StageError(StageError),
   /// Program link failed. You can inspect the reason by looking at the contained `String`.
   LinkFailed(String),
@@ -591,41 +602,77 @@ impl<T> Uniform<T> where T: Uniformable {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Type {
   // scalars
+  /// 32-bit signed integer.
   Int,
+  /// 32-bit unsigned integer.
   UInt,
+  /// 32-bit floating-point number.
   Float,
+  /// Boolean.
   Bool,
+
   // vectors
+  /// 2D signed integral vector.
   IVec2,
+  /// 3D signed integral vector.
   IVec3,
+  /// 4D signed integral vector.
   IVec4,
+  /// 2D unsigned integral vector.
   UIVec2,
+  /// 3D unsigned integral vector.
   UIVec3,
+  /// 4D unsigned integral vector.
   UIVec4,
+  /// 2D floating-point vector.
   Vec2,
+  /// 3D floating-point vector.
   Vec3,
+  /// 4D floating-point vector.
   Vec4,
+  /// 2D boolean vector.
   BVec2,
+  /// 3D boolean vector.
   BVec3,
+  /// 4D boolean vector.
   BVec4,
+
   // matrices
+  /// 2×2 floating-point matrix.
   M22,
+  /// 3×3 floating-point matrix.
   M33,
+  /// 4×4 floating-point matrix.
   M44,
+
   // textures
+  /// Signed integral 1D texture sampler.
   ISampler1D,
+  /// Signed integral 2D texture sampler.
   ISampler2D,
+  /// Signed integral 3D texture sampler.
   ISampler3D,
+  /// Unsigned integral 1D texture sampler.
   UISampler1D,
+  /// Unsigned integral 2D texture sampler.
   UISampler2D,
+  /// Unsigned integral 3D texture sampler.
   UISampler3D,
+  /// Floating-point 1D texture sampler.
   Sampler1D,
+  /// Floating-point 2D texture sampler.
   Sampler2D,
+  /// Floating-point 3D texture sampler.
   Sampler3D,
+  /// Signed cubemap sampler.
   ICubemap,
+  /// Unsigned cubemap sampler.
   UICubemap,
+  /// Floating-point cubemap sampler.
   Cubemap,
+
   // buffer
+  /// Buffer binding; used for UBOs.
   BufferBinding,
 }
 

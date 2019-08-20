@@ -30,7 +30,11 @@ pub unsafe trait DepthPixel: Pixel {}
 pub unsafe trait RenderablePixel: Pixel {}
 
 /// Reify a static sample type at runtime.
+///
+/// That trait is used to allow sampling with different types than the actual encoding of the
+/// texture as long as the [`Type`] remains the same.
 pub unsafe trait SamplerType {
+  /// Underlying type of the sampler.
   fn sample_type() -> Type;
 }
 
@@ -46,8 +50,11 @@ pub struct PixelFormat {
 /// Pixel type.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Type {
+  /// Signed integral pixel type.
   Integral,
+  /// Unsigned integral pixel type.
   Unsigned,
+  /// Floating-point pixel type.
   Floating,
 }
 
@@ -72,10 +79,15 @@ pub enum Format {
 /// Size in bits a pixel channel can be.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Size {
+  /// 8-bit.
   Eight,
+  /// 10-bit.
   Ten,
+  /// 11-bit.
   Eleven,
+  /// 16-bit.
   Sixteen,
+  /// 32-bit.
   ThirtyTwo,
 }
 
@@ -575,6 +587,11 @@ impl_Pixel!(
 impl_ColorPixel!(RGBA32F);
 impl_RenderablePixel!(RGBA32F);
 
+/// A red, green and blue pixel format in which:
+///
+///   - The red channel is on 11 bits.
+///   - The green channel is on 11 bits, too.
+///   - The blue channel is on 10 bits.
 #[derive(Clone, Copy, Debug)]
 pub struct R11G11B10F;
 

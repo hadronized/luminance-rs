@@ -143,6 +143,65 @@ struct VertexBuffer {
 }
 
 /// Build tessellations the easy way.
+///
+/// This type allows you to create [`Tess`] by specifying piece-by-piece what the tessellation is
+/// made of. Several situations and configurations are supported.
+///
+/// # Specifying vertices
+///
+/// If you want to create a [`Tess`] holding vertices without anything else, you want to use the
+/// [`TessBuilder::add_vertices`]. Every time that function is called, a _vertex buffer_ is
+/// virtually allocated for your tessellation, which gives you three possibilities:
+///
+/// ## 1. Attributeless [`Tess`]
+///
+/// If you don’t call that function, you end up with an _attributeless_ tessellation. Such a
+/// tessellation has zero memory allocated to vertices. Instead, when invoking a _vertex shader_,
+/// the vertices must be created on the fly _inside_ the vertex shader directly.
+///
+/// ## 2. Interleaved [`Tess`]
+///
+/// If you call that function once, you have a single _vertex buffer_ allocated, which either
+/// gives you a 1-attribute tessellation, or an interleaved tessellation. Interleaved tessellation
+/// allows you to use a Rust `struct` (if it implements the [`Vertex`] trait) as vertex type and
+/// easily fetch them from a vertex shader.
+///
+/// ## 3. Deinterleaved [`Tess`]
+///
+/// If you call that function several times, the [`TessBuilder`] assumes you want _deinterleaved_
+/// memory, which means that each patch of vertices you add is supposed to contain one type of
+/// deinterleaved vertex attributes. A coherency check is done by the [`TessBuilder`] to ensure
+/// the vertex data is correct.
+///
+/// # Specifying indices
+///
+/// By default, vertices are picked in the order you specify them in the vertex buffer(s). If you
+/// want more control on the order, you can add _indices_.
+///
+/// As soon as you provide indices, the [`TessBuilder`] will change the way [`Tess`] will fetch
+/// vertices. Instead of fetching the first vertex, then second, then third, etc., it will first
+/// fetch the first index, then the second, then third, and respectively use the value of those
+/// indices to fetch the actual vertices.
+///
+/// For instance, if instead of fetching vertices `[1, 2, 3`] (which is the default) you want to
+/// fetch `[12, 35, 2]`, you can add the `[12, 35, 2]` indices in the [`TessBuilder`]. When
+/// rendering, the [`Tess`] will fetch the first index and get `12`; it will then make the first
+/// vertex to be fetched the 12th; then fetch the second index; get `35` and fetch the 35th vertex.
+/// Finally, as you might have guessed, it will fetch the third index, get `2` and then the third
+/// vertex to be fetched will be the second one.
+///
+/// That feature is really important as it allows you to _factorize_ vertices: instead of
+/// duplicating them, you can just reuse their indices.
+///
+/// You can have only one set of indices. See the [`TessBuilder::set_indices`] function.
+///
+/// # Specifying vertex instancing
+///
+/// It’s also possible to provide instancing information. Those are special vertex attributes that
+/// are picked on an _instance_-based information instead of _vertex number_ one. It works very
+/// similarily to how vertices data work, but on a per-instance bases.
+///
+/// See the [`TessBuilder::add_instances`] function for further details.
 pub struct TessBuilder<'a, C> {
   ctx: &'a mut C,
   vertex_buffers: Vec<VertexBuffer>,
@@ -155,6 +214,9 @@ pub struct TessBuilder<'a, C> {
 }
 
 impl<'a, C> TessBuilder<'a, C> {
+  /// Create a new, default [`TessBuilder`].
+  ///
+  /// By default, the _primitive mode_ of the building [`Tess`] is [`Mode::Point`].
   pub fn new(ctx: &'a mut C) -> Self {
     TessBuilder {
       ctx,
@@ -190,6 +252,7 @@ impl<'a, C> TessBuilder<'a, C> where C: GraphicsContext {
     self
   }
 
+  /// Add instances to be part of the tessellation.
   pub fn add_instances<V, W>(mut self, instances: W) -> Self where W: AsRef<[V]>, V: Vertex {
     let instances = instances.as_ref();
 
@@ -215,16 +278,28 @@ impl<'a, C> TessBuilder<'a, C> where C: GraphicsContext {
     self
   }
 
+  /// Set the primitive mode for the building [`Tess`].
   pub fn set_mode(mut self, mode: Mode) -> Self {
     self.mode = mode;
     self
   }
 
+  /// Set the default number of vertices to be rendered.
+  ///
+  /// That function is not mandatory if you are not building an _attributeless_ tessellation but is
+  /// if you are.
+  ///
+  /// When called while building a [`Tess`] owning at least one vertex bufer, it acts as a _default_
+  /// number of vertices to render and is useful when you will slice the tessellation with open
+  /// ranges.
   pub fn set_vertex_nb(mut self, nb: usize) -> Self {
     self.vert_nb = nb;
     self
   }
 
+  /// Set the default number of instances to render.
+  ///
+  /// `0` disables geometry instancing.
   pub fn set_instance_nb(mut self, nb: usize) -> Self {
     self.inst_nb = nb;
     self
@@ -236,6 +311,7 @@ impl<'a, C> TessBuilder<'a, C> where C: GraphicsContext {
     self
   }
 
+  /// Build the [`Tess`].
   pub fn build(self) -> Result<Tess, TessError> {
     // try to deduce the number of vertices to render if it’s not specified
     let vert_nb = self.guess_vert_nb_or_fail()?;
@@ -397,18 +473,25 @@ impl<'a, C> TessBuilder<'a, C> where C: GraphicsContext {
   }
 }
 
+/// Possible errors that might occur when dealing with [`Tess`].
 #[derive(Debug)]
 pub enum TessError {
+  /// Error related to attributeless tessellation and/or render.
   AttributelessError(String),
+  /// Length incoherency in vertex, index or instance buffers.
   LengthIncoherency(usize),
+  /// Overflow when accessing underlying buffers.
   Overflow(usize, usize)
 }
 
 /// Possible tessellation index types.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum TessIndexType {
+  /// 8-bit unsigned integer.
   U8,
+  /// 16-bit unsigned integer.
   U16,
+  /// 32-bit unsigned integer.
   U32,
 }
 
@@ -440,6 +523,10 @@ impl TessIndexType {
 ///
 /// > Implementing this trait is `unsafe`.
 pub unsafe trait TessIndex {
+  /// Type of the underlying index.
+  ///
+  /// You are limited in which types you can use as indexes. Feel free to have a look at the
+  /// documentation of the [`TessIndexType`] trait for further information.
   const INDEX_TYPE: TessIndexType;
 }
 
@@ -462,6 +549,23 @@ struct IndexedDrawState {
   index_type: TessIndexType,
 }
 
+/// GPU tessellation.
+///
+/// GPU tessellations gather several pieces of information:
+///
+///   - _Vertices_, which define points in space associated with _vertex attributes_, giving them
+///     meaningful data. Those data are then processed by a _vertex shader_ to produce more
+///     interesting data down the graphics pipeline.
+///   - _Indices_, which are used to change the order the _vertices_ are fetched to form
+///     _primitives_ (lines, triangles, etc.).
+///   - _Primitive mode_, the way vertices should be linked together. See [`Mode`] for further
+///     details.
+///   - And other information used to determine how to render such tessellations.
+///
+/// A [`Tess`] doesn’t directly state how to render an object, it just describes its topology and
+/// inner construction (i.e. mesh).
+///
+/// Constructing a [`Tess`] is not doable directly: you need to use a [`TessBuilder`] first.
 pub struct Tess {
   mode: GLenum,
   vert_nb: usize,
@@ -517,6 +621,10 @@ impl Tess {
     }
   }
 
+  /// Obtain a slice over the vertex buffer.
+  ///
+  /// This function fails if you try to obtain a buffer from an attriteless [`Tess`] or
+  /// deinterleaved memory.
   pub fn as_slice<V>(&mut self) -> Result<BufferSlice<V>, TessMapError> where V: Vertex {
     match self.vertex_buffers.len() {
       0 => Err(TessMapError::ForbiddenAttributelessMapping),
@@ -536,6 +644,10 @@ impl Tess {
     }
   }
 
+  /// Obtain a mutable slice over the vertex buffer.
+  ///
+  /// This function fails if you try to obtain a buffer from an attriteless [`Tess`] or
+  /// deinterleaved memory.
   pub fn as_slice_mut<V>(&mut self) -> Result<BufferSliceMut<V>, TessMapError> where V: Vertex {
     match self.vertex_buffers.len() {
       0 => Err(TessMapError::ForbiddenAttributelessMapping),
@@ -555,6 +667,10 @@ impl Tess {
     }
   }
 
+  /// Obtain a slice over the index buffer.
+  ///
+  /// This function fails if you try to obtain a buffer from an attriteless [`Tess`] or if no
+  /// index buffer is available.
   pub fn as_index_slice<I>(&mut self) -> Result<BufferSlice<I>, TessMapError> where I: TessIndex {
     match self.index_state {
       Some(IndexedDrawState { ref mut _buffer, ref index_type, .. }) => {
@@ -571,6 +687,10 @@ impl Tess {
     }
   }
 
+  /// Obtain a mutable slice over the index buffer.
+  ///
+  /// This function fails if you try to obtain a buffer from an attriteless [`Tess`] or if no
+  /// index buffer is available.
   pub fn as_index_slice_mut<I>(
     &mut self
   ) -> Result<BufferSliceMut<I>, TessMapError>
@@ -590,6 +710,10 @@ impl Tess {
     }
   }
 
+  /// Obtain a slice over the instance buffer.
+  ///
+  /// This function fails if you try to obtain a buffer from an attriteless [`Tess`] or
+  /// deinterleaved memory.
   pub fn as_inst_slice<V>(&mut self) -> Result<BufferSlice<V>, TessMapError> where V: Vertex {
     match self.instance_buffers.len() {
       0 => Err(TessMapError::ForbiddenAttributelessMapping),
@@ -609,6 +733,10 @@ impl Tess {
     }
   }
 
+  /// Obtain a mutable slice over the instance buffer.
+  ///
+  /// This function fails if you try to obtain a buffer from an attriteless [`Tess`] or
+  /// deinterleaved memory.
   pub fn as_inst_slice_mut<V>(&mut self) -> Result<BufferSliceMut<V>, TessMapError> where V: Vertex {
     match self.instance_buffers.len() {
       0 => Err(TessMapError::ForbiddenAttributelessMapping),
@@ -883,7 +1011,25 @@ impl<'a> From<&'a Tess> for TessSlice<'a> {
   }
 }
 
+/// The [`Tess`] slice index feature.
+///
+/// That trait allows to use the syntax `tess.slice(_)` where `_` is one of Rust range operators:
+///
+///   - [`..`](https://doc.rust-lang.org/std/ops/struct.RangeFull.html) for the whole range.
+///   - [`a .. b`](https://doc.rust-lang.org/std/ops/struct.Range.html) for a sub-range, excluding
+///     the right part.
+///   - [`a ..= b`](https://doc.rust-lang.org/std/ops/struct.RangeInclusive.html) for a sub-range,
+///     including the right part.
+///   - [`a ..`](https://doc.rust-lang.org/std/ops/struct.RangeFrom.html) for a sub-range open
+///     on the right part.
+///   - [`.. b`](https://doc.rust-lang.org/std/ops/struct.RangeTo.html) for a sub-range open on the
+///     left part and excluding the right part.
+///   - [`..= b](https://doc.rust-lang.org/std/ops/struct.RangeToInclusive.html) for a sub-range
+///     open on the left part and including the right part.
+///
+/// It’s technically possible to add any kind of index type, even though not really useful so far.
 pub trait TessSliceIndex<Idx> {
+  /// Slice a tesselation object and yields a [`TessSlice`] according to the index range.
   fn slice(&self, idx: Idx) -> TessSlice;
 }
 

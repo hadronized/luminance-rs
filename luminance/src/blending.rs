@@ -71,5 +71,6 @@ pub enum Factor {
   DstAlpha,
   /// `(1 - dstA) * color`
   DstAlphaComplement,
+  /// This behavior is still not well understood. Dammit.
   SrcAlphaSaturate,
 }

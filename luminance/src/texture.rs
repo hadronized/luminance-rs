@@ -417,11 +417,17 @@ impl Dimensionable for Cubemap {
 /// Faces of a cubemap.
 #[derive(Clone, Copy, Debug)]
 pub enum CubeFace {
+  /// The +X face of the cube.
   PositiveX,
+  /// The -X face of the cube.
   NegativeX,
+  /// The +Y face of the cube.
   PositiveY,
+  /// The -Y face of the cube.
   NegativeY,
+  /// The +Z face of the cube.
   PositiveZ,
+  /// The -Z face of the cube.
   NegativeZ,
 }
 
@@ -545,6 +551,14 @@ impl<L, D, P> Texture<L, D, P>
 where L: Layerable,
       D: Dimensionable,
       P: Pixel {
+  /// Create a new texture.
+  ///
+  ///   - The `mipmaps` parameter must be set to `0` if you want only one “layer of texels”.
+  ///     creating a texture without any layer wouldn’t make any sense, so if you want three layers,
+  ///     you will want the _base_ layer plus two mipmaps layers: you will then pass `2` as value
+  ///     here.
+  ///   - The `sampler` parameter allows to customize the way the texture will be sampled in
+  ///     shader stages. Refer to the documentation of [`Sampler`] for further details.
   pub fn new<C>(ctx: &mut C, size: D::Size, mipmaps: usize, sampler: &Sampler) -> Result<Self, TextureError>
   where C: GraphicsContext {
     let mipmaps = mipmaps + 1; // + 1 prevent having 0 mipmaps
@@ -719,6 +733,15 @@ where L: Layerable,
     texels
   }
 
+  /// Get the inner size of the texture.
+  ///
+  /// That value represents the _dimension_ of the texture. Depending on the type of texture, its
+  /// dimensionality varies. For instance:
+  ///
+  ///   - 1D textures have a single value, giving the length of the texture.
+  ///   - 2D textures have two values for their _width_ and _height_.
+  ///   - 3D textures have three values: _width_, _height_ and _depth_.
+  ///   - Etc. etc.
   pub fn size(&self) -> D::Size {
     self.size
   }
@@ -727,7 +750,11 @@ where L: Layerable,
 /// Whether mipmaps should be generated.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum GenMipmaps {
+  /// Mipmaps should be generated.
+  ///
+  /// Mipmaps are generated when creating textures but also when uploading texels, clearing, etc.
   Yes,
+  /// Never generate mipmaps.
   No
 }
 
@@ -1142,8 +1169,12 @@ impl Default for Sampler {
   }
 }
 
+/// Errors that might happen when working with textures.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TextureError {
+  /// A texture’s storage failed to be created.
+  ///
+  /// The carried [`String`] gives the reason of the failure.
   TextureStorageCreationFailed(String),
 }
 

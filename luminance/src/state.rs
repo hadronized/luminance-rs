@@ -340,15 +340,28 @@ fn from_blending_factor(factor: Factor) -> GLenum {
 /// An error that might happen when the context is queried.
 #[derive(Debug)]
 pub enum StateQueryError {
+  /// The [`GraphicsState`] object is unavailable.
+  ///
+  /// That might occur if the current thread doesn’t support allocating a new graphics state. It
+  /// might happen if you try to have more than one state on the same thread, for instance.
   UnavailableGraphicsState,
+  /// Corrupted blending state.
   UnknownBlendingState(GLboolean),
+  /// Corrupted blending equation.
   UnknownBlendingEquation(GLenum),
+  /// Corrupted blending source factor.
   UnknownBlendingSrcFactor(GLenum),
+  /// Corrupted blending destination factor.
   UnknownBlendingDstFactor(GLenum),
+  /// Corrupted depth test state.
   UnknownDepthTestState(GLboolean),
+  /// Corrupted face culling state.
   UnknownFaceCullingState(GLboolean),
+  /// Corrupted face culling order.
   UnknownFaceCullingOrder(GLenum),
+  /// Corrupted face culling mode.
   UnknownFaceCullingMode(GLenum),
+  /// Corrupted vertex restart state.
   UnknownVertexRestartState(GLboolean),
 }
 
