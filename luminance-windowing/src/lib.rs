@@ -26,6 +26,8 @@
 //! - Iterate over the system events captured by your application.
 //! - Draw and swap the buffer chain.
 
+#![deny(missing_docs)]
+
 use luminance::context::GraphicsContext;
 
 /// Dimension metrics.
