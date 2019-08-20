@@ -393,6 +393,8 @@
 //! [luminance-windowing]: https://crates.io/crates/luminance-windowing
 //! [luminance-glfw]: https://crates.io/crates/luminance-glfw
 
+#![deny(missing_docs)]
+
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(not(feature = "std"), feature(alloc))]
 

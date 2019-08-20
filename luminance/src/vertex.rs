@@ -30,17 +30,26 @@ pub type VertexDesc = Vec<VertexBufferDesc>;
 
 /// A vertex attribute descriptor in a vertex buffer.
 ///
-/// Such a description is used to explain what vertex buffers are made of and how they should be
+/// Such a description is used to state what vertex buffers are made of and how they should be
 /// aligned / etc.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct VertexBufferDesc {
+  /// Internal index of the attribute.
+  ///
+  /// That index is used as a mapping with vertex shaders to know how to fetch vertex attributes.
   pub index: usize,
+  /// The name of the attribute.
+  ///
+  /// Such a name is used in vertex shaders to perform mapping.
   pub name: &'static str,
+  /// Whether _vertex instancing_ should be used with that vertex attribute.
   pub instancing: VertexInstancing,
+  /// Vertex attribute descriptor.
   pub attrib_desc: VertexAttribDesc
 }
 
 impl VertexBufferDesc {
+  /// Create a new [`VertexBufferDesc`].
   pub fn new<S>(
     sem: S,
     instancing: VertexInstancing,
@@ -59,7 +68,9 @@ impl VertexBufferDesc {
 /// should be enabled for all others (interleaved vertex instancing is not supported).
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum VertexInstancing {
+  /// Use vertex instancing.
   On,
+  /// Disable vertex instancing.
   Off,
 }
 
@@ -130,7 +141,9 @@ impl VertexAttribType {
 /// normalized integers (that will, then, be accessed as floating vertex attributes).
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Normalized {
+  /// Normalize integral values and expose them as floating-point values.
   Yes,
+  /// Do not perform any normalization and hence leave integral values as-is.
   No
 }
 
@@ -153,6 +166,7 @@ pub enum VertexAttribDim {
 /// A vertex attribute type is always associated with a single constant of type [`VertexAttribDesc`],
 /// giving GPUs hints about how to treat them.
 pub unsafe trait VertexAttrib {
+  /// The vertex attribute descriptor.
   const VERTEX_ATTRIB_DESC: VertexAttribDesc;
 }
 
@@ -214,8 +228,12 @@ pub struct SemanticsDesc {
 ///
 /// Vertex attribute types can be associated with only one semantics.
 pub trait HasSemantics {
+  /// Type of the semantics.
+  ///
+  /// See the [`Semantics`] trait for further information.
   type Sem: Semantics;
 
+  /// The aforementioned vertex semantics for the attribute type.
   const SEMANTICS: Self::Sem;
 }
 

@@ -4,11 +4,14 @@
 /// Face culling setup.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct FaceCulling {
+  /// Face culling order.
   pub(crate) order: FaceCullingOrder,
+  /// Face culling mode.
   pub(crate) mode: FaceCullingMode,
 }
 
 impl FaceCulling {
+  /// Create a new [`FaceCulling`].
   pub fn new(order: FaceCullingOrder, mode: FaceCullingMode) -> Self {
     FaceCulling { order, mode }
   }
@@ -20,9 +23,12 @@ impl Default for FaceCulling {
   }
 }
 
+/// Should face culling be enabled?
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) enum FaceCullingState {
+  /// Enable face culling.
   On,
+  /// Disable face culling.
   Off,
 }
 

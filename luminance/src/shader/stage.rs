@@ -1,3 +1,8 @@
+//! _Shader stages_ and their related features.
+//!
+//! A shader stage is a part of a _shader program_. Typically, _shader programs_ are comprised of
+//! _several_ shader stages. The minimal configuration implies at least a _vertex shader_ and a
+//! _fragment shader_.
 #[cfg(feature = "std")]
 use std::ffi::CString;
 #[cfg(feature = "std")]
@@ -21,10 +26,15 @@ use crate::metagl::*;
 /// A shader stage type.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Type {
+  /// Tessellation control shader.
   TessellationControlShader,
+  /// Tessellation evaluation shader.
   TessellationEvaluationShader,
+  /// Vertex shader.
   VertexShader,
+  /// Geometry shader.
   GeometryShader,
+  /// Fragment shader.
   FragmentShader,
 }
 

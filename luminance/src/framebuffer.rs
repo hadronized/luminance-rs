@@ -51,7 +51,13 @@ use crate::texture::{
 /// Framebuffer error.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum FramebufferError {
+  /// Texture error.
+  ///
+  /// This happen while creating / associating the color / depth slots.
   TextureError(TextureError),
+  /// Incomplete error.
+  ///
+  /// This happens when finalizing the construction of the framebuffer.
   Incomplete(IncompleteReason),
 }
 
@@ -68,13 +74,21 @@ impl fmt::Display for FramebufferError {
 /// Reason a framebuffer is incomplete.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum IncompleteReason {
+  /// Incomplete framebuffer.
   Undefined,
+  /// Incomplete attachment (color / depth).
   IncompleteAttachment,
+  /// An attachment was missing.
   MissingAttachment,
+  /// Incomplete draw buffer.
   IncompleteDrawBuffer,
+  /// Incomplete read buffer.
   IncompleteReadBuffer,
+  /// Unsupported.
   Unsupported,
+  /// Incomplete multisample configuration.
   IncompleteMultisample,
+  /// Incomplete layer targets.
   IncompleteLayerTargets,
 }
 
@@ -280,26 +294,31 @@ where L: Layerable,
     }
   }
 
+  /// OpenGL handle of the framebuffer.
   #[inline]
   pub(crate) fn handle(&self) -> GLuint {
     self.handle
   }
 
+  /// Width of the framebuffer.
   #[inline]
   pub fn width(&self) -> u32 {
     self.w
   }
 
+  /// Height of the framebuffer.
   #[inline]
   pub fn height(&self) -> u32 {
     self.h
   }
 
+  /// Access the underlying color slot.
   #[inline]
   pub fn color_slot(&self) -> &CS::ColorTextures {
     &self.color_slot
   }
 
+  /// Access the underlying depth slot.
   #[inline]
   pub fn depth_slot(&self) -> &DS::DepthTexture {
     &self.depth_slot

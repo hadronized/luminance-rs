@@ -13,12 +13,16 @@ use crate::face_culling::FaceCulling;
 /// various `RenderState::set_*` methods.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct RenderState {
+  /// Blending configuration.
   pub(crate) blending: Option<(Equation, Factor, Factor)>,
+  /// Depth test configuration.
   pub(crate) depth_test: DepthTest,
+  /// Face culling configuration.
   pub(crate) face_culling: Option<FaceCulling>,
 }
 
 impl RenderState {
+  /// Override the blending configuration.
   pub fn set_blending<B>(self, blending: B) -> Self
   where B: Into<Option<(Equation, Factor, Factor)>> {
     RenderState {
@@ -27,18 +31,22 @@ impl RenderState {
     }
   }
 
+  /// Blending configuration.
   pub fn blending(&self) -> Option<(Equation, Factor, Factor)> {
     self.blending
   }
 
+  /// Override the depth test configuration.
   pub fn set_depth_test(self, depth_test: DepthTest) -> Self {
     RenderState { depth_test, ..self }
   }
 
+  /// Depth test configuration.
   pub fn depth_test(&self) -> DepthTest {
     self.depth_test
   }
 
+  /// Override the face culling configuration.
   pub fn set_face_culling<FC>(self, face_culling: FC) -> Self
   where FC: Into<Option<FaceCulling>> {
     RenderState {
@@ -47,6 +55,7 @@ impl RenderState {
     }
   }
 
+  /// Face culling configuration.
   pub fn face_culling(&self) -> Option<FaceCulling> {
     self.face_culling
   }
