@@ -1,6 +1,8 @@
 //! [GLFW](https://crates.io/crates/glfw) backend for [luminance](https://crates.io/crates/luminance)
 //! and [luminance-windowing](https://crates.io/crates/luminance-windowing).
 
+#![deny(missing_docs)]
+
 use gl;
 use glfw::{self, Context, CursorMode as GlfwCursorMode, SwapInterval, Window, WindowMode};
 use luminance::context::GraphicsContext;
