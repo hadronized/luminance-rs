@@ -6,23 +6,20 @@ authors = ["Dimitri Sabadie <dimitri.sabadie@gmail.com>"]
 description = "GLFW support for luminance"
 keywords = ["stateless", "type-safe", "graphics", "luminance", "glfw"]
 categories = ["rendering::graphics-api"]
-homepage = "https://github.com/phaazon/luminance"
-repository = "https://github.com/phaazon/luminance"
+homepage = "https://github.com/phaazon/luminance-rs"
+repository = "https://github.com/phaazon/luminance-rs"
 documentation = "https://docs.rs/luminance-glfw"
 readme = "README.md"
 edition = "2018"
 
 [badges]
-travis-ci = { repository = "phaazon/luminance", branch = "master" }
-is-it-maintained-issue-resolution = { repository = "phaazon/luminance" }
-is-it-maintained-open-issues = { repository = "phaazon/luminance" }
 maintenance = { status = "actively-developed" }
 
 [dependencies]
 gl = "0.13"
 glfw = { version = "0.31", default-features = false }
-luminance = { version = "0.30", path = "../luminance" }
-luminance-windowing = { version = "0.2", path = "../luminance-windowing" }
+luminance = "0.30"
+luminance-windowing = "0.2"
 
 [features]
 all = ["glfw-sys"]

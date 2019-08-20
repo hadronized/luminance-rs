@@ -9,10 +9,10 @@ categories = ["rendering::graphics-api"]
 homepage = "https://github.com/phaazon/luminance-rs"
 repository = "https://github.com/phaazon/luminance-rs"
 documentation = "https://docs.rs/luminance-glutin"
+readme = "README.md"
 edition = "2018"
 
 [badges]
-travis-ci = { repository = "phaazon/luminance-glutin", branch = "master" }
 maintenance = { status = "actively-developed" }
 
 [dependencies]

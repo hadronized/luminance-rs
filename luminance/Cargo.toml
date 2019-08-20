@@ -13,9 +13,6 @@ readme = "README.md"
 edition = "2018"
 
 [badges]
-travis-ci = { repository = "phaazon/luminance-rs", branch = "master" }
-is-it-maintained-issue-resolution = { repository = "phaazon/luminance-rs" }
-is-it-maintained-open-issues = { repository = "phaazon/luminance-rs" }
 maintenance = { status = "actively-developed" }
 
 [features]
