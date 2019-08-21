@@ -25,7 +25,7 @@ unsafe impl Vertex for () {
   }
 }
 
-/// A [`VertexDesc`] is a list of [`VertexAttribDesc`]s.
+/// A [`VertexDesc`] is a list of [`VertexBufferDesc`]s.
 pub type VertexDesc = Vec<VertexBufferDesc>;
 
 /// A vertex attribute descriptor in a vertex buffer.

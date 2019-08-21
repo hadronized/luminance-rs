@@ -16,7 +16,7 @@
 //! # Tessellation creation
 //!
 //! Creation is done via the [`Tess::new`] function. This function is polymorphing in the type of
-//! vertices you send. See the [`TessVertices`] type for further details.
+//! vertices you send.
 //!
 //! ## On interleaved and deinterleaved vertices
 //!
