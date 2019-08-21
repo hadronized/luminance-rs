@@ -3,6 +3,8 @@
 //! [glutin]: https://crates.io/crates/glutin
 //! [luminance-windowing]: https://crates.io/crates/luminance-windowing
 
+#![deny(missing_docs)]
+
 use gl;
 pub use glutin::{
   ContextError, CreationError, DeviceEvent, DeviceId, ElementState, Event, KeyboardInput,
@@ -22,10 +24,15 @@ use std::cell::RefCell;
 use std::os::raw::c_void;
 use std::rc::Rc;
 
+/// Error that might occur when creating a Glutin surface.
 #[derive(Debug)]
 pub enum Error {
+  /// Something went wrong when creating the Glutin surface. The carried [`CreationError`] provides
+  /// more information.
   CreationError(CreationError),
+  /// OpenGL context error.
   ContextError(ContextError),
+  /// Graphics state error that might occur when querying the initial state.
   GraphicsStateError(StateQueryError)
 }
 
@@ -41,6 +48,11 @@ impl From<ContextError> for Error {
   }
 }
 
+/// The Glutin surface.
+///
+/// You want to create such an object in order to use any [luminance] construct.
+///
+/// [luminance]: https://crates.io/crates/luminance
 pub struct GlutinSurface {
   ctx: WindowedContext<PossiblyCurrent>,
   event_loop: EventsLoop,
