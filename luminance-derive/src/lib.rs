@@ -26,6 +26,7 @@
 //! [`Semantics`]: https://docs.rs/luminance/latest/luminance/vertex/trait.Semantics.html
 
 #![deny(missing_docs)]
+
 extern crate proc_macro;
 
 mod attrib;
