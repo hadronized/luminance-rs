@@ -595,8 +595,8 @@ where L: Layerable,
   }
 
   /// Convert a texture to its raw representation.
-  pub fn to_raw(mut self) -> RawTexture {
-    let raw = mem::replace(&mut self.raw, unsafe { mem::uninitialized() });
+  pub fn to_raw(self) -> RawTexture {
+    let raw = unsafe { ptr::read(&self.raw) };
 
     // forget self so that we don’t call drop on it after the function has returned
     mem::forget(self);
@@ -706,7 +706,9 @@ where L: Layerable,
 
   // FIXME: cubemaps?
   /// Get the raw texels associated with this texture.
-  pub fn get_raw_texels(&self) -> Vec<P::RawEncoding> where P: Pixel, P::RawEncoding: Copy {
+  pub fn get_raw_texels(
+    &self
+  ) -> Vec<P::RawEncoding> where P: Pixel, P::RawEncoding: Copy + Default {
     let mut texels = Vec::new();
     let pf = P::pixel_format();
     let (format, _, ty) = opengl_pixel_format(pf).unwrap();
@@ -723,7 +725,7 @@ where L: Layerable,
       gl::GetTexLevelParameteriv(self.target, 0, gl::TEXTURE_HEIGHT, &mut h);
 
       // resize the vec to allocate enough space to host the returned texels
-      texels.resize((w * h) as usize * pixel_components(pf), mem::uninitialized());
+      texels.resize_with((w * h) as usize * pixel_components(pf), Default::default);
 
       gl::GetTexImage(self.target, 0, format, ty, texels.as_mut_ptr() as *mut c_void);
 
