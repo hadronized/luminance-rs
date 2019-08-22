@@ -75,10 +75,12 @@ It is currently composed of four different crates:
     need it, but it provides some basic and shared data structures you might use.
   - [luminance-glfw]: an implementation of [luminance-windowing] for [GLFW](https://www.glfw.org)
     (via [glfw](https://crates.io/crates/glfw)).
+  - [luminance-glutin]: an implementation of [luminance-windowing] for [glutin].
 
 [luminance]: ./luminance
 [luminance-derive]: ./luminance-derive
 [luminance-windowing]: ./luminance-windowing
+[glutin]: https://crates.io/crates/glutin
 [gfx-hal]: https://crates.io/crates/gfx-hal
 [Vulkan]: https://www.khronos.org/vulkan
 [Opengl]: https://www.khronos.org/opengl
