@@ -1,6 +1,6 @@
 [package]
 name = "luminance"
-version = "0.30.1"
+version = "0.31.0"
 license = "BSD-3-Clause"
 authors = ["Dimitri Sabadie <dimitri.sabadie@gmail.com>"]
 description = "Stateless and type-safe graphics framework"
@@ -26,5 +26,5 @@ optional = true
 [dev-dependencies]
 image = "0.22"
 luminance-derive = "0.1"
-luminance-glfw = "0.5"
+luminance-glfw = "0.6"
 luminance-glutin = "0.1"
