@@ -8,7 +8,7 @@
   - Various internal bug fixes and performance improvements.
   - Fix pixel code for `Format::R` and `Format::RG` when querying a texture’s texels.
 
-## Major changes features
+## Major changes
 
   - Remove the concept of `GTup`. No code was using it and it was not really elegant.
   - Remove the `uniform_interface!` macro and replace it with the `UniformInterface` procedural
@@ -45,7 +45,7 @@
       as the list of all possible semantics, encoded by `SemanticsDesc`.
     - Users are highly advised to look at the `Vertex` and `Semantics` proc-macro derive in the
       [luminance-derive] crate.
-  - Revised the `Tess` type to make it easier to work with.
+  - Revise the `Tess` type to make it easier to work with.
     - The `Tess::new` and `Tess::attributeless` functions were removed.
     - The `TessBuilder` type was added and replace both the above function.
     - That last type has a lot of methods that can be combined in different ways to build powerful
@@ -109,7 +109,7 @@
     be used in any production releases so far – expect breakage / undefined behaviors as this
     feature hasn’t been quite intensively tested yet.
   - Add support for the `R11FG11FB10F` pixel format.
-  - Migrate crates to Rust Edition 2018.
+  - Migrate to Rust Edition 2018.
   - The `WindowOpt` now has support for multisampling. See the `WindowOpt::set_num_samples` for
     further details.
   - Implement dynamic edition of windowing types properties. That allows to change data on-the-fly,
@@ -134,9 +134,9 @@
   - Add more CI testing.
   - Update examples and made them available to the `cargo run --example` command. Read more
     [here](./examples/README.md).
-  - Massive documentation rewrite (among the use of `#![deny(missing_docs)]` in all [luminance]
-    crates. The situation is still not perfect and `0.31` patch versions will be released to fix and
-    update the documentation. Step by step.
+  - Massive documentation rewrite (among the use of `#![deny(missing_docs)]`. The situation is still
+    not perfect and patch versions will be released to fix and update the documentation. Step by
+    step.
   - Add design notes and documents in the repository.
   - Massive dependencies update. Special thanks to @eijebong for his help!
   - Add the `11-query-texture-texels` example, which showcases how to query a texture’s texels and
