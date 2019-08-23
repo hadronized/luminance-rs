@@ -4,6 +4,9 @@
 //! or even texture coordinates. Even though you’re free to use whichever type you want, you’re
 //! limited to a range of types and dimensions. See [`VertexAttribType`] and [`VertexAttribDim`]
 //! for further details.
+//!
+//! [`VertexAttribDim`]: crate::vertex::VertexAttribDim
+//! [`VertexAttribType`]: crate::vertex::VertexAttribType
 
 /// A type that can be used as a [`Vertex`] has to implement that trait – it must provide an
 /// associated [`VertexDesc`] value via a function call. This associated value gives enough

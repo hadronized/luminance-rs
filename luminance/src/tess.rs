@@ -1,58 +1,53 @@
-//! Tessellation features.
+//! # GPU geometries.
 //!
-//! # Tessellation mode
+//! Tessellations (i.e. [`Tess`]) represent geometric information stored on GPU. They are at the
+//! heart of any render, should it be 2D, 3D or even more exotic configuration. Please familiarize
+//! yourself with the tessellation abstractions before going on.
 //!
-//! Tessellation is geometric information. Currently, several kinds of tessellation are supported:
+//! # Tessellation primitive
 //!
-//! - *point clouds*;
-//! - *lines*;
-//! - *line strips*;
-//! - *triangles*;
-//! - *triangle fans*;
-//! - *triangle strips*.
+//! Currently, several kinds of tessellation are supported:
 //!
-//! Those kinds of tessellation are designated by the `Mode` type.
+//! - [`Mode::Point`]; _point clouds_.
+//! - [`Mode::Line`]; _lines_.
+//! - [`Mode::LineStrip`]; _line strips_, which are lines connected between them to create a single,
+//!   long line.
+//! - [`Mode::Triangle`]; _triangles_.
+//! - [`Mode::TriangleFan`]; _triangle fans_, a way of connecting triangles.
+//! - [`Mode::TriangleStrip`]; _triangle strips_, another way of connecting triangles.
+//!
+//! Those kinds of tessellation are designated by the [`Mode`] type. You will also come across the
+//! name of _primitive mode_ to designate such an idea.
 //!
 //! # Tessellation creation
 //!
-//! Creation is done via the [`Tess::new`] function. This function is polymorphing in the type of
-//! vertices you send.
+//! Creation is done via the [`TessBuilder`] type, using the _builder_ pattern. Once you’re done
+//! with configuring everything, you can generate the tessellation and get a [`Tess`] object.
 //!
-//! ## On interleaved and deinterleaved vertices
-//!
-//! Because [`Tess::new`] uses your user-defined vertex type, it uses interleaved memory. That
-//! means that all vertices are spread out in a single GPU memory region (a single buffer). This
-//! behavior is fine for most applications that will want their shaders to use all vertex attributes
-//! but sometimes you want a more specific memory strategy. For instance, some shaders won’t use all
-//! of the available vertex attributes.
-//!
-//! [`Tess`] supports such situations with the [`Tess::new_deinterleaved`] method, that creates a
-//! tessellation by lying vertex attributes out in their own respective buffers. The implication is
-//! that the interface requires you to pass already deinterleaved vertices. Those are most of the
-//! time isomorphic to tuples of slices.
-//!
-//! # Tessellation vertices CPU mapping
-//!
-//! It’s possible to map `Tess`’ vertices into your code. You’re provided with two types to do so:
-//!
-//! - [`BufferSlice`], which gives you an immutable access to the vertices.
-//! - [`BufferSliceMut`], which gives you a mutable access to the vertices.
-//!
-//! You can retrieve those slices with the [`Tess::as_slice`] and [`Tess::as_slice_mut`] methods.
+//! [`Tess`] represents data on the GPU and can be thought of as an access to the actual data, a bit
+//! in the same way as a [`Vec`] is just a small data structure that represents an access to a
+//! much bigger memory area.
 //!
 //! # Tessellation render
 //!
 //! In order to render a [`Tess`], you have to use a [`TessSlice`] object. You’ll be able to use
-//! that object in *pipelines*. See the `pipeline` module for further details.
+//! that object in *pipelines*. See the [pipeline] module for further details.
 //!
-//! [`BufferSlice`]: crate/buffer/struct.BufferSlice.html
-//! [`BufferSliceMut`]: crate/buffer/struct.BufferSliceMut.html
-//! [`Tess`]: struct.Tess.html
-//! [`Tess::as_slice`]: struct.Tess.html#method.as_slice
-//! [`Tess::as_slice_mut`]: struct.Tess.html#method.as_slice_mut
-//! [`Tess::new`]: struct.Tess.html#method.new
-//! [`Tess::new_deinterleaved`]: struct.Tess.html#method.new_deinterleaved
-//! [`TessSlice`]: struct.TessSlice.html
+//! [`Mode`]: crate::tess::Mode
+//! [`Mode::Point`]: crate::tess::Mode::Point
+//! [`Mode::Line`]: crate::tess::Mode::Line
+//! [`Mode::LineStrip`]: crate::tess::Mode::LineStrip
+//! [`Mode::Triangle`]: crate::tess::Mode::Triangle
+//! [`Mode::TriangleFan`]: crate::tess::Mode::TriangleFan
+//! [`Mode::TriangleStrip`]: crate::tess::Mode::TriangleStrip
+//! [`BufferSlice`]: crate::buffer::BufferSlice
+//! [`BufferSliceMut`]: crate::buffer::BufferSliceMut
+//! [`Tess`]: crate::tess::Tess
+//! [`Tess::as_slice`]: crate::tess::Tess::as_slice
+//! [`Tess::as_slice_mut`]: crate::tess::Tess::as_slice_mut
+//! [`TessBuilder`]: crate::tess::TessBuilder
+//! [`TessSlice`]: crate::tess::TessSlice
+//! [pipeline]: crate::pipeline
 
 #[cfg(feature = "std")]
 use std::fmt;
@@ -82,19 +77,62 @@ use crate::vertex::{
 use crate::vertex_restart::VertexRestart;
 
 /// Vertices can be connected via several modes.
+///
+/// Some modes allow for _primitive restart_. Primitive restart is a cool feature that allows to
+/// _break_ the building of a primitive to _start over again_. For instance, when making a curve,
+/// you can imagine gluing segments next to each other. If at some point, you want to start a new
+/// line, you have two choices:
+///
+///   - Either you stop your draw call and make another one.
+///   - Or you just use the _primitive restart_ feature to ask to create another line from scratch.
+///
+/// That feature is encoded with a special _vertex index_. You can setup the value of the _primitive
+/// restart index_ with [`TessBuilder::set_primitive_restart_index`]. Whenever a vertex index is set
+/// to the same value as the _primitive restart index_, the value is not interpreted as a vertex
+/// index but just a marker / hint to start a new primitive.
 #[derive(Copy, Clone, Debug)]
 pub enum Mode {
   /// A single point.
+  ///
+  /// Points are left unconnected from each other and represent a _point cloud_. This is the typical
+  /// primitive mode you want to do, for instance, particles rendering.
   Point,
   /// A line, defined by two points.
+  ///
+  /// Every pair of vertices are connected together to form a straight line.
   Line,
   /// A strip line, defined by at least two points and zero or many other ones.
+  ///
+  /// The first two vertices create a line, and every new vertex flowing in the graphics pipeline
+  /// (starting from the third, then) well extend the initial line, making a curve composed of
+  /// several segments.
+  ///
+  /// > This kind of primitive mode allows the usage of _primitive restart_.
   LineStrip,
   /// A triangle, defined by three points.
   Triangle,
   /// A triangle fan, defined by at least three points and zero or many other ones.
+  ///
+  /// Such a mode is easy to picture: a cooling fan is a circular shape, with blades.
+  /// [`Mode::TriangleFan`] is kind of the same. The first vertex is at the center of the fan, then
+  /// the second vertex creates the first edge of the first triangle. Every time you add a new
+  /// vertex, a triangle is created by taking the first (center) vertex, the very previous vertex
+  /// and the current vertex. By specifying vertices around the center, you actually create a
+  /// fan-like shape.
+  ///
+  /// > This kind of primitive mode allows the usage of _primitive restart_.
   TriangleFan,
   /// A triangle strip, defined by at least three points and zero or many other ones.
+  ///
+  /// This mode is a bit different from [`Mode::TriangleStrip`]. The first two vertices define the
+  /// first edge of the first triangle. Then, for each new vertex, a new triangle is created by
+  /// taking the very previous vertex and the last to very previous vertex. What it means is that
+  /// every time a triangle is created, the next vertex will share the edge that was created to
+  /// spawn the previous triangle.
+  ///
+  /// This mode is useful to create long ribbons / strips of triangles.
+  ///
+  /// > This kind of primitive mode allows the usage of _primitive restart_.
   TriangleStrip,
 }
 
@@ -913,6 +951,12 @@ fn opengl_mode(mode: Mode) -> GLenum {
 /// Tessellation slice.
 ///
 /// This type enables slicing a tessellation on the fly so that we can render patches of it.
+/// Typically, you can obtain a slice by using the [`TessSliceIndex`] trait (the
+/// [`TessSliceIndex::slice`] method) and combining it with some Rust range operators, such as
+/// [`..`] or [`..=`].
+///
+/// [`..`]: https://doc.rust-lang.org/std/ops/struct.RangeFull.html
+/// [`..=`]: https://doc.rust-lang.org/std/ops/struct.RangeInclusive.html
 #[derive(Clone)]
 pub struct TessSlice<'a> {
   /// Tessellation to render.

@@ -46,43 +46,7 @@
 //! explanations.
 //!
 //! Samplers must be declared in the shader code according to the type of the texture used in the
-//! Rust code. The size won’t matter, only the type. Here’s an exhaustive type of which sampler type
-//! you must use according to the type of pixel format ([`PixelFormat`]) you use:
-//!
-//! > The `*` must be replaced by the dimension you use for your texture. If you use `Dim2` for
-//! > instance, replace with `2`, as in `sampler*D -> sampler2D`.
-//!
-//! | `PixelFormat` | GLSL sampler type |
-//! |---------------|-------------------|
-//! | `R8I`         | `isampler*D`      |
-//! | `R8UI`        | `usampler*D`      |
-//! | `R16I`        | `isampler*D`      |
-//! | `R16UI`       | `usampler*D`      |
-//! | `R32I`        | `isampler*D`      |
-//! | `R32UI`       | `usampler*D`      |
-//! | `R32F`        | `sampler*D`       |
-//! | `RG8I`        | `isampler*D`      |
-//! | `RG8UI`       | `usampler*D`      |
-//! | `RG16I`       | `isampler*D`      |
-//! | `RG16UI`      | `usampler*D`      |
-//! | `RG32I`       | `isampler*D`      |
-//! | `RG32UI`      | `usampler*D`      |
-//! | `RG32F`       | `sampler*D`       |
-//! | `RGB8I`       | `isampler*D`      |
-//! | `RGB8UI`      | `usampler*D`      |
-//! | `RGB16I`      | `isampler*D`      |
-//! | `RGB16UI`     | `usampler*D`      |
-//! | `RGB32I`      | `isampler*D`      |
-//! | `RGB32UI`     | `usampler*D`      |
-//! | `RGB32F`      | `sampler*D`       |
-//! | `RGBA8I`      | `isampler*D`      |
-//! | `RGBA8UI`     | `usampler*D`      |
-//! | `RGBA16I`     | `isampler*D`      |
-//! | `RGBA16UI`    | `usampler*D`      |
-//! | `RGBA32I`     | `isampler*D`      |
-//! | `RGBA32UI`    | `usampler*D`      |
-//! | `RGBA32F`     | `sampler*D`       |
-//! | `Depth32F`    | `sampler1D`       |
+//! Rust code. The size won’t matter, only the type.
 //!
 //! # Uploading data to textures
 //!
@@ -105,6 +69,8 @@
 //!
 //! The function `Texel::get_raw_texels` must be used to retreive texels out of a texture. This
 //! function allocates memory, so be careful when using it.
+//!
+//! [`PixelFormat`]: crate::pixel::PixelFormat
 
 #[cfg(feature = "std")]
 use std::cell::RefCell;
