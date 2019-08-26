@@ -237,7 +237,7 @@ struct VertexBuffer {
 ///
 /// It’s also possible to provide instancing information. Those are special vertex attributes that
 /// are picked on an _instance_-based information instead of _vertex number_ one. It works very
-/// similarily to how vertices data work, but on a per-instance bases.
+/// similarly to how vertices data work, but on a per-instance bases.
 ///
 /// See the [`TessBuilder::add_instances`] function for further details.
 pub struct TessBuilder<'a, C> {
@@ -327,7 +327,7 @@ impl<'a, C> TessBuilder<'a, C> where C: GraphicsContext {
   /// That function is not mandatory if you are not building an _attributeless_ tessellation but is
   /// if you are.
   ///
-  /// When called while building a [`Tess`] owning at least one vertex bufer, it acts as a _default_
+  /// When called while building a [`Tess`] owning at least one vertex buffer, it acts as a _default_
   /// number of vertices to render and is useful when you will slice the tessellation with open
   /// ranges.
   pub fn set_vertex_nb(mut self, nb: usize) -> Self {
