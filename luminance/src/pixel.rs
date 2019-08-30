@@ -617,7 +617,7 @@ impl_DepthPixel!(Depth32F);
 // OpenGL format, internal sized-format and type.
 pub(crate) fn opengl_pixel_format(pf: PixelFormat) -> Option<(GLenum, GLenum, GLenum)> {
   match (pf.format, pf.encoding) {
-    (Format::R(Size::Eight), Type::Floating) => Some((gl::RED, gl::RED, gl::UNSIGNED_BYTE)),
+    (Format::R(Size::Eight), Type::Floating) => Some((gl::RED, gl::R8, gl::UNSIGNED_BYTE)),
     (Format::R(Size::Eight), Type::Integral) => Some((gl::RED_INTEGER, gl::R8I, gl::BYTE)),
     (Format::R(Size::Eight), Type::Unsigned) => Some((gl::RED_INTEGER, gl::R8UI, gl::UNSIGNED_BYTE)),
     (Format::R(Size::Sixteen), Type::Integral) => Some((gl::RED_INTEGER, gl::R16I, gl::SHORT)),
@@ -626,7 +626,7 @@ pub(crate) fn opengl_pixel_format(pf: PixelFormat) -> Option<(GLenum, GLenum, GL
     (Format::R(Size::ThirtyTwo), Type::Unsigned) => Some((gl::RED_INTEGER, gl::R32UI, gl::UNSIGNED_INT)),
     (Format::R(Size::ThirtyTwo), Type::Floating) => Some((gl::RED, gl::R32F, gl::FLOAT)),
 
-    (Format::RG(Size::Eight, Size::Eight), Type::Floating) => Some((gl::RG, gl::RG, gl::UNSIGNED_BYTE)),
+    (Format::RG(Size::Eight, Size::Eight), Type::Floating) => Some((gl::RG, gl::RG8, gl::UNSIGNED_BYTE)),
     (Format::RG(Size::Eight, Size::Eight), Type::Integral) => Some((gl::RG_INTEGER, gl::RG8I, gl::BYTE)),
     (Format::RG(Size::Eight, Size::Eight), Type::Unsigned) => Some((gl::RG_INTEGER, gl::RG8UI, gl::UNSIGNED_BYTE)),
     (Format::RG(Size::Sixteen, Size::Sixteen), Type::Integral) => Some((gl::RG_INTEGER, gl::RG16I, gl::SHORT)),
@@ -635,7 +635,7 @@ pub(crate) fn opengl_pixel_format(pf: PixelFormat) -> Option<(GLenum, GLenum, GL
     (Format::RG(Size::ThirtyTwo, Size::ThirtyTwo), Type::Unsigned) => Some((gl::RG_INTEGER, gl::RG32UI, gl::UNSIGNED_INT)),
     (Format::RG(Size::ThirtyTwo, Size::ThirtyTwo), Type::Floating) => Some((gl::RG, gl::RG32F, gl::FLOAT)),
 
-    (Format::RGB(Size::Eight, Size::Eight, Size::Eight), Type::Floating) => Some((gl::RGB, gl::RGB, gl::UNSIGNED_BYTE)),
+    (Format::RGB(Size::Eight, Size::Eight, Size::Eight), Type::Floating) => Some((gl::RGB, gl::RGB8, gl::UNSIGNED_BYTE)),
     (Format::RGB(Size::Eight, Size::Eight, Size::Eight), Type::Integral) => Some((gl::RGB_INTEGER, gl::RGB8I, gl::BYTE)),
     (Format::RGB(Size::Eight, Size::Eight, Size::Eight), Type::Unsigned) => Some((gl::RGB_INTEGER, gl::RGB8UI, gl::UNSIGNED_BYTE)),
     (Format::RGB(Size::Sixteen, Size::Sixteen, Size::Sixteen), Type::Integral) => Some((gl::RGB_INTEGER, gl::RGB16I, gl::SHORT)),
@@ -645,7 +645,7 @@ pub(crate) fn opengl_pixel_format(pf: PixelFormat) -> Option<(GLenum, GLenum, GL
     (Format::RGB(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo), Type::Unsigned) => Some((gl::RGB_INTEGER, gl::RGB32UI, gl::UNSIGNED_INT)),
     (Format::RGB(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo), Type::Floating) => Some((gl::RGB, gl::RGB32F, gl::FLOAT)),
 
-    (Format::RGBA(Size::Eight, Size::Eight, Size::Eight, Size::Eight), Type::Floating) => Some((gl::RGBA, gl::RGBA, gl::UNSIGNED_BYTE)),
+    (Format::RGBA(Size::Eight, Size::Eight, Size::Eight, Size::Eight), Type::Floating) => Some((gl::RGBA, gl::RGBA8, gl::UNSIGNED_BYTE)),
     (Format::RGBA(Size::Eight, Size::Eight, Size::Eight, Size::Eight), Type::Integral) => Some((gl::RGBA_INTEGER, gl::RGBA8I, gl::BYTE)),
     (Format::RGBA(Size::Eight, Size::Eight, Size::Eight, Size::Eight), Type::Unsigned) => Some((gl::RGBA_INTEGER, gl::RGBA8UI, gl::UNSIGNED_BYTE)),
     (Format::RGBA(Size::Sixteen, Size::Sixteen, Size::Sixteen, Size::Sixteen), Type::Integral) => Some((gl::RGBA_INTEGER, gl::RGBA16I, gl::SHORT)),
