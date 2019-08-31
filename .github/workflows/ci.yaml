@@ -22,14 +22,14 @@ jobs:
       - name: Test
         run: cargo test --verbose
 
-  build-macosx:
-    runs-on: macosx-latest
-    steps:
-      - uses: actions/checkout@v1
-      - name: Build
-        run: cargo build --verbose
-      - name: Test
-        run: cargo test --verbose
+  #build-macosx:
+  #  runs-on: macosx-latest
+  #  steps:
+  #    - uses: actions/checkout@v1
+  #    - name: Build
+  #      run: cargo build --verbose
+  #    - name: Test
+  #      run: cargo test --verbose
 
   check-readme:
     runs-on: ubuntu-latest
