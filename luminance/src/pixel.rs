@@ -10,7 +10,8 @@ pub unsafe trait Pixel {
   type Encoding;
 
   /// Raw encoding of a single pixel; i.e. that is, encoding of underlying values in contiguous
-  /// texture memory. It should match the [`PixelFormat`] mapping.
+  /// texture memory, without taking into account channels. It should match the [`PixelFormat`]
+  /// mapping.
   type RawEncoding;
 
   /// The type of sampler required to access this pixel format.
@@ -76,6 +77,19 @@ pub enum Format {
   Depth(Size),
 }
 
+impl Format {
+  /// Size (in bits) of a pixel that a format represents.
+  pub fn size(&self) -> usize {
+    match *self {
+      Format::R(r) => r.size(),
+      Format::RG(r, g) => r.size() + g.size(),
+      Format::RGB(r, g, b) => r.size() + g.size() + b.size(),
+      Format::RGBA(r, g, b, a) => r.size() + g.size() + b.size() + a.size(),
+      Format::Depth(d) => d.size(),
+    }
+  }
+}
+
 /// Size in bits a pixel channel can be.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Size {
@@ -89,6 +103,19 @@ pub enum Size {
   Sixteen,
   /// 32-bit.
   ThirtyTwo,
+}
+
+impl Size {
+  /// Size (in bits).
+  pub fn size(&self) -> usize {
+    match *self {
+      Size::Eight => 8,
+      Size::Ten => 10,
+      Size::Eleven => 11,
+      Size::Sixteen => 16,
+      Size::ThirtyTwo => 32,
+    }
+  }
 }
 
 /// Does a `PixelFormat` represent a color?
