@@ -190,6 +190,9 @@ pub trait Dimensionable {
   /// Offset type of a dimension (used to caracterize addition and subtraction of sizes, mostly).
   type Offset: Copy;
 
+  /// Zero offset.
+  const ZERO_OFFSET: Self::Offset;
+
   /// Dimension.
   fn dim() -> Dim;
 
@@ -219,8 +222,10 @@ pub trait Dimensionable {
     1
   }
 
-  /// Zero offset.
-  const ZERO_OFFSET: Self::Offset;
+  /// Amount of pixels this size represents.
+  ///
+  /// For 2D sizes, it represents the area; for 3D sizes, the volume; etc.
+  fn count(size: Self::Size) -> usize;
 }
 
 // Capacity of the dimension, which is the product of the width, height and depth.
@@ -249,6 +254,8 @@ impl Dimensionable for Dim1 {
   type Offset = u32;
   type Size = u32;
 
+  const ZERO_OFFSET: Self::Offset = 0;
+
   fn dim() -> Dim {
     Dim::Dim1
   }
@@ -261,7 +268,9 @@ impl Dimensionable for Dim1 {
     off
   }
 
-  const ZERO_OFFSET: Self::Offset = 0;
+  fn count(size: Self::Size) -> usize {
+    size as usize
+  }
 }
 
 /// 2D dimension.
@@ -271,6 +280,8 @@ pub struct Dim2;
 impl Dimensionable for Dim2 {
   type Offset = [u32; 2];
   type Size = [u32; 2];
+
+  const ZERO_OFFSET: Self::Offset = [0, 0];
 
   fn dim() -> Dim {
     Dim::Dim2
@@ -292,7 +303,9 @@ impl Dimensionable for Dim2 {
     off[1]
   }
 
-  const ZERO_OFFSET: Self::Offset = [0, 0];
+  fn count([width, height]: Self::Size) -> usize {
+    width as usize * height as usize
+  }
 }
 
 /// 3D dimension.
@@ -302,6 +315,8 @@ pub struct Dim3;
 impl Dimensionable for Dim3 {
   type Offset = [u32; 3];
   type Size = [u32; 3];
+
+  const ZERO_OFFSET: Self::Offset = [0, 0, 0];
 
   fn dim() -> Dim {
     Dim::Dim3
@@ -331,7 +346,9 @@ impl Dimensionable for Dim3 {
     off[2]
   }
 
-  const ZERO_OFFSET: Self::Offset = [0, 0, 0];
+  fn count([width, height, depth]: Self::Size) -> usize {
+    width as usize * height as usize * depth as usize
+  }
 }
 
 /// Cubemap dimension.
@@ -341,6 +358,8 @@ pub struct Cubemap;
 impl Dimensionable for Cubemap {
   type Offset = ([u32; 2], CubeFace);
   type Size = u32;
+
+  const ZERO_OFFSET: Self::Offset = ([0, 0], CubeFace::PositiveX);
 
   fn dim() -> Dim {
     Dim::Cubemap
@@ -377,7 +396,10 @@ impl Dimensionable for Cubemap {
     }
   }
 
-  const ZERO_OFFSET: Self::Offset = ([0, 0], CubeFace::PositiveX);
+  fn count(size: Self::Size) -> usize {
+    let size = size as usize;
+    size * size * size
+  }
 }
 
 /// Faces of a cubemap.
@@ -586,7 +608,7 @@ where L: Layerable,
     offset: D::Offset,
     size: D::Size,
     pixel: P::Encoding
-  )
+  ) -> Result<(), TextureError>
   where P::Encoding: Copy {
     self.upload_part(
       gen_mipmaps,
@@ -597,7 +619,7 @@ where L: Layerable,
   }
 
   /// Clear a whole texture with a `pixel` value.
-  pub fn clear(&self, gen_mipmaps: GenMipmaps, pixel: P::Encoding)
+  pub fn clear(&self, gen_mipmaps: GenMipmaps, pixel: P::Encoding) -> Result<(), TextureError>
   where P::Encoding: Copy {
     self.clear_part(gen_mipmaps, D::ZERO_OFFSET, self.size, pixel)
   }
@@ -613,13 +635,13 @@ where L: Layerable,
     offset: D::Offset,
     size: D::Size,
     texels: &[P::Encoding],
-  ) {
+  ) -> Result<(), TextureError> {
     unsafe {
       let mut gfx_state = self.state.borrow_mut();
 
       gfx_state.bind_texture(self.target, self.handle);
 
-      upload_texels::<L, D, P, P::Encoding>(self.target, offset, size, texels);
+      upload_texels::<L, D, P, P::Encoding>(self.target, offset, size, texels)?;
 
       if gen_mipmaps == GenMipmaps::Yes {
         gl::GenerateMipmap(self.target);
@@ -627,6 +649,8 @@ where L: Layerable,
 
       gfx_state.bind_texture(self.target, 0);
     }
+
+    Ok(())
   }
 
   /// Upload `texels` to the whole texture.
@@ -634,7 +658,7 @@ where L: Layerable,
     &self,
     gen_mipmaps: GenMipmaps,
     texels: &[P::Encoding],
-  ) {
+  ) -> Result<(), TextureError> {
     self.upload_part(gen_mipmaps, D::ZERO_OFFSET, self.size, texels)
   }
 
@@ -649,13 +673,13 @@ where L: Layerable,
     offset: D::Offset,
     size: D::Size,
     texels: &[P::RawEncoding],
-  ) {
+  ) -> Result<(), TextureError> {
     unsafe {
       let mut gfx_state = self.state.borrow_mut();
 
       gfx_state.bind_texture(self.target, self.handle);
 
-      upload_texels::<L, D, P, P::RawEncoding>(self.target, offset, size, texels);
+      upload_texels::<L, D, P, P::RawEncoding>(self.target, offset, size, texels)?;
 
       if gen_mipmaps == GenMipmaps::Yes {
         gl::GenerateMipmap(self.target);
@@ -663,10 +687,16 @@ where L: Layerable,
 
       gfx_state.bind_texture(self.target, 0);
     }
+
+    Ok(())
   }
 
   /// Upload raw `texels` to the whole texture.
-  pub fn upload_raw(&self, gen_mipmaps: GenMipmaps, texels: &[P::RawEncoding]) {
+  pub fn upload_raw(
+    &self,
+    gen_mipmaps: GenMipmaps,
+    texels: &[P::RawEncoding]
+  ) -> Result<(), TextureError> {
     self.upload_part_raw(gen_mipmaps, D::ZERO_OFFSET, self.size, texels)
   }
 
@@ -1036,11 +1066,24 @@ fn opengl_depth_comparison(fun: DepthComparison) -> GLenum {
 }
 
 // Upload texels into the texture’s memory. Becareful of the type of texels you send down.
-fn upload_texels<L, D, P, T>(target: GLenum, off: D::Offset, size: D::Size, texels: &[T])
+fn upload_texels<L, D, P, T>(
+  target: GLenum,
+  off: D::Offset,
+  size: D::Size,
+  texels: &[T]
+) -> Result<(), TextureError>
 where L: Layerable,
       D: Dimensionable,
       P: Pixel {
+  // number of bytes in the input texels argument
+  let input_bytes = texels.len() * mem::size_of::<T>();
   let pf = P::pixel_format();
+  let expected_bytes = D::count(size) * pf.format.size();
+
+  if input_bytes < expected_bytes {
+    // potential segfault / overflow; abort
+    return Err(TextureError::NotEnoughPixels(expected_bytes, input_bytes));
+  }
 
   match opengl_pixel_format(pf) {
     Some((format, _, encoding)) => match L::layering() {
@@ -1104,6 +1147,8 @@ where L: Layerable,
     },
     None => panic!("unknown pixel format"),
   }
+
+  Ok(())
 }
 
 /// A `Sampler` object gives hint on how a `Texture` should be sampled.
@@ -1144,6 +1189,12 @@ pub enum TextureError {
   ///
   /// The carried [`String`] gives the reason of the failure.
   TextureStorageCreationFailed(String),
+  /// Not enough pixel data provided for the given area asked.
+  ///
+  /// The first [`usize`] is the number of expected bytes to be uploaded and the second [`usize`] is
+  /// the number you provided. You must provide at least as many pixels as expected by the area in
+  /// the texture you’re uploading to.
+  NotEnoughPixels(usize, usize),
 }
 
 impl fmt::Display for TextureError {
@@ -1151,6 +1202,10 @@ impl fmt::Display for TextureError {
     match *self {
       TextureError::TextureStorageCreationFailed(ref e) => {
         write!(f, "texture storage creation failed: {}", e)
+      }
+
+      TextureError::NotEnoughPixels(expected, provided) => {
+        write!(f, "not enough texels provided: expected {} bytes, provided {} bytes", expected, provided)
       }
     }
   }

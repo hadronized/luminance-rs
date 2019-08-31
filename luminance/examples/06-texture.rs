@@ -119,7 +119,8 @@ fn read_image(path: &Path) -> Option<image::RgbaImage> {
 
 fn load_from_disk(surface: &mut GlfwSurface, img: image::RgbaImage) -> Texture<Flat, Dim2, NormRGBA8UI> {
   let (width, height) = img.dimensions();
-  let texels = img.into_raw();
+  let mut texels = img.into_raw();
+  texels.clear();
 
   // create the luminance texture; the third argument is the number of mipmaps we want (leave it
   // to 0 for now) and the latest is the sampler to use when sampling the texels in the
@@ -128,7 +129,7 @@ fn load_from_disk(surface: &mut GlfwSurface, img: image::RgbaImage) -> Texture<F
     .expect("luminance texture creation");
 
   // the first argument disables mipmap generation (we don’t care so far)
-  tex.upload_raw(GenMipmaps::No, &texels);
+  tex.upload_raw(GenMipmaps::No, &texels).unwrap();
 
   tex
 }
