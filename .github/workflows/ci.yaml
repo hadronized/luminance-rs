@@ -1,0 +1,51 @@
+name: CI
+on: [push]
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies
+        run: sudo apt-get install -y libxrandr-dev xorg-dev
+      - uses: actions/checkout@v1
+      - name: Build
+        run: cargo build --verbose
+      - name: Test
+        run: cargo test --verbose
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Build
+        run: cargo build --verbose
+      - name: Test
+        run: cargo test --verbose
+
+  build-macosx:
+    runs-on: macosx-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Build
+        run: cargo build --verbose
+      - name: Test
+        run: cargo test --verbose
+
+  check-readme:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install cargo-sync-readme
+        run: cargo install --force cargo-sync-readme
+      - name: Check
+        run: |
+          cd $GITHUB_WORKSPACE/luminance
+          cargo sync-readme -c
+          cd $GITHUB_WORKSPACE/luminance-derive
+          cargo sync-readme -c
+          cd $GITHUB_WORKSPACE/luminance-windowing
+          cargo sync-readme -c
+          cd $GITHUB_WORKSPACE/luminance-glfw
+          cargo sync-readme -c
+          cd $GITHUB_WORKSPACE/luminance-glutin
+          cargo sync-readme -c
