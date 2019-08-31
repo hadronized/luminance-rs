@@ -11,10 +11,11 @@
 //!
 //! https://docs.rs/luminance
 
+use luminance::blending::{Equation, Factor};
 use luminance::context::GraphicsContext as _;
 use luminance::framebuffer::Framebuffer;
 use luminance::pipeline::BoundTexture;
-use luminance::pixel::{NormRGB8UI, Floating};
+use luminance::pixel::{NormRGBA8UI, Floating};
 use luminance::render_state::RenderState;
 use luminance::shader::program::{Program, Uniform};
 use luminance::tess::{Mode, TessBuilder};
@@ -43,14 +44,17 @@ struct ShaderInterface {
 }
 
 fn run(texture_path: &Path) {
+  let img = read_image(texture_path).expect("error while reading image on disk");
+  let (width, height) = img.dimensions();
+
   let mut surface = GlfwSurface::new(
-    WindowDim::Windowed(960, 540),
+    WindowDim::Windowed(width, height),
     "Hello, world!",
     WindowOpt::default(),
   )
   .expect("GLFW surface creation");
 
-  let tex = load_from_disk(&mut surface, Path::new(&texture_path)).expect("texture loading");
+  let tex = load_from_disk(&mut surface, img);
 
   // set the uniform interface to our type so that we can read textures from the shader
   let (program, _) =
@@ -66,6 +70,7 @@ fn run(texture_path: &Path) {
     .unwrap();
 
   let mut back_buffer = Framebuffer::back_buffer(surface.size());
+  let render_st = RenderState::default().set_blending((Equation::Additive, Factor::SrcAlpha, Factor::Zero));
 
   println!("rendering!");
 
@@ -95,7 +100,7 @@ fn run(texture_path: &Path) {
           // to use the texture passed as argument (no allocation or copy is performed)
           iface.tex.update(&bound_tex);
 
-          rdr_gate.render(RenderState::default(), |tess_gate| {
+          rdr_gate.render(render_st, |tess_gate| {
             // render the tessellation to the surface the regular way and let the vertex shader’s
             // magic do the rest!
             tess_gate.render(&mut surface, (&tess).into());
@@ -107,30 +112,23 @@ fn run(texture_path: &Path) {
   }
 }
 
-fn load_from_disk(surface: &mut GlfwSurface, path: &Path) -> Option<Texture<Flat, Dim2, NormRGB8UI>> {
-  // load the texture into memory as a whole bloc (i.e. no streaming)
-  match image::open(&path) {
-    Ok(img) => {
-      // convert the image to a RGB colorspace
-      let rgb_img = img.flipv().to_rgb();
-      let (width, height) = rgb_img.dimensions();
-      let texels = rgb_img.into_raw();
+// read the texture into memory as a whole bloc (i.e. no streaming)
+fn read_image(path: &Path) -> Option<image::RgbaImage> {
+  image::open(path).map(|img| img.flipv().to_rgba()).ok()
+}
 
-      // create the luminance texture; the third argument is the number of mipmaps we want (leave it
-      // to 0 for now) and the latest is the sampler to use when sampling the texels in the
-      // shader (we’ll just use the default one)
-      let tex = Texture::new(surface, [width, height], 0, &Sampler::default())
-        .expect("luminance texture creation");
+fn load_from_disk(surface: &mut GlfwSurface, img: image::RgbaImage) -> Texture<Flat, Dim2, NormRGBA8UI> {
+  let (width, height) = img.dimensions();
+  let texels = img.into_raw();
 
-      // the first argument disables mipmap generation (we don’t care so far)
-      tex.upload_raw(GenMipmaps::No, &texels);
+  // create the luminance texture; the third argument is the number of mipmaps we want (leave it
+  // to 0 for now) and the latest is the sampler to use when sampling the texels in the
+  // shader (we’ll just use the default one)
+  let tex = Texture::new(surface, [width, height], 0, &Sampler::default())
+    .expect("luminance texture creation");
 
-      Some(tex)
-    }
+  // the first argument disables mipmap generation (we don’t care so far)
+  tex.upload_raw(GenMipmaps::No, &texels);
 
-    Err(e) => {
-      eprintln!("cannot open image {}: {}", path.display(), e);
-      None
-    }
-  }
+  tex
 }
