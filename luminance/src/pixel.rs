@@ -333,7 +333,7 @@ impl_Pixel!(
   NormRG8UI,
   (u8, u8),
   u8,
-  Floating,
+  NormUnsigned,
   Format::RG(Size::Eight, Size::Eight)
 );
 impl_ColorPixel!(NormRG8UI);
@@ -452,7 +452,7 @@ impl_Pixel!(
   NormRGB8UI,
   (u8, u8, u8),
   u8,
-  Floating,
+  NormUnsigned,
   Format::RGB(Size::Eight, Size::Eight, Size::Eight)
 );
 impl_ColorPixel!(NormRGB8UI);
@@ -571,7 +571,7 @@ impl_Pixel!(
   NormRGBA8UI,
   (u8, u8, u8, u8),
   u8,
-  Floating,
+  NormUnsigned,
   Format::RGBA(Size::Eight, Size::Eight, Size::Eight, Size::Eight)
 );
 impl_ColorPixel!(NormRGBA8UI);

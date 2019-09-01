@@ -15,7 +15,7 @@ use luminance::blending::{Equation, Factor};
 use luminance::context::GraphicsContext as _;
 use luminance::framebuffer::Framebuffer;
 use luminance::pipeline::BoundTexture;
-use luminance::pixel::{NormRGBA8UI, Floating};
+use luminance::pixel::{NormRGBA8UI, NormUnsigned};
 use luminance::render_state::RenderState;
 use luminance::shader::program::{Program, Uniform};
 use luminance::tess::{Mode, TessBuilder};
@@ -40,7 +40,7 @@ fn main() {
 #[derive(UniformInterface)]
 struct ShaderInterface {
   // the 'static lifetime acts as “anything” here
-  tex: Uniform<&'static BoundTexture<'static, Flat, Dim2, Floating>>
+  tex: Uniform<&'static BoundTexture<'static, Flat, Dim2, NormUnsigned>>
 }
 
 fn run(texture_path: &Path) {
@@ -119,8 +119,7 @@ fn read_image(path: &Path) -> Option<image::RgbaImage> {
 
 fn load_from_disk(surface: &mut GlfwSurface, img: image::RgbaImage) -> Texture<Flat, Dim2, NormRGBA8UI> {
   let (width, height) = img.dimensions();
-  let mut texels = img.into_raw();
-  texels.clear();
+  let texels = img.into_raw();
 
   // create the luminance texture; the third argument is the number of mipmaps we want (leave it
   // to 0 for now) and the latest is the sampler to use when sampling the texels in the
