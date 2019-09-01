@@ -1,3 +1,20 @@
+# 0.32
+
+> ?
+
+## Bug fixes
+
+  - Fix the 06-texture example (see #189). The problem was due to the usage of an RGB pixel format,
+    which is not supported by nvidia GPUs. Even though it is hard to find evidence, querying the
+    in-use pixel format in internal code showed that RGB pixel format for unsigned integral texture
+    is not supported and it’s probably safe to assume they don’t support RGB pixel format at all.
+
+## Major changes
+
+  - Make uploading texels to texture a failible operation. It can now fail with the
+    `TextureError::NotEnoughPixels` error if the user provided a slice with an insufficient amount
+    of bits.
+
 # 0.31.1
 
 > Fri Aug 23th 2019
