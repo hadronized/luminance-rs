@@ -110,7 +110,7 @@ use core::ptr;
 
 use crate::context::GraphicsContext;
 use crate::metagl::*;
-use crate::pixel::{opengl_pixel_format, pixel_components, Pixel, PixelFormat};
+use crate::pixel::{opengl_pixel_format, Pixel, PixelFormat};
 use crate::state::GraphicsState;
 
 /// How to wrap texture coordinates while sampling textures?
@@ -721,7 +721,7 @@ where L: Layerable,
       gl::GetTexLevelParameteriv(self.target, 0, gl::TEXTURE_HEIGHT, &mut h);
 
       // resize the vec to allocate enough space to host the returned texels
-      texels.resize_with((w * h) as usize * pixel_components(pf), Default::default);
+      texels.resize_with((w * h) as usize * pf.canals_len(), Default::default);
 
       gl::GetTexImage(self.target, 0, format, ty, texels.as_mut_ptr() as *mut c_void);
 
