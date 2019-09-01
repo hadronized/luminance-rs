@@ -48,9 +48,39 @@ pub struct PixelFormat {
   pub format: Format,
 }
 
+impl PixelFormat {
+  /// Does a [`PixelFormat`] represent a color?
+  pub fn is_color_pixel(&self) -> bool {
+    match self.format {
+      Format::Depth(_) => false,
+      _ => true,
+    }
+  }
+
+  /// Does a [`PixelFormat`] represent depth information?
+  pub fn is_depth_pixel(&self) -> bool {
+    !self.is_color_pixel()
+  }
+
+  /// Return the number of canals.
+  pub fn canals_len(&self) -> usize {
+    match self.format {
+      Format::R(_) => 1,
+      Format::RG(_, _) => 2,
+      Format::RGB(_, _, _) => 3,
+      Format::RGBA(_, _, _, _) => 4,
+      Format::Depth(_) => 1,
+    }
+  }
+}
+
 /// Pixel type.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Type {
+  /// Normalized signed integral pixel type.
+  NormIntegral,
+  /// Normalized unsigned integral pixel type.
+  NormUnsigned,
   /// Signed integral pixel type.
   Integral,
   /// Unsigned integral pixel type.
@@ -118,19 +148,6 @@ impl Size {
       Size::ThirtyTwo => 32,
     }
   }
-}
-
-/// Does a `PixelFormat` represent a color?
-pub fn is_color_pixel(f: PixelFormat) -> bool {
-  match f.format {
-    Format::Depth(_) => false,
-    _ => true,
-  }
-}
-
-/// Does a `PixelFormat` represent depth information?
-pub fn is_depth_pixel(f: PixelFormat) -> bool {
-  !is_color_pixel(f)
 }
 
 /// The integral sample type.
@@ -686,16 +703,5 @@ pub(crate) fn opengl_pixel_format(pf: PixelFormat) -> Option<(GLenum, GLenum, GL
     (Format::Depth(Size::ThirtyTwo), Type::Floating) => Some((gl::DEPTH_COMPONENT, gl::DEPTH_COMPONENT32F, gl::FLOAT)),
 
     _ => None
-  }
-}
-
-// Return the number of components.
-pub(crate) fn pixel_components(pf: PixelFormat) -> usize {
-  match pf.format {
-    Format::R(_) => 1,
-    Format::RG(_, _) => 2,
-    Format::RGB(_, _, _) => 3,
-    Format::RGBA(_, _, _, _) => 4,
-    Format::Depth(_) => 1,
   }
 }
