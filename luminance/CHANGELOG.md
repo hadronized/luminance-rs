@@ -4,7 +4,7 @@
 
 ## Bug fixes
 
-  - Fix the 06-texture example (see #189). The problem was due to the usage of an RGB pixel format,
+  - Fix the 06-texture example (see [#189]). The problem was due to the usage of an RGB pixel format,
     which is not supported by nvidia GPUs. Even though it is hard to find evidence, querying the
     in-use pixel format in internal code showed that RGB pixel format for unsigned integral texture
     is not supported and it’s probably safe to assume they don’t support RGB pixel format at all.
@@ -666,3 +666,4 @@
 [luminance-glfw]: https://crates.io/crates/luminance-glfw
 [luminance-glutin]: https://crates.io/crates/luminance-glutin
 [glutin]: https://crates.io/crates/glutin
+[#189]: https://github.com/phaazon/luminance-rs/issues/189
