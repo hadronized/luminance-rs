@@ -23,4 +23,4 @@ quote = "1"
 syn = "1"
 
 [dev-dependencies]
-luminance = "0.31"
+luminance = "0.32"

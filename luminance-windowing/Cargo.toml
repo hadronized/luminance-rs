@@ -16,4 +16,4 @@ edition = "2018"
 maintenance = { status = "actively-developed" }
 
 [dependencies]
-luminance = "0.31"
+luminance = "0.32"
