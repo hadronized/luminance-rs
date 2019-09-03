@@ -15,7 +15,7 @@ use luminance::blending::{Equation, Factor};
 use luminance::context::GraphicsContext as _;
 use luminance::framebuffer::Framebuffer;
 use luminance::pipeline::BoundTexture;
-use luminance::pixel::{NormRGBA8UI, NormUnsigned};
+use luminance::pixel::{NormRGB8UI, NormUnsigned};
 use luminance::render_state::RenderState;
 use luminance::shader::program::{Program, Uniform};
 use luminance::tess::{Mode, TessBuilder};
@@ -113,11 +113,11 @@ fn run(texture_path: &Path) {
 }
 
 // read the texture into memory as a whole bloc (i.e. no streaming)
-fn read_image(path: &Path) -> Option<image::RgbaImage> {
-  image::open(path).map(|img| img.flipv().to_rgba()).ok()
+fn read_image(path: &Path) -> Option<image::RgbImage> {
+  image::open(path).map(|img| img.flipv().to_rgb()).ok()
 }
 
-fn load_from_disk(surface: &mut GlfwSurface, img: image::RgbaImage) -> Texture<Flat, Dim2, NormRGBA8UI> {
+fn load_from_disk(surface: &mut GlfwSurface, img: image::RgbImage) -> Texture<Flat, Dim2, NormRGB8UI> {
   let (width, height) = img.dimensions();
   let texels = img.into_raw();
 
