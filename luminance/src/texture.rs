@@ -720,6 +720,10 @@ where L: Layerable,
       gl::GetTexLevelParameteriv(self.target, 0, gl::TEXTURE_WIDTH, &mut w);
       gl::GetTexLevelParameteriv(self.target, 0, gl::TEXTURE_HEIGHT, &mut h);
 
+      // set the packing alignment based on the number of bytes to skip
+      let skip_bytes = (pf.format.size() * w as usize) % 8;
+      set_pack_alignment(skip_bytes);
+
       // resize the vec to allocate enough space to host the returned texels
       texels.resize_with((w * h) as usize * pf.canals_len(), Default::default);
 
@@ -1075,6 +1079,18 @@ fn set_unpack_alignment(skip_bytes: usize) {
   };
 
   unsafe { gl::PixelStorei(gl::UNPACK_ALIGNMENT, unpack_alignment) };
+}
+
+// set the pack alignment for downloading aligned texels
+fn set_pack_alignment(skip_bytes: usize) {
+  let pack_alignment = match skip_bytes {
+    0 => 8,
+    2 => 2,
+    4 => 4,
+    _ => 1
+  };
+
+  unsafe { gl::PixelStorei(gl::PACK_ALIGNMENT, pack_alignment) };
 }
 
 // Upload texels into the texture’s memory. Becareful of the type of texels you send down.

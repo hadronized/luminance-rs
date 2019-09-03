@@ -6,6 +6,8 @@
 
   - Fix the 06-texture example (see [#189]). The problem was due to the usage of an RGB pixel format
     and non-power-of-two textures, causing un-aligned memory to be read from OpenGL.
+  - No bug reported but a patch is provided in advance: similarily to just above, reading texels is
+    now fixed to take account packing alignment.
 
 ## Major changes
 
