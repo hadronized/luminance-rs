@@ -11,9 +11,9 @@
 
 ## Major changes
 
-  - Make uploading texels to texture a failible operation. It can now fail with the
+  - Make uploading texels to a texture a failible operation. It can now fail with the
     `TextureError::NotEnoughPixels` error if the user provided a slice with an insufficient amount
-    of bits.
+    of bytes.
 
 ## Minor changes
 
