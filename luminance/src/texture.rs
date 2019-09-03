@@ -1065,6 +1065,18 @@ fn opengl_depth_comparison(fun: DepthComparison) -> GLenum {
   }
 }
 
+// set the unpack alignment for uploading aligned texels
+fn set_unpack_alignment(skip_bytes: usize) {
+  let unpack_alignment = match skip_bytes {
+    0 => 8,
+    2 => 2,
+    4 => 4,
+    _ => 1
+  };
+
+  unsafe { gl::PixelStorei(gl::UNPACK_ALIGNMENT, unpack_alignment) };
+}
+
 // Upload texels into the texture’s memory. Becareful of the type of texels you send down.
 fn upload_texels<L, D, P, T>(
   target: GLenum,
@@ -1078,12 +1090,19 @@ where L: Layerable,
   // number of bytes in the input texels argument
   let input_bytes = texels.len() * mem::size_of::<T>();
   let pf = P::pixel_format();
-  let expected_bytes = D::count(size) * pf.format.size();
+  let pf_size = pf.format.size();
+  let expected_bytes = D::count(size) * pf_size;
 
   if input_bytes < expected_bytes {
     // potential segfault / overflow; abort
     return Err(TextureError::NotEnoughPixels(expected_bytes, input_bytes));
   }
+
+  // set the pixel row alignment to the required value for uploading data according to the width
+  // of the texture and the size of a single pixel; here, skip_bytes represents the number of bytes
+  // that will be skipped
+  let skip_bytes = (D::width(size) as usize * pf_size) % 8;
+  set_unpack_alignment(skip_bytes);
 
   match opengl_pixel_format(pf) {
     Some((format, _, encoding)) => match L::layering() {
