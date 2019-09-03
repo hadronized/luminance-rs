@@ -14,6 +14,16 @@
   - Make uploading texels to texture a failible operation. It can now fail with the
     `TextureError::NotEnoughPixels` error if the user provided a slice with an insufficient amount
     of bits.
+  - Deprecate all RGB pixel formats. Even though those are supported by a wide variety of Intel
+    GPUs and probably some other vendors, tests made with Nvidia GPUs showed that most of them do
+    not play well with RGB textures. That support is even worse as instead of failing allocating the
+    storage for such textures, the process receives SIGSEGV. Mitigation was planned by using
+    [this extension](https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_internalformat_query.txt)
+    and [this one](https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_internalformat_query2.txt)
+    in order to check for incorrect configuration but the idea was eventually given up on as it
+    would discourage people from using RGBA textures (trying RGB textures when you don’t need an
+    alpha channel seems more obvious than RGBA ones). **RGB textures will be completely removed in
+    the next breaking-change release** — either _0.33_ or _1.0_.
 
 # 0.31.1
 
