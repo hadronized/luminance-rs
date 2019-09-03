@@ -1,6 +1,9 @@
 //! Pixel formats types and function manipulation.
 //!
 //! The `Pixel` trait is used to reify a pixel type at runtime via `PixelFormat`.
+//!
+
+#![allow(deprecated)]
 
 use crate::metagl::*;
 
@@ -100,6 +103,7 @@ pub enum Format {
   /// Holds red and green channels.
   RG(Size, Size),
   /// Holds red, green and blue channels.
+  #[deprecated(since = "0.32", note = "RGB textures are being ruled out for not being supported by enough GPUs. Prefer using RGBA textures.")]
   RGB(Size, Size, Size),
   /// Holds red, green, blue and alpha channels.
   RGBA(Size, Size, Size, Size),
@@ -486,6 +490,7 @@ impl_ColorPixel!(RG32F);
 impl_RenderablePixel!(RG32F);
 
 /// A red, green and blue 8-bit signed integral pixel format.
+#[deprecated(since = "0.32", note = "RGB textures are being ruled out for not being supported by enough GPUs. Prefer using RGBA textures.")]
 #[derive(Clone, Copy, Debug)]
 pub struct RGB8I;
 
@@ -501,6 +506,7 @@ impl_RenderablePixel!(RGB8I);
 
 /// A red, green and blue 8-bit signed integral pixel format, accessed as normalized floating
 /// pixels.
+#[deprecated(since = "0.32", note = "RGB textures are being ruled out for not being supported by enough GPUs. Prefer using RGBA textures.")]
 #[derive(Clone, Copy, Debug)]
 pub struct NormRGB8I;
 
@@ -515,6 +521,7 @@ impl_ColorPixel!(NormRGB8I);
 impl_RenderablePixel!(NormRGB8I);
 
 /// A red, green and blue 8-bit unsigned integral pixel format.
+#[deprecated(since = "0.32", note = "RGB textures are being ruled out for not being supported by enough GPUs. Prefer using RGBA textures.")]
 #[derive(Clone, Copy, Debug)]
 pub struct RGB8UI;
 
@@ -530,6 +537,7 @@ impl_RenderablePixel!(RGB8UI);
 
 /// A red, green and blue 8-bit unsigned integral pixel format, accessed as normalized floating
 /// pixels.
+#[deprecated(since = "0.32", note = "RGB textures are being ruled out for not being supported by enough GPUs. Prefer using RGBA textures.")]
 #[derive(Clone, Copy, Debug)]
 pub struct NormRGB8UI;
 
@@ -545,6 +553,7 @@ impl_RenderablePixel!(NormRGB8UI);
 
 /// A red, green and blue 16-bit signed integral pixel format.
 #[derive(Clone, Copy, Debug)]
+#[deprecated(since = "0.32", note = "RGB textures are being ruled out for not being supported by enough GPUs. Prefer using RGBA textures.")]
 pub struct RGB16I;
 
 impl_Pixel!(
@@ -559,6 +568,7 @@ impl_RenderablePixel!(RGB16I);
 
 /// A red, green and blue 16-bit signed integral pixel format, accessed as normalized floating
 /// pixels.
+#[deprecated(since = "0.32", note = "RGB textures are being ruled out for not being supported by enough GPUs. Prefer using RGBA textures.")]
 #[derive(Clone, Copy, Debug)]
 pub struct NormRGB16I;
 
@@ -573,6 +583,7 @@ impl_ColorPixel!(NormRGB16I);
 impl_RenderablePixel!(NormRGB16I);
 
 /// A red, green and blue 16-bit unsigned integral pixel format.
+#[deprecated(since = "0.32", note = "RGB textures are being ruled out for not being supported by enough GPUs. Prefer using RGBA textures.")]
 #[derive(Clone, Copy, Debug)]
 pub struct RGB16UI;
 
@@ -588,6 +599,7 @@ impl_RenderablePixel!(RGB16UI);
 
 /// A red, green and blue 16-bit unsigned integral pixel format, accessed as normalized floating
 /// pixels.
+#[deprecated(since = "0.32", note = "RGB textures are being ruled out for not being supported by enough GPUs. Prefer using RGBA textures.")]
 #[derive(Clone, Copy, Debug)]
 pub struct NormRGB16UI;
 
@@ -602,6 +614,7 @@ impl_ColorPixel!(NormRGB16UI);
 impl_RenderablePixel!(NormRGB16UI);
 
 /// A red, green and blue 32-bit signed integral pixel format.
+#[deprecated(since = "0.32", note = "RGB textures are being ruled out for not being supported by enough GPUs. Prefer using RGBA textures.")]
 #[derive(Clone, Copy, Debug)]
 pub struct RGB32I;
 
@@ -617,6 +630,7 @@ impl_RenderablePixel!(RGB32I);
 
 /// A red, green and blue 32-bit signed integral pixel format, accessed as normalized floating
 /// pixels.
+#[deprecated(since = "0.32", note = "RGB textures are being ruled out for not being supported by enough GPUs. Prefer using RGBA textures.")]
 #[derive(Clone, Copy, Debug)]
 pub struct NormRGB32I;
 
@@ -631,6 +645,7 @@ impl_ColorPixel!(NormRGB32I);
 impl_RenderablePixel!(NormRGB32I);
 
 /// A red, green and blue 32-bit unsigned integral pixel format.
+#[deprecated(since = "0.32", note = "RGB textures are being ruled out for not being supported by enough GPUs. Prefer using RGBA textures.")]
 #[derive(Clone, Copy, Debug)]
 pub struct RGB32UI;
 
@@ -646,6 +661,7 @@ impl_RenderablePixel!(RGB32UI);
 
 /// A red, green and blue 32-bit unsigned integral pixel format, accessed as normalized floating
 /// pixels.
+#[deprecated(since = "0.32", note = "RGB textures are being ruled out for not being supported by enough GPUs. Prefer using RGBA textures.")]
 #[derive(Clone, Copy, Debug)]
 pub struct NormRGB32UI;
 
@@ -660,6 +676,7 @@ impl_ColorPixel!(NormRGB32UI);
 impl_RenderablePixel!(NormRGB32UI);
 
 /// A red, green and blue 32-bit floating pixel format.
+#[deprecated(since = "0.32", note = "RGB textures are being ruled out for not being supported by enough GPUs. Prefer using RGBA textures.")]
 #[derive(Clone, Copy, Debug)]
 pub struct RGB32F;
 

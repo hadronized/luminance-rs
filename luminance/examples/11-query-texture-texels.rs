@@ -15,13 +15,13 @@ use luminance::render_state::RenderState;
 use luminance::shader::program::Program;
 use luminance::tess::{Mode, TessBuilder};
 use luminance::texture::{Flat, Dim2};
-use luminance::pixel::RGB8UI;
+use luminance::pixel::NormRGBA8UI;
 use luminance_derive::Vertex;
 use luminance_glfw::{Action, GlfwSurface, Key, Surface, WindowEvent, WindowDim, WindowOpt};
 
 // We get the shader at compile time from local files
 const VS: &'static str = include_str!("simple-vs.glsl");
-const FS: &'static str = include_str!("simple-fs-unsigned.glsl");
+const FS: &'static str = include_str!("simple-fs.glsl");
 
 // The vertices. We define two triangles.
 const TRI_VERTICES: [Vertex; 6] = [
@@ -74,7 +74,7 @@ fn main() {
 
   // the back buffer, which we will make our render into (we make it mutable so that we can change
   // it whenever the window dimensions change)
-  let fb = Framebuffer::<Flat, Dim2, RGB8UI, ()>::new(&mut surface, [960, 540], 0).unwrap();
+  let fb = Framebuffer::<Flat, Dim2, NormRGBA8UI, ()>::new(&mut surface, [960, 540], 0).unwrap();
 
   'app: loop {
     // for all the events on the surface
@@ -109,7 +109,7 @@ fn main() {
       // the backbuffer contains our texels
       let texels = fb.color_slot().get_raw_texels();
       // create a .png file and output it
-      save_buffer("./rendered.png", &texels, 960, 540, ColorType::RGB(8)).unwrap();
+      save_buffer("./rendered.png", &texels, 960, 540, ColorType::RGBA(8)).unwrap();
 
       generated = true;
     }
