@@ -767,7 +767,7 @@ pub(crate) fn opengl_target(l: Layering, d: Dim) -> GLenum {
     Layering::Layered => match d {
       Dim::Dim1 => gl::TEXTURE_1D_ARRAY,
       Dim::Dim2 => gl::TEXTURE_2D_ARRAY,
-      Dim::Dim3 => panic!("3D textures array not supported"),
+      Dim::Dim3 => unimplemented!("3D textures array not supported"),
       Dim::Cubemap => gl::TEXTURE_CUBE_MAP_ARRAY,
     },
   }
@@ -1143,9 +1143,9 @@ where L: Layerable,
           )
         },
       },
-      Layering::Layered => panic!("Layering::Layered not implemented yet"),
+      Layering::Layered => unimplemented!("Layering::Layered not implemented yet"),
     },
-    None => panic!("unknown pixel format"),
+    None => return Err(TextureError::UnsupportedPixelFormat(pf))
   }
 
   Ok(())
@@ -1195,6 +1195,11 @@ pub enum TextureError {
   /// the number you provided. You must provide at least as many pixels as expected by the area in
   /// the texture you’re uploading to.
   NotEnoughPixels(usize, usize),
+  /// Unsupported pixel format.
+  ///
+  /// Sometimes, some hardware might not support a given pixel format (or the format exists on
+  /// the interface side but doesn’t in the implementation). That error represents such a case.
+  UnsupportedPixelFormat(PixelFormat)
 }
 
 impl fmt::Display for TextureError {
@@ -1206,6 +1211,10 @@ impl fmt::Display for TextureError {
 
       TextureError::NotEnoughPixels(expected, provided) => {
         write!(f, "not enough texels provided: expected {} bytes, provided {} bytes", expected, provided)
+      }
+
+      TextureError::UnsupportedPixelFormat(fmt) => {
+        write!(f, "unsupported pixel format: {:?}", fmt)
       }
     }
   }
