@@ -963,7 +963,7 @@ pub struct TessSlice<'a> {
   tess: &'a Tess,
   /// Start index (vertex) in the tessellation.
   start_index: usize,
-  /// Number of vertices to pick from the tessellation. If `None`, all of them are selected.
+  /// Number of vertices to pick from the tessellation.
   vert_nb: usize,
   /// Number of instances to render.
   inst_nb: usize,
@@ -978,6 +978,17 @@ impl<'a> TessSlice<'a> {
       start_index: 0,
       vert_nb: tess.vert_nb,
       inst_nb: tess.inst_nb,
+    }
+  }
+
+  /// Create a tessellation render that will render the whole input tessellation with as many
+  /// instances as specified.
+  pub fn inst_whole(tess: &'a Tess, inst_nb: usize) -> Self {
+    TessSlice {
+      tess,
+      start_index: 0,
+      vert_nb: tess.vert_nb,
+      inst_nb,
     }
   }
 
@@ -1008,10 +1019,37 @@ impl<'a> TessSlice<'a> {
     }
   }
 
+  /// Create a tessellation render for a part of the tessellation starting at the beginning of its
+  /// buffer with as many instances as specified.
+  ///
+  /// The part is selected by giving the number of vertices to render.
+  ///
+  /// > Note: if you also need to use an arbitrary part of your tessellation (not starting at the
+  /// > first vertex in its buffer), have a look at `TessSlice::one_slice`.
+  ///
+  /// # Panic
+  ///
+  /// Panic if the number of vertices is higher to the capacity of the tessellation’s vertex buffer.
+  pub fn inst_sub(tess: &'a Tess, vert_nb: usize, inst_nb: usize) -> Self {
+    if vert_nb > tess.vert_nb {
+      panic!(
+        "cannot render {} vertices for a tessellation which vertex capacity is {}",
+        vert_nb, tess.vert_nb
+      );
+    }
+
+    TessSlice {
+      tess,
+      start_index: 0,
+      vert_nb,
+      inst_nb,
+    }
+  }
+
   /// Create a tessellation render for a slice of the tessellation starting anywhere in its buffer
   /// with only one instance.
   ///
-  /// The part is selected by giving the start vertex and the number of vertices to render. This
+  /// The part is selected by giving the start vertex and the number of vertices to render.
   ///
   /// # Panic
   ///
@@ -1038,6 +1076,39 @@ impl<'a> TessSlice<'a> {
       start_index: start,
       vert_nb: nb,
       inst_nb: 1,
+    }
+  }
+
+  /// Create a tessellation render for a slice of the tessellation starting anywhere in its buffer
+  /// with as many instances as specified.
+  ///
+  /// The part is selected by giving the start vertex and the number of vertices to render.
+  ///
+  /// # Panic
+  ///
+  /// Panic if the start vertex is higher to the capacity of the tessellation’s vertex buffer.
+  ///
+  /// Panic if the number of vertices is higher to the capacity of the tessellation’s vertex buffer.
+  pub fn inst_slice(tess: &'a Tess, start: usize, nb: usize, inst_nb: usize) -> Self {
+    if start > tess.vert_nb {
+      panic!(
+        "cannot render {} vertices starting at vertex {} for a tessellation which vertex capacity is {}",
+        nb, start, tess.vert_nb
+      );
+    }
+
+    if nb > tess.vert_nb {
+      panic!(
+        "cannot render {} vertices for a tessellation which vertex capacity is {}",
+        nb, tess.vert_nb
+      );
+    }
+
+    TessSlice {
+      tess,
+      start_index: start,
+      vert_nb: nb,
+      inst_nb,
     }
   }
 
@@ -1072,14 +1143,25 @@ impl<'a> From<&'a Tess> for TessSlice<'a> {
 ///     open on the left part and including the right part.
 ///
 /// It’s technically possible to add any kind of index type, even though not really useful so far.
+///
+/// Additionally, you can use the `tess.inst_slice(range, inst_nb)` construct to also specify
+/// the render should be performed with `inst_nb` instances.
 pub trait TessSliceIndex<Idx> {
   /// Slice a tesselation object and yields a [`TessSlice`] according to the index range.
   fn slice(&self, idx: Idx) -> TessSlice;
+
+  /// Slice a tesselation object and yields a [`TessSlice`] according to the index range with as
+  /// many instances as specified.
+  fn inst_slice(&self, idx: Idx, inst_nb: usize) -> TessSlice;
 }
 
 impl TessSliceIndex<RangeFull> for Tess {
   fn slice<'a>(&self, _: RangeFull) -> TessSlice {
     TessSlice::one_whole(self)
+  }
+
+  fn inst_slice<'a>(&self, _: RangeFull, inst_nb: usize) -> TessSlice {
+    TessSlice::inst_whole(self, inst_nb)
   }
 }
 
@@ -1087,17 +1169,29 @@ impl TessSliceIndex<RangeTo<usize>> for Tess {
   fn slice(&self, to: RangeTo<usize>) -> TessSlice {
     TessSlice::one_sub(self, to.end)
   }
+
+  fn inst_slice(&self, to: RangeTo<usize>, inst_nb: usize) -> TessSlice {
+    TessSlice::inst_sub(self, to.end, inst_nb)
+  }
 }
 
 impl TessSliceIndex<RangeFrom<usize>> for Tess {
   fn slice(&self, from: RangeFrom<usize>) -> TessSlice {
     TessSlice::one_slice(self, from.start, self.vert_nb - from.start)
   }
+
+  fn inst_slice(&self, from: RangeFrom<usize>, inst_nb: usize) -> TessSlice {
+    TessSlice::inst_slice(self, from.start, self.vert_nb - from.start, inst_nb)
+  }
 }
 
 impl TessSliceIndex<Range<usize>> for Tess {
   fn slice(&self, range: Range<usize>) -> TessSlice {
     TessSlice::one_slice(self, range.start, range.end - range.start)
+  }
+
+  fn inst_slice(&self, range: Range<usize>, inst_nb: usize) -> TessSlice {
+    TessSlice::inst_slice(self, range.start, range.end - range.start, inst_nb)
   }
 }
 
@@ -1107,10 +1201,20 @@ impl TessSliceIndex<RangeInclusive<usize>> for Tess {
     let end = *range.end();
     TessSlice::one_slice(self, start, end - start + 1)
   }
+
+  fn inst_slice(&self, range: RangeInclusive<usize>, inst_nb: usize) -> TessSlice {
+    let start = *range.start();
+    let end = *range.end();
+    TessSlice::inst_slice(self, start, end - start + 1, inst_nb)
+  }
 }
 
 impl TessSliceIndex<RangeToInclusive<usize>> for Tess {
   fn slice(&self, to: RangeToInclusive<usize>) -> TessSlice {
     TessSlice::one_sub(self, to.end + 1)
+  }
+
+  fn inst_slice(&self, to: RangeToInclusive<usize>, inst_nb: usize) -> TessSlice {
+    TessSlice::inst_sub(self, to.end + 1, inst_nb)
   }
 }
