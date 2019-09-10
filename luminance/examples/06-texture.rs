@@ -103,7 +103,7 @@ fn run(texture_path: &Path) {
           rdr_gate.render(render_st, |tess_gate| {
             // render the tessellation to the surface the regular way and let the vertex shader’s
             // magic do the rest!
-            tess_gate.render(&mut surface, (&tess).into());
+            tess_gate.render(&mut surface, &tess);
           });
         });
       });
