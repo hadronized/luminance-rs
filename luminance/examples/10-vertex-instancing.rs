@@ -114,7 +114,7 @@ fn main() {
           }
 
           rdr_gate.render(RenderState::default(), |tess_gate| {
-            tess_gate.render(&mut surface, (&triangle).into());
+            tess_gate.render(&mut surface, &triangle);
           });
         });
       });

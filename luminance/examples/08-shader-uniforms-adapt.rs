@@ -160,7 +160,7 @@ fn main() {
               iface.triangle_size.update(t.cos().powf(2.));
 
               rdr_gate.render(RenderState::default(), |tess_gate| {
-                tess_gate.render(&mut surface, (&triangle).into());
+                tess_gate.render(&mut surface, &triangle);
               });
             });
           }
@@ -174,7 +174,7 @@ fn main() {
               iface.triangle_pos.update(triangle_pos);
 
               rdr_gate.render(RenderState::default(), |tess_gate| {
-                tess_gate.render(&mut surface, (&triangle).into());
+                tess_gate.render(&mut surface, &triangle);
               });
             });
           }

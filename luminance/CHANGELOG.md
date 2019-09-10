@@ -6,6 +6,9 @@
 
   - Swap the arguments in the binary closure that is passed to `ShadingGate::shade`. That is more
     logical regarding the other closures from, for instance, `Pipeline`.
+  - Change the `TessGate::render` function so that it now accepts `T: Into<TessSlice>`
+    instead of a `TessSlice` directly. That enables you to pass `&Tess` directly instead of
+    slicing it with `..` or `*_whole`.
 
 # 0.33
 

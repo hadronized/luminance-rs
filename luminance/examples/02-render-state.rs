@@ -125,13 +125,13 @@ fn main() {
 
           rdr_gate.render(render_state, |tess_gate| match depth_method {
             DepthMethod::Under => {
-              tess_gate.render(&mut surface, (&red_triangle).into());
-              tess_gate.render(&mut surface, (&blue_triangle).into());
+              tess_gate.render(&mut surface, &red_triangle);
+              tess_gate.render(&mut surface, &blue_triangle);
             }
 
             DepthMethod::Atop => {
-              tess_gate.render(&mut surface, (&blue_triangle).into());
-              tess_gate.render(&mut surface, (&red_triangle).into());
+              tess_gate.render(&mut surface, &blue_triangle);
+              tess_gate.render(&mut surface, &red_triangle);
             }
           });
         });

@@ -96,11 +96,9 @@ fn main() {
         shd_gate.shade(&program, |_,rdr_gate| {
           // start rendering things with the default render state provided by luminance
           rdr_gate.render(RenderState::default(), |tess_gate| {
-            let tess = &tris;
-
             // pick the right tessellation to use depending on the mode chosen
             // render the tessellation to the surface
-            tess_gate.render(&mut surface, tess.into());
+            tess_gate.render(&mut surface, &tris);
           });
         });
       });

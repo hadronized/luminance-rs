@@ -459,7 +459,7 @@ pub struct TessGate {
 
 impl TessGate {
   /// Render a tessellation.
-  pub fn render<C>(&self, ctx: &mut C, tess: TessSlice) where C: GraphicsContext {
-    tess.render(ctx);
+  pub fn render<'a, C, T>(&self, ctx: &mut C, tess: T) where C: GraphicsContext, T: Into<TessSlice<'a>> {
+    tess.into().render(ctx);
   }
 }

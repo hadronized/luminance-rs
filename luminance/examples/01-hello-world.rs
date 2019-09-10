@@ -230,7 +230,7 @@ fn main() {
             };
 
             // Render the tessellation to the surface.
-            tess_gate.render(&mut surface, tess.into());
+            tess_gate.render(&mut surface, tess);
           });
         });
       });
