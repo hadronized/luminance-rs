@@ -99,7 +99,7 @@ fn main() {
     surface
       .pipeline_builder()
       .pipeline(&back_buffer, [0., 0., 0., 0.], |_, shd_gate| {
-        shd_gate.shade(&program, |rdr_gate, _| {
+        shd_gate.shade(&program, |_, rdr_gate| {
           rdr_gate.render(RenderState::default(), |tess_gate| {
             let slice = match slice_method {
               // the red triangle is at slice [..3]; you can also use the TessSlice::one_sub

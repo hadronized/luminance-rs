@@ -1,3 +1,12 @@
+# <next>
+
+> ?
+
+## Major changes
+
+  - Swap the arguments in the binary closure that is passed to `ShadingGate::shade`. That is more
+    logical regarding the other closures from, for instance, `Pipeline`.
+
 # 0.33
 
 > Fri Sept 6th 2019

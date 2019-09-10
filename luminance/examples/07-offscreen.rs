@@ -113,7 +113,7 @@ fn main() {
 
     // render the triangle in the offscreen framebuffer first
     builder.pipeline(&offscreen_buffer, [0., 0., 0., 0.], |_, shd_gate| {
-      shd_gate.shade(&program, |rdr_gate, _| {
+      shd_gate.shade(&program, |_, rdr_gate| {
         rdr_gate.render(RenderState::default(), |tess_gate| {
           // we render the triangle here by asking for the whole triangle
           tess_gate.render(&mut surface, triangle.slice(..));
@@ -126,7 +126,7 @@ fn main() {
       // we must bind the offscreen framebuffer color content so that we can pass it to a shader
       let bound_texture = pipeline.bind_texture(offscreen_buffer.color_slot());
 
-      shd_gate.shade(&copy_program, |rdr_gate, iface| {
+      shd_gate.shade(&copy_program, |iface, rdr_gate| {
         // we update the texture with the bound texture
         iface.texture.update(&bound_texture);
 

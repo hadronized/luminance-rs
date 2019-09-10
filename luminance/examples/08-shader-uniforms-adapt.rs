@@ -155,7 +155,7 @@ fn main() {
         match program {
           // if we use the first interface, we just need to pass the time and the triangle position
           ProgramMode::First(ref program) => {
-            shd_gate.shade(&program, |rdr_gate, iface| {
+            shd_gate.shade(&program, |iface, rdr_gate| {
               iface.time.update(t);
               iface.triangle_size.update(t.cos().powf(2.));
 
@@ -168,7 +168,7 @@ fn main() {
           // if we use the second interface, we just need to pass the time and we will make the size
           // grow by using the time
           ProgramMode::Second(ref program) => {
-            shd_gate.shade(&program, |rdr_gate, iface| {
+            shd_gate.shade(&program, |iface, rdr_gate| {
               iface.time.update(t);
               // iface.triangle_pos.update(triangle_pos); // uncomment this to see a nice error ;)
               iface.triangle_pos.update(triangle_pos);

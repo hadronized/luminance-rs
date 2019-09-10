@@ -394,7 +394,7 @@ impl<'a> ShadingGate<'a> {
   pub fn shade<In, Out, Uni, F>(&self, program: &'a Program<In, Out, Uni>, f: F)
   where In: Semantics,
         Uni: UniformInterface,
-        F: FnOnce(&RenderGate, ProgramInterface<'a, Uni>) {
+        F: FnOnce(ProgramInterface<'a, Uni>, &RenderGate) {
     unsafe {
       let bstack = self.binding_stack.borrow_mut();
       bstack.gfx_state.borrow_mut().use_program(program.handle());
@@ -405,7 +405,7 @@ impl<'a> ShadingGate<'a> {
     };
 
     let program_interface = program.interface();
-    f(&render_gate, program_interface);
+    f(program_interface, &render_gate);
   }
 }
 

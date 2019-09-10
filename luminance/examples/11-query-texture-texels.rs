@@ -93,7 +93,7 @@ fn main() {
       .pipeline_builder()
       .pipeline(&fb, [0., 0., 0., 0.], |_, shd_gate| {
         // start shading with our program
-        shd_gate.shade(&program, |rdr_gate, _| {
+        shd_gate.shade(&program, |_,rdr_gate| {
           // start rendering things with the default render state provided by luminance
           rdr_gate.render(RenderState::default(), |tess_gate| {
             let tess = &tris;

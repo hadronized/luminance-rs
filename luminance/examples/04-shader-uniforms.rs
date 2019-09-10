@@ -116,7 +116,7 @@ fn main() {
       .pipeline_builder()
       .pipeline(&back_buffer, [0., 0., 0., 0.], |_, shd_gate| {
         // notice the iface free variable, which type is &ShaderInterface
-        shd_gate.shade(&program, |rdr_gate, iface| {
+        shd_gate.shade(&program, |iface, rdr_gate| {
           // update the time and triangle position on the GPU shader program
           iface.time.update(t);
           iface.triangle_pos.update(triangle_pos);
