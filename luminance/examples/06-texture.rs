@@ -95,7 +95,7 @@ fn run(texture_path: &Path) {
         // bind our fancy texture to the GPU: it gives us a bound texture we can use with the shader
         let bound_tex = pipeline.bind_texture(&tex);
 
-        shd_gate.shade(&program, |rdr_gate, iface| {
+        shd_gate.shade(&program, |iface, rdr_gate| {
           // update the texture; strictly speaking, this update doesn’t do much: it just tells the GPU
           // to use the texture passed as argument (no allocation or copy is performed)
           iface.tex.update(&bound_tex);

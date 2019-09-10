@@ -115,7 +115,7 @@ fn main() {
     surface
       .pipeline_builder()
       .pipeline(&back_buffer, [0., 0., 0., 0.], |_, shd_gate| {
-        shd_gate.shade(&program, |rdr_gate, _| {
+        shd_gate.shade(&program, |_, rdr_gate| {
           let render_state = RenderState::default()
           // let’s disable the depth test so that every fragment (i.e. pixels) will rendered to every
           // time we have to draw a part of a triangle

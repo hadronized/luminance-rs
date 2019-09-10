@@ -241,7 +241,7 @@ fn main() {
       .pipeline_builder()
       .pipeline(&back_buffer, [0., 0., 0., 0.], |_, shd_gate| {
         // Start shading with our program.
-        shd_gate.shade(&program, |rdr_gate, _| {
+        shd_gate.shade(&program, |_, rdr_gate| {
           // Start rendering things with the default render state provided by luminance.
           rdr_gate.render(RenderState::default(), |tess_gate| {
             // Pick the right tessellation to use depending on the mode chosen.

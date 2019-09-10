@@ -55,7 +55,7 @@ fn main() {
     surface
       .pipeline_builder()
       .pipeline(&back_buffer, [0., 0., 0., 0.], |_, shd_gate| {
-        shd_gate.shade(&program, |rdr_gate, _| {
+        shd_gate.shade(&program, |_, rdr_gate| {
           rdr_gate.render(RenderState::default(), |tess_gate| {
             // render the tessellation to the surface the regular way and let the vertex shader’s
             // magic do the rest!
