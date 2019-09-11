@@ -280,8 +280,8 @@ impl GraphicsState {
     }
   }
 
-  pub(crate) unsafe fn bind_element_array_buffer(&mut self, handle: GLuint) {
-    if self.bound_element_array_buffer != handle {
+  pub(crate) unsafe fn bind_element_array_buffer(&mut self, handle: GLuint, bind: Bind) {
+    if bind == Bind::Forced || self.bound_element_array_buffer != handle {
       gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, handle);
       self.bound_element_array_buffer = handle;
     }
