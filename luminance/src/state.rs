@@ -273,8 +273,8 @@ impl GraphicsState {
     }
   }
 
-  pub(crate) unsafe fn bind_array_buffer(&mut self, handle: GLuint) {
-    if self.bound_array_buffer != handle {
+  pub(crate) unsafe fn bind_array_buffer(&mut self, handle: GLuint, bind: Bind) {
+    if bind == Bind::Forced || self.bound_array_buffer != handle {
       gl::BindBuffer(gl::ARRAY_BUFFER, handle);
       self.bound_array_buffer = handle;
     }
@@ -294,8 +294,8 @@ impl GraphicsState {
     }
   }
 
-  pub(crate) unsafe fn bind_vertex_array(&mut self, handle: GLuint) {
-    if self.bound_vertex_array != handle {
+  pub(crate) unsafe fn bind_vertex_array(&mut self, handle: GLuint, bind: Bind) {
+    if bind == Bind::Forced || self.bound_vertex_array != handle {
       gl::BindVertexArray(handle);
       self.bound_vertex_array = handle;
     }
@@ -307,6 +307,13 @@ impl GraphicsState {
       self.current_program = handle;
     }
   }
+}
+
+/// Should the binding be cached or forced to the provided value?
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub(crate) enum Bind {
+  Forced,
+  Cached
 }
 
 #[inline]
