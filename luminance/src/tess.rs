@@ -58,6 +58,9 @@ use std::os::raw::c_void;
 #[cfg(feature = "std")]
 use std::ptr;
 
+use std::cell::RefCell;
+use std::rc::Rc;
+
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 #[cfg(not(feature = "std"))]
@@ -70,7 +73,7 @@ use core::ptr;
 use crate::buffer::{Buffer, BufferError, BufferSlice, BufferSliceMut, RawBuffer};
 use crate::context::GraphicsContext;
 use crate::metagl::*;
-use crate::state::Bind;
+use crate::state::{Bind, GraphicsState};
 use crate::vertex::{
   Normalized, VertexBufferDesc, Vertex, VertexAttribDim, VertexAttribDesc, VertexAttribType,
   VertexDesc, VertexInstancing
@@ -367,22 +370,27 @@ impl<'a, C> TessBuilder<'a, C> where C: GraphicsContext {
 
       gl::GenVertexArrays(1, &mut vao);
 
-      gfx_st.bind_vertex_array(vao, Bind::Cached);
+      // force binding the vertex array so that previously bound vertex arrays (possibly the same
+      // handle) don’t prevent us from binding here
+      gfx_st.bind_vertex_array(vao, Bind::Forced);
 
       // add the vertex buffers into the vao
       for vb in &self.vertex_buffers {
-        gfx_st.bind_array_buffer(vb.buf.handle(), Bind::Cached);
+        // force binding as it’s meaningful when a vao is bound
+        gfx_st.bind_array_buffer(vb.buf.handle(), Bind::Forced);
         set_vertex_pointers(&vb.fmt)
       }
 
       // in case of indexed render, create an index buffer
       if let Some(ref index_buffer) = self.index_buffer {
-        gfx_st.bind_element_array_buffer(index_buffer.0.handle(), Bind::Cached);
+        // force binding as it’s meaningful when a vao is bound
+        gfx_st.bind_element_array_buffer(index_buffer.0.handle(), Bind::Forced);
       }
 
       // add any instance buffers, if any
       for vb in &self.instance_buffers {
-        gfx_st.bind_array_buffer(vb.buf.handle(), Bind::Cached);
+        // force binding as it’s meaningful when a vao is bound
+        gfx_st.bind_array_buffer(vb.buf.handle(), Bind::Forced);
         set_vertex_pointers(&vb.fmt);
       }
 
@@ -404,6 +412,7 @@ impl<'a, C> TessBuilder<'a, C> where C: GraphicsContext {
         vertex_buffers: self.vertex_buffers,
         instance_buffers: self.instance_buffers,
         index_state,
+        state: self.ctx.state().clone(),
       })
     }
   }
@@ -613,6 +622,7 @@ pub struct Tess {
   vertex_buffers: Vec<VertexBuffer>,
   instance_buffers: Vec<VertexBuffer>,
   index_state: Option<IndexedDrawState>,
+  state: Rc<RefCell<GraphicsState>>,
 }
 
 impl Tess {
@@ -799,6 +809,7 @@ impl Tess {
 impl Drop for Tess {
   fn drop(&mut self) {
     unsafe {
+      self.state.borrow_mut().unbind_vertex_array();
       gl::DeleteVertexArrays(1, &self.vao);
     }
   }

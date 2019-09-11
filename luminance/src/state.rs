@@ -287,6 +287,16 @@ impl GraphicsState {
     }
   }
 
+  pub(crate) unsafe fn unbind_buffer(&mut self, handle: GLuint) {
+    if self.bound_array_buffer == handle {
+      self.bind_array_buffer(0, Bind::Cached);
+    } else if self.bound_element_array_buffer == handle {
+      self.bind_element_array_buffer(0, Bind::Cached);
+    } else if let Some(handle_) = self.bound_uniform_buffers.iter_mut().find(|h| **h == handle) {
+      *handle_ = 0;
+    }
+  }
+
   pub(crate) unsafe fn bind_draw_framebuffer(&mut self, handle: GLuint) {
     if self.bound_draw_framebuffer != handle {
       gl::BindFramebuffer(gl::DRAW_FRAMEBUFFER, handle);
@@ -299,6 +309,10 @@ impl GraphicsState {
       gl::BindVertexArray(handle);
       self.bound_vertex_array = handle;
     }
+  }
+
+  pub(crate) unsafe fn unbind_vertex_array(&mut self) {
+    self.bind_vertex_array(0, Bind::Cached)
   }
 
   pub(crate) unsafe fn use_program(&mut self, handle: GLuint) {

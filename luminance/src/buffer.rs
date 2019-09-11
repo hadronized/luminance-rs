@@ -196,8 +196,10 @@ impl<T> Buffer<T> {
     let mut buffer: GLuint = 0;
     let bytes = mem::size_of::<T>() * len;
 
+    // generate a buffer and force binding the handle; this prevent side-effects from previous bound
+    // resources to prevent binding the buffer
     gl::GenBuffers(1, &mut buffer);
-    ctx.state().borrow_mut().bind_array_buffer(buffer, Bind::Cached);
+    ctx.state().borrow_mut().bind_array_buffer(buffer, Bind::Forced);
     gl::BufferData(gl::ARRAY_BUFFER, bytes as isize, ptr::null(), gl::STREAM_DRAW);
 
     Buffer {
@@ -443,7 +445,10 @@ impl RawBuffer {
 
 impl Drop for RawBuffer {
   fn drop(&mut self) {
-    unsafe { gl::DeleteBuffers(1, &self.handle) }
+    unsafe {
+      self.state.borrow_mut().unbind_buffer(self.handle);
+      gl::DeleteBuffers(1, &self.handle);
+    }
   }
 }
 
