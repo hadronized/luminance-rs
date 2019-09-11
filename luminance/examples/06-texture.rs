@@ -69,8 +69,7 @@ fn run(texture_path: &Path) {
     .build()
     .unwrap();
 
-  let size = surface.size();
-  let mut back_buffer = Framebuffer::back_buffer(&mut surface, size);
+  let mut back_buffer = surface.back_buffer().unwrap();
   let render_st = RenderState::default().set_blending((Equation::Additive, Factor::SrcAlpha, Factor::Zero));
   let mut resize = false;
 
@@ -90,8 +89,7 @@ fn run(texture_path: &Path) {
     }
 
     if resize {
-      let size = surface.size();
-      back_buffer = Framebuffer::back_buffer(&mut surface, size);
+      back_buffer = surface.back_buffer().unwrap();
       resize = false;
     }
 

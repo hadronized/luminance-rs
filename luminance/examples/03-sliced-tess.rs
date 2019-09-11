@@ -73,8 +73,7 @@ fn main() {
     .build()
     .unwrap();
 
-  let size = surface.size();
-  let mut back_buffer = Framebuffer::back_buffer(&mut surface, size);
+  let mut back_buffer = surface.back_buffer().unwrap();
 
   let mut slice_method = SliceMethod::Red;
   println!("now rendering slice {:?}", slice_method);
@@ -100,8 +99,7 @@ fn main() {
     }
 
     if resize {
-      let size = surface.size();
-      back_buffer = Framebuffer::back_buffer(&mut surface, size);
+      back_buffer = surface.back_buffer().unwrap();
       resize = false;
     }
 

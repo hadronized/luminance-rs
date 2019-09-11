@@ -1,3 +1,13 @@
+# 0.5
+
+> Wed Sept 11th 2019
+
+## Major changes
+
+  - The `Surface` trait has a new method to implement: `Surface::back_buffer`. That method provides
+    the `Framebuffer::back_buffer` in a much more convenient way and is automatically implemented
+    by default.
+
 # 0.4
 
 > Fri Sept 6th 2019

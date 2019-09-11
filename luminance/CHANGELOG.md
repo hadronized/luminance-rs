@@ -1,6 +1,6 @@
-# <next>
+# 0.34
 
-> ?
+> Wed Sept 11th 2019
 
 ## Bug fixes
 
@@ -18,6 +18,9 @@
     slicing it with `..` or `*_whole`.
   - Because framebuffers and buffers must now have access to the GPU’s state, the
     `Framebuffer::back_buffer` function now expects an object which implements `GraphicsContext`.
+  - The `Surface` trait has a new method to implement: `Surface::back_buffer`. That method provides
+    the `Framebuffer::back_buffer` in a much more convenient way and is automatically implemented
+    by default.
 
 # 0.33
 

@@ -184,8 +184,7 @@ fn main() {
 
   // The back buffer, which we will make our render into (we make it mutable so that we can change
   // it whenever the window dimensions change).
-  let size = surface.size();
-  let mut back_buffer = Framebuffer::back_buffer(&mut surface, size);
+  let mut back_buffer = surface.back_buffer().unwrap();
   let mut demo = TessMethod::Direct;
   let mut resize = false;
 
@@ -215,8 +214,7 @@ fn main() {
 
     if resize {
       // Simply ask another backbuffer at the right dimension (no allocation / reallocation).
-      let size = surface.size();
-      back_buffer = Framebuffer::back_buffer(&mut surface, size);
+      back_buffer = surface.back_buffer().unwrap();surface.back_buffer().unwrap();
       resize = false;
     }
 
