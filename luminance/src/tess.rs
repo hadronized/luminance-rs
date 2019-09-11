@@ -70,6 +70,7 @@ use core::ptr;
 use crate::buffer::{Buffer, BufferError, BufferSlice, BufferSliceMut, RawBuffer};
 use crate::context::GraphicsContext;
 use crate::metagl::*;
+use crate::state::Bind;
 use crate::vertex::{
   Normalized, VertexBufferDesc, Vertex, VertexAttribDim, VertexAttribDesc, VertexAttribType,
   VertexDesc, VertexInstancing
@@ -366,22 +367,22 @@ impl<'a, C> TessBuilder<'a, C> where C: GraphicsContext {
 
       gl::GenVertexArrays(1, &mut vao);
 
-      gfx_st.bind_vertex_array(vao);
+      gfx_st.bind_vertex_array(vao, Bind::Cached);
 
       // add the vertex buffers into the vao
       for vb in &self.vertex_buffers {
-        gfx_st.bind_array_buffer(vb.buf.handle());
+        gfx_st.bind_array_buffer(vb.buf.handle(), Bind::Cached);
         set_vertex_pointers(&vb.fmt)
       }
 
       // in case of indexed render, create an index buffer
       if let Some(ref index_buffer) = self.index_buffer {
-        gfx_st.bind_element_array_buffer(index_buffer.0.handle());
+        gfx_st.bind_element_array_buffer(index_buffer.0.handle(), Bind::Cached);
       }
 
       // add any instance buffers, if any
       for vb in &self.instance_buffers {
-        gfx_st.bind_array_buffer(vb.buf.handle());
+        gfx_st.bind_array_buffer(vb.buf.handle(), Bind::Cached);
         set_vertex_pointers(&vb.fmt);
       }
 
@@ -622,7 +623,7 @@ impl Tess {
 
     unsafe {
       let mut gfx_st = ctx.state().borrow_mut();
-      gfx_st.bind_vertex_array(self.vao);
+      gfx_st.bind_vertex_array(self.vao, Bind::Cached);
 
       if let Some(index_state) = self.index_state.as_ref() {
         // indexed render

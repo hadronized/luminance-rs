@@ -131,7 +131,7 @@ use core::slice;
 use crate::context::GraphicsContext;
 use crate::linear::{M22, M33, M44};
 use crate::metagl::*;
-use crate::state::GraphicsState;
+use crate::state::{Bind, GraphicsState};
 
 /// Buffer errors.
 #[derive(Debug, Eq, PartialEq)]
@@ -197,7 +197,7 @@ impl<T> Buffer<T> {
     let bytes = mem::size_of::<T>() * len;
 
     gl::GenBuffers(1, &mut buffer);
-    ctx.state().borrow_mut().bind_array_buffer(buffer);
+    ctx.state().borrow_mut().bind_array_buffer(buffer, Bind::Cached);
     gl::BufferData(gl::ARRAY_BUFFER, bytes as isize, ptr::null(), gl::STREAM_DRAW);
 
     Buffer {
@@ -225,7 +225,7 @@ impl<T> Buffer<T> {
 
     unsafe {
       gl::GenBuffers(1, &mut buffer);
-      ctx.state().borrow_mut().bind_array_buffer(buffer);
+      ctx.state().borrow_mut().bind_array_buffer(buffer, Bind::Cached);
       gl::BufferData(
         gl::ARRAY_BUFFER,
         bytes as isize,
@@ -262,7 +262,7 @@ impl<T> Buffer<T> {
     }
 
     unsafe {
-      self.raw.state.borrow_mut().bind_array_buffer(self.handle);
+      self.raw.state.borrow_mut().bind_array_buffer(self.handle, Bind::Cached);
       let ptr = gl::MapBuffer(gl::ARRAY_BUFFER, gl::READ_ONLY) as *const T;
 
       let x = *ptr.offset(i as isize);
@@ -276,7 +276,7 @@ impl<T> Buffer<T> {
   /// Retrieve the whole content of the [`Buffer`].
   pub fn whole(&self) -> Vec<T> where T: Copy {
     unsafe {
-      self.raw.state.borrow_mut().bind_array_buffer(self.handle);
+      self.raw.state.borrow_mut().bind_array_buffer(self.handle, Bind::Cached);
       let ptr = gl::MapBuffer(gl::ARRAY_BUFFER, gl::READ_ONLY) as *mut T;
 
       let values = Vec::from_raw_parts(ptr, self.len, self.len);
@@ -296,7 +296,7 @@ impl<T> Buffer<T> {
     }
 
     unsafe {
-      self.raw.state.borrow_mut().bind_array_buffer(self.handle);
+      self.raw.state.borrow_mut().bind_array_buffer(self.handle, Bind::Cached);
       let ptr = gl::MapBuffer(gl::ARRAY_BUFFER, gl::WRITE_ONLY) as *mut T;
 
       *ptr.offset(i as isize) = x;
@@ -326,7 +326,7 @@ impl<T> Buffer<T> {
     };
 
     unsafe {
-      self.raw.state.borrow_mut().bind_array_buffer(self.handle);
+      self.raw.state.borrow_mut().bind_array_buffer(self.handle, Bind::Cached);
       let ptr = gl::MapBuffer(gl::ARRAY_BUFFER, gl::WRITE_ONLY);
 
       ptr::copy_nonoverlapping(values.as_ptr() as *const c_void, ptr, real_bytes);
@@ -401,7 +401,7 @@ impl RawBuffer {
   /// Obtain an immutable slice view into the buffer.
   pub(crate) fn as_slice<T>(&mut self) -> Result<BufferSlice<T>, BufferError> {
     unsafe {
-      self.state.borrow_mut().bind_array_buffer(self.handle);
+      self.state.borrow_mut().bind_array_buffer(self.handle, Bind::Cached);
 
       let ptr = gl::MapBuffer(gl::ARRAY_BUFFER, gl::READ_ONLY) as *const T;
 
@@ -416,7 +416,7 @@ impl RawBuffer {
   /// Obtain a mutable slice view into the buffer.
   pub(crate) fn as_slice_mut<T>(&mut self) -> Result<BufferSliceMut<T>, BufferError> {
     unsafe {
-      self.state.borrow_mut().bind_array_buffer(self.handle);
+      self.state.borrow_mut().bind_array_buffer(self.handle, Bind::Cached);
 
       let ptr = gl::MapBuffer(gl::ARRAY_BUFFER, gl::READ_WRITE) as *mut T;
 
@@ -468,7 +468,7 @@ pub struct BufferSlice<'a, T> where T: 'a {
 impl<'a, T> Drop for BufferSlice<'a, T> where T: 'a {
   fn drop(&mut self) {
     unsafe {
-      self.raw.state.borrow_mut().bind_array_buffer(self.raw.handle);
+      self.raw.state.borrow_mut().bind_array_buffer(self.raw.handle, Bind::Cached);
       gl::UnmapBuffer(gl::ARRAY_BUFFER);
     }
   }
@@ -506,7 +506,7 @@ pub struct BufferSliceMut<'a, T> where T: 'a {
 impl<'a, T> Drop for BufferSliceMut<'a, T> where T: 'a {
   fn drop(&mut self) {
     unsafe {
-      self.raw.state.borrow_mut().bind_array_buffer(self.raw.handle);
+      self.raw.state.borrow_mut().bind_array_buffer(self.raw.handle, Bind::Cached);
       gl::UnmapBuffer(gl::ARRAY_BUFFER);
     }
   }
