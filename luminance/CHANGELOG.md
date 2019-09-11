@@ -2,6 +2,13 @@
 
 > ?
 
+## Bug fixes
+
+  - Fix a bug that would cause short-living `Tess` to prevent any other tessellation from acquiring
+    the required GPU state to hold scarce resources. The bug was due to `Drop` implementors that
+    were missing an interaction with the GPU. Fixing this bug implied a major change about frame
+    buffers. Thanks to [@austinjones](https://github.com/austinjones) for their report of the bug.
+
 ## Major changes
 
   - Swap the arguments in the binary closure that is passed to `ShadingGate::shade`. That is more
@@ -9,6 +16,8 @@
   - Change the `TessGate::render` function so that it now accepts `T: Into<TessSlice>`
     instead of a `TessSlice` directly. That enables you to pass `&Tess` directly instead of
     slicing it with `..` or `*_whole`.
+  - Because framebuffers and buffers must now have access to the GPU’s state, the
+    `Framebuffer::back_buffer` function now expects an object which implements `GraphicsContext`.
 
 # 0.33
 
