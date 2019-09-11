@@ -18,7 +18,6 @@ mod common;
 
 use crate::common::{Semantics, Vertex, VertexPosition, VertexColor};
 use luminance::context::GraphicsContext as _;
-use luminance::framebuffer::Framebuffer;
 use luminance::render_state::RenderState;
 use luminance::shader::program::{Program, Uniform};
 use luminance::tess::{Mode, TessBuilder};

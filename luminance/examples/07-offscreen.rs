@@ -14,7 +14,7 @@ use luminance::pipeline::BoundTexture;
 use luminance::pixel::{RGBA32F, Floating};
 use luminance::render_state::RenderState;
 use luminance::shader::program::{Program, Uniform};
-use luminance::tess::{Mode, TessBuilder, TessSliceIndex};
+use luminance::tess::{Mode, TessBuilder};
 use luminance::texture::{Dim2, Flat};
 use luminance_derive::UniformInterface;
 use luminance_glfw::{Action, GlfwSurface, Key, Surface, WindowEvent, WindowDim, WindowOpt};
@@ -117,7 +117,7 @@ fn main() {
       shd_gate.shade(&program, |_, rdr_gate| {
         rdr_gate.render(RenderState::default(), |tess_gate| {
           // we render the triangle here by asking for the whole triangle
-          tess_gate.render(&mut surface, triangle.slice(..));
+          tess_gate.render(&mut surface, &triangle);
         });
       });
     });
@@ -134,7 +134,7 @@ fn main() {
         rdr_gate.render(RenderState::default(), |tess_gate| {
           // this will render the attributeless quad with the offscreen framebuffer color slot
           // bound for the shader to fetch from
-          tess_gate.render(&mut surface, quad.slice(..));
+          tess_gate.render(&mut surface, &quad);
         });
       });
     });
