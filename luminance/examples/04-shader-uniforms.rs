@@ -62,13 +62,15 @@ fn main() {
     .build()
     .unwrap();
 
-  let mut back_buffer = Framebuffer::back_buffer(surface.size());
+  let size = surface.size();
+  let mut back_buffer = Framebuffer::back_buffer(&mut surface, size);
 
   // position of the triangle
   let mut triangle_pos = [0., 0.];
 
   // reference time
   let start_t = Instant::now();
+  let mut resize = false;
 
   'app: loop {
     for event in surface.poll_events() {
@@ -99,13 +101,20 @@ fn main() {
           triangle_pos[1] -= 0.1;
         }
 
-        WindowEvent::FramebufferSize(width, height) => {
-          back_buffer = Framebuffer::back_buffer([width as u32, height as u32]);
+        WindowEvent::FramebufferSize(..) => {
+          resize = true;
         }
 
         _ => (),
       }
     }
+
+    if resize {
+      let size = surface.size();
+      back_buffer = Framebuffer::back_buffer(&mut surface, size);
+      resize = false;
+    }
+
 
     // get the current monotonic time
     let elapsed = start_t.elapsed();

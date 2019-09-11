@@ -83,11 +83,14 @@ fn main() {
     .build()
     .unwrap();
 
-  let mut back_buffer = Framebuffer::back_buffer(surface.size());
+  let size = surface.size();
+  let mut back_buffer = Framebuffer::back_buffer(&mut surface, size);
 
   let mut blending = None;
   let mut depth_method = DepthMethod::Under;
   println!("now rendering red triangle {:?} the blue one", depth_method);
+
+  let mut resize = false;
 
   'app: loop {
     for event in surface.poll_events() {
@@ -104,12 +107,18 @@ fn main() {
           println!("now blending with {:?}", blending);
         }
 
-        WindowEvent::FramebufferSize(width, height) => {
-          back_buffer = Framebuffer::back_buffer([width as u32, height as u32]);
+        WindowEvent::FramebufferSize(..) => {
+          resize = true;
         }
 
         _ => (),
       }
+    }
+
+    if resize {
+      let size = surface.size();
+      back_buffer = Framebuffer::back_buffer(&mut surface, size);
+      resize = false;
     }
 
     surface
