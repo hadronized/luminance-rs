@@ -10,7 +10,6 @@ use crate::common::{
   Instance, Semantics, Vertex, VertexPosition, VertexColor, VertexInstancePosition, VertexWeight
 };
 use luminance::context::GraphicsContext;
-use luminance::framebuffer::Framebuffer;
 use luminance::render_state::RenderState;
 use luminance::shader::program::Program;
 use luminance::tess::{Mode, TessBuilder};

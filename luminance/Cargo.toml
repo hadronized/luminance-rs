@@ -26,5 +26,5 @@ optional = true
 [dev-dependencies]
 image = "0.22"
 luminance-derive = "0.2"
-luminance-glfw = "0.7"
-luminance-glutin = "0.2"
+luminance-glfw = "0.8"
+luminance-glutin = "0.3"

@@ -15,7 +15,6 @@ use crate::common::{Semantics, Vertex, VertexPosition, VertexColor};
 use luminance::blending::{Equation, Factor};
 use luminance::context::GraphicsContext as _;
 use luminance::depth_test::DepthTest;
-use luminance::framebuffer::Framebuffer;
 use luminance::render_state::RenderState;
 use luminance::shader::program::Program;
 use luminance::tess::{Mode, TessBuilder};

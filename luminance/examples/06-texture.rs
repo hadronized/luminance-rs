@@ -13,7 +13,6 @@
 
 use luminance::blending::{Equation, Factor};
 use luminance::context::GraphicsContext as _;
-use luminance::framebuffer::Framebuffer;
 use luminance::pipeline::BoundTexture;
 use luminance::pixel::{NormRGB8UI, NormUnsigned};
 use luminance::render_state::RenderState;
