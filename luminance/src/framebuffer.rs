@@ -29,7 +29,9 @@
 //! Color buffers are abstracted by `ColorSlot` and the depth buffer by `DepthSlot`.
 
 #[cfg(feature = "std")]
+use std::cell::RefCell;
 use std::fmt;
+use std::rc::Rc;
 #[cfg(feature = "std")]
 use std::marker::PhantomData;
 
@@ -43,6 +45,7 @@ use core::marker::PhantomData;
 use crate::context::GraphicsContext;
 use crate::metagl::*;
 use crate::pixel::{ColorPixel, DepthPixel, PixelFormat, RenderablePixel};
+use crate::state::{Bind, GraphicsState};
 use crate::texture::{
   create_texture, opengl_target, Dim2, Dimensionable, Flat, Layerable, RawTexture, Texture,
   TextureError,
@@ -121,7 +124,6 @@ impl fmt::Display for IncompleteReason {
 /// A framebuffer can have zero or several color slots and it can have zero or one depth slot. If
 /// you use several color slots, you’ll be performing what’s called *MRT* (*M* ultiple *R* ender
 /// *T* argets), enabling to render to several textures at once.
-#[derive(Debug)]
 pub struct Framebuffer<L, D, CS, DS>
 where L: Layerable,
       D: Dimensionable,
@@ -134,13 +136,18 @@ where L: Layerable,
   h: u32,
   color_slot: CS::ColorTextures,
   depth_slot: DS::DepthTexture,
+  state: Rc<RefCell<GraphicsState>>,
   _l: PhantomData<L>,
   _d: PhantomData<D>,
 }
 
 impl Framebuffer<Flat, Dim2, (), ()> {
   /// Get the back buffer with the given dimension.
-  pub fn back_buffer(size: <Dim2 as Dimensionable>::Size) -> Self {
+  pub fn back_buffer<C>(
+    ctx: &mut C,
+    size: <Dim2 as Dimensionable>::Size
+  ) -> Self
+  where C: GraphicsContext {
     Framebuffer {
       handle: 0,
       renderbuffer: None,
@@ -148,6 +155,7 @@ impl Framebuffer<Flat, Dim2, (), ()> {
       h: size[1],
       color_slot: (),
       depth_slot: (),
+      state: ctx.state().clone(),
       _l: PhantomData,
       _d: PhantomData,
     }
@@ -260,6 +268,7 @@ where L: Layerable,
         h: D::height(size),
         color_slot: CS::reify_textures(ctx, size, mipmaps, &mut textures.into_iter()),
         depth_slot: DS::reify_texture(ctx, size, mipmaps, depth_texture),
+        state: ctx.state().clone(),
         _l: PhantomData,
         _d: PhantomData,
       };
@@ -267,13 +276,14 @@ where L: Layerable,
       match get_status() {
         Ok(_) => {
           ctx.state().borrow_mut().bind_draw_framebuffer(0); // FIXME: see whether really needed
+
           Ok(framebuffer)
         }
 
         Err(reason) => {
           ctx.state().borrow_mut().bind_draw_framebuffer(0); // FIXME: see whether really needed
 
-          Self::destroy(&framebuffer);
+          framebuffer.destroy();
 
           Err(FramebufferError::Incomplete(reason))
         }
@@ -286,10 +296,12 @@ where L: Layerable,
     unsafe {
       if let Some(renderbuffer) = self.renderbuffer {
         gl::DeleteRenderbuffers(1, &renderbuffer);
+        gl::BindRenderbuffer(gl::RENDERBUFFER, 0);
       }
 
       if self.handle != 0 {
         gl::DeleteFramebuffers(1, &self.handle);
+        self.state.borrow_mut().bind_vertex_array(0, Bind::Cached);
       }
     }
   }
