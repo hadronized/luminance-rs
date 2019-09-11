@@ -37,8 +37,7 @@ fn main() {
     .build()
     .unwrap();
 
-  let size = surface.size();
-  let mut back_buffer = Framebuffer::back_buffer(&mut surface, size);
+  let mut back_buffer = surface.back_buffer().unwrap();
   let mut resize = false;
 
   'app: loop {
@@ -55,8 +54,7 @@ fn main() {
     }
 
     if resize {
-      let size = surface.size();
-      back_buffer = Framebuffer::back_buffer(&mut surface, size);
+      back_buffer = surface.back_buffer().unwrap();
       resize = true;
     }
 
