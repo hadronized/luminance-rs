@@ -75,14 +75,14 @@ fn main() {
 
   let surf_size = surface.size();
   // “screen“ we want to render into our offscreen render
-  let mut back_buffer = Framebuffer::back_buffer(surf_size);
+  let mut back_buffer = Framebuffer::back_buffer(&mut surface, surf_size);
   // offscreen buffer that we will render in the first place
   let mut offscreen_buffer =
     Framebuffer::<Flat, Dim2, RGBA32F, ()>::new(&mut surface, surf_size, 0).expect("framebuffer creation");
 
   // hack to update the offscreen buffer if needed; this is needed because we cannot update the
   // offscreen buffer from within the event loop
-  let mut update_offscreen_buffer = None;
+  let mut resize = false;
 
   'app: loop {
     // for all the events on the surface
@@ -90,8 +90,8 @@ fn main() {
       match event {
         WindowEvent::Close | WindowEvent::Key(Key::Escape, _, Action::Release, _) => break 'app,
 
-        WindowEvent::FramebufferSize(width, height) => {
-          update_offscreen_buffer = Some([width as u32, height as u32]);
+        WindowEvent::FramebufferSize(..) => {
+          resize = true;
         }
 
         _ => (),
@@ -99,13 +99,15 @@ fn main() {
     }
 
     // if the window got resized
-    if let Some(size) = update_offscreen_buffer {
+    if resize {
+      let size = surface.size();
+
       // simply ask another backbuffer at the right dimension (no allocation / reallocation)
-      back_buffer = Framebuffer::back_buffer(size);
+      back_buffer = Framebuffer::back_buffer(&mut surface, size);
       // ditto for the offscreen framebuffer
       offscreen_buffer = Framebuffer::new(&mut surface, size, 0).expect("framebuffer recreation");
 
-      update_offscreen_buffer = None;
+      resize = false;
     }
 
     // we get an object to create pipelines (we’ll need two)

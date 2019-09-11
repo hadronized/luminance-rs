@@ -37,19 +37,27 @@ fn main() {
     .build()
     .unwrap();
 
-  let mut back_buffer = Framebuffer::back_buffer(surface.size());
+  let size = surface.size();
+  let mut back_buffer = Framebuffer::back_buffer(&mut surface, size);
+  let mut resize = false;
 
   'app: loop {
     for event in surface.poll_events() {
       match event {
         WindowEvent::Close | WindowEvent::Key(Key::Escape, _, Action::Release, _) => break 'app,
 
-        WindowEvent::FramebufferSize(width, height) => {
-          back_buffer = Framebuffer::back_buffer([width as u32, height as u32]);
+        WindowEvent::FramebufferSize(..) => {
+          resize = true;
         }
 
         _ => (),
       }
+    }
+
+    if resize {
+      let size = surface.size();
+      back_buffer = Framebuffer::back_buffer(&mut surface, size);
+      resize = true;
     }
 
     surface

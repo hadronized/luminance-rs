@@ -69,8 +69,10 @@ fn run(texture_path: &Path) {
     .build()
     .unwrap();
 
-  let mut back_buffer = Framebuffer::back_buffer(surface.size());
+  let size = surface.size();
+  let mut back_buffer = Framebuffer::back_buffer(&mut surface, size);
   let render_st = RenderState::default().set_blending((Equation::Additive, Factor::SrcAlpha, Factor::Zero));
+  let mut resize = false;
 
   println!("rendering!");
 
@@ -79,12 +81,18 @@ fn run(texture_path: &Path) {
       match event {
         WindowEvent::Close | WindowEvent::Key(Key::Escape, _, Action::Release, _) => break 'app,
 
-        WindowEvent::FramebufferSize(width, height) => {
-          back_buffer = Framebuffer::back_buffer([width as u32, height as u32]);
+        WindowEvent::FramebufferSize(..) => {
+          resize = true;
         }
 
         _ => (),
       }
+    }
+
+    if resize {
+      let size = surface.size();
+      back_buffer = Framebuffer::back_buffer(&mut surface, size);
+      resize = false;
     }
 
     // here, we need to bind the pipeline variable; it will enable us to bind the texture to the GPU

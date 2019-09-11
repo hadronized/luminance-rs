@@ -73,10 +73,13 @@ fn main() {
     .build()
     .unwrap();
 
-  let mut back_buffer = Framebuffer::back_buffer(surface.size());
+  let size = surface.size();
+  let mut back_buffer = Framebuffer::back_buffer(&mut surface, size);
 
   let mut slice_method = SliceMethod::Red;
   println!("now rendering slice {:?}", slice_method);
+
+  let mut resize = false;
 
   'app: loop {
     for event in surface.poll_events() {
@@ -88,12 +91,18 @@ fn main() {
           println!("now rendering slice {:?}", slice_method);
         }
 
-        WindowEvent::FramebufferSize(width, height) => {
-          back_buffer = Framebuffer::back_buffer([width as u32, height as u32]);
+        WindowEvent::FramebufferSize(..) => {
+          resize = true;
         }
 
         _ => (),
       }
+    }
+
+    if resize {
+      let size = surface.size();
+      back_buffer = Framebuffer::back_buffer(&mut surface, size);
+      resize = false;
     }
 
     surface

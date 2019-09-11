@@ -184,9 +184,11 @@ fn main() {
 
   // The back buffer, which we will make our render into (we make it mutable so that we can change
   // it whenever the window dimensions change).
-  let mut back_buffer = Framebuffer::back_buffer(surface.size());
-
+  let size = surface.size();
+  let mut back_buffer = Framebuffer::back_buffer(&mut surface, size);
   let mut demo = TessMethod::Direct;
+  let mut resize = false;
+
   println!("now rendering {:?}", demo);
 
   'app: loop {
@@ -203,13 +205,19 @@ fn main() {
         }
 
         // Handle window resizing.
-        WindowEvent::FramebufferSize(width, height) => {
-          // Simply ask another backbuffer at the right dimension (no allocation / reallocation).
-          back_buffer = Framebuffer::back_buffer([width as u32, height as u32]);
+        WindowEvent::FramebufferSize(..) => {
+          resize = true;
         }
 
         _ => (),
       }
+    }
+
+    if resize {
+      // Simply ask another backbuffer at the right dimension (no allocation / reallocation).
+      let size = surface.size();
+      back_buffer = Framebuffer::back_buffer(&mut surface, size);
+      resize = false;
     }
 
     // Create a new dynamic pipeline that will render to the back buffer and must clear it with
