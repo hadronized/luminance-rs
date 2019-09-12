@@ -1,6 +1,6 @@
 [package]
 name = "luminance-derive"
-version = "0.2.1"
+version = "0.2.2"
 license = "BSD-3-Clause"
 authors = ["Dimitri Sabadie <dimitri.sabadie@gmail.com>"]
 description = "Procedural macros for deriving luminance traits"
@@ -23,4 +23,4 @@ quote = "1"
 syn = "1"
 
 [dev-dependencies]
-luminance = ">=0.33, <0.35"
+luminance = ">=0.33, <0.36"

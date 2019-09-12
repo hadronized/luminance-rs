@@ -1,12 +1,23 @@
+# 0.35
+
+> Thur Sep 12th 2019
+
+## Major changes
+
+  - Implement _safe pipelines_. Those implement stricter rules regarding Rust’s borrowing so that
+    you cannot accidentally invalidate the GPU’s state by trying to nest or return _gates_
+    (something you are never expected to do and shouldn’t do, but now you cannot do it even if you
+    want to).
+
 # 0.34.1
 
-> Wed Sept 11th 2019
+> Wed Sep 11th 2019
 
   - Re-release with `[dev-dependencies]` updated for other crates
 
 # 0.34
 
-> Wed Sept 11th 2019
+> Wed Sep 11th 2019
 
 ## Bug fixes
 
@@ -30,7 +41,7 @@
 
 # 0.33
 
-> Fri Sept 6th 2019
+> Fri Sep 6th 2019
 
   - Add support for specifying the number of instances to render with `TessSlice`. The methods to
     specify that parameter are the same as the regular, 1-instance version ones but with the prefix
@@ -38,7 +49,7 @@
 
 # 0.32
 
-> Tue Sept 3rd 2019
+> Tue Sep 3rd 2019
 
 ## Bug fixes
 

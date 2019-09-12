@@ -1,6 +1,6 @@
 [package]
 name = "luminance-windowing"
-version = "0.5.0"
+version = "0.5.1"
 license = "BSD-3-Clause"
 authors = ["Dimitri Sabadie <dimitri.sabadie@gmail.com>"]
 description = "Common windowing code for luminance"
@@ -16,4 +16,4 @@ edition = "2018"
 maintenance = { status = "actively-developed" }
 
 [dependencies]
-luminance = "0.34"
+luminance = ">=0.34, <0.36"
