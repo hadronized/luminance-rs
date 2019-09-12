@@ -120,8 +120,8 @@ fn main() {
 
     surface
       .pipeline_builder()
-      .pipeline(&back_buffer, [0., 0., 0., 0.], |_, shd_gate| {
-        shd_gate.shade(&program, |_, rdr_gate| {
+      .pipeline(&back_buffer, [0., 0., 0., 0.], |_, mut shd_gate| {
+        shd_gate.shade(&program, |_, mut rdr_gate| {
           let render_state = RenderState::default()
           // let’s disable the depth test so that every fragment (i.e. pixels) will rendered to every
           // time we have to draw a part of a triangle
@@ -129,15 +129,15 @@ fn main() {
           // set the blending we decided earlier
           .set_blending(blending);
 
-          rdr_gate.render(render_state, |tess_gate| match depth_method {
+          rdr_gate.render(render_state, |mut tess_gate| match depth_method {
             DepthMethod::Under => {
-              tess_gate.render(&mut surface, &red_triangle);
-              tess_gate.render(&mut surface, &blue_triangle);
+              tess_gate.render(&red_triangle);
+              tess_gate.render(&blue_triangle);
             }
 
             DepthMethod::Atop => {
-              tess_gate.render(&mut surface, &blue_triangle);
-              tess_gate.render(&mut surface, &red_triangle);
+              tess_gate.render(&blue_triangle);
+              tess_gate.render(&red_triangle);
             }
           });
         });

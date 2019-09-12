@@ -120,16 +120,16 @@ fn main() {
 
     surface
       .pipeline_builder()
-      .pipeline(&back_buffer, [0., 0., 0., 0.], |_, shd_gate| {
+      .pipeline(&back_buffer, [0., 0., 0., 0.], |_, mut shd_gate| {
         // notice the iface free variable, which type is &ShaderInterface
-        shd_gate.shade(&program, |iface, rdr_gate| {
+        shd_gate.shade(&program, |iface, mut rdr_gate| {
           // update the time and triangle position on the GPU shader program
           iface.time.update(t);
           iface.triangle_pos.update(triangle_pos);
 
-          rdr_gate.render(RenderState::default(), |tess_gate| {
+          rdr_gate.render(RenderState::default(), |mut tess_gate| {
             // render the dynamically selected slice
-            tess_gate.render(&mut surface, &triangle);
+            tess_gate.render(&triangle);
           });
         });
       });

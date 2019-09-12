@@ -221,11 +221,12 @@ fn main() {
     // pitch black prior to do any render to it.
     surface
       .pipeline_builder()
-      .pipeline(&back_buffer, [0., 0., 0., 0.], |_, shd_gate| {
+      .pipeline(&back_buffer, [0., 0., 0., 0.], |_, mut shd_gate| {
         // Start shading with our program.
-        shd_gate.shade(&program, |_, rdr_gate| {
+        shd_gate.shade(&program, |_, mut rdr_gate| {
+
           // Start rendering things with the default render state provided by luminance.
-          rdr_gate.render(RenderState::default(), |tess_gate| {
+          rdr_gate.render(RenderState::default(), |mut tess_gate| {
             // Pick the right tessellation to use depending on the mode chosen.
             let tess = match demo {
               TessMethod::Direct => &direct_triangles,
@@ -235,7 +236,7 @@ fn main() {
             };
 
             // Render the tessellation to the surface.
-            tess_gate.render(&mut surface, tess);
+            tess_gate.render(tess);
           });
         });
       });

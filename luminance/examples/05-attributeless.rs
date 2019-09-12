@@ -59,12 +59,12 @@ fn main() {
 
     surface
       .pipeline_builder()
-      .pipeline(&back_buffer, [0., 0., 0., 0.], |_, shd_gate| {
-        shd_gate.shade(&program, |_, rdr_gate| {
-          rdr_gate.render(RenderState::default(), |tess_gate| {
+      .pipeline(&back_buffer, [0., 0., 0., 0.], |_, mut shd_gate| {
+        shd_gate.shade(&program, |_, mut rdr_gate| {
+          rdr_gate.render(RenderState::default(), |mut tess_gate| {
             // render the tessellation to the surface the regular way and let the vertex shader’s
             // magic do the rest!
-            tess_gate.render(&mut surface, &tess);
+            tess_gate.render(&tess);
           });
         });
       });

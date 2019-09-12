@@ -627,7 +627,7 @@ pub struct Tess {
 
 impl Tess {
   fn render<C>(&self, ctx: &mut C, start_index: usize, vert_nb: usize, inst_nb: usize)
-  where C: GraphicsContext {
+  where C: ?Sized + GraphicsContext {
     let vert_nb = vert_nb as GLsizei;
     let inst_nb = inst_nb as GLsizei;
 
@@ -1125,7 +1125,7 @@ impl<'a> TessSlice<'a> {
   }
 
   /// Render a tessellation.
-  pub fn render<C>(&self, ctx: &mut C) where C: GraphicsContext {
+  pub fn render<C>(&self, ctx: &mut C) where C: ?Sized + GraphicsContext {
     self
       .tess
       .render(ctx, self.start_index, self.vert_nb, self.inst_nb);
