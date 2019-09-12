@@ -135,7 +135,7 @@ use crate::vertex::Semantics;
 // bindings points only when no recycled resource is available. It helps have a better memory
 // footprint in the resource space.
 struct BindingStack {
-  gfx_state: Rc<RefCell<GraphicsState>>,
+  state: Rc<RefCell<GraphicsState>>,
   next_texture_unit: u32,
   free_texture_units: Vec<u32>,
   next_buffer_binding: u32,
@@ -144,9 +144,9 @@ struct BindingStack {
 
 impl BindingStack {
   // Create a new, empty binding stack.
-  fn new(gfx_state: Rc<RefCell<GraphicsState>>) -> Self {
+  fn new(state: Rc<RefCell<GraphicsState>>) -> Self {
     BindingStack {
-      gfx_state,
+      state,
       next_texture_unit: 0,
       free_texture_units: Vec::new(),
       next_buffer_binding: 0,
@@ -156,22 +156,28 @@ impl BindingStack {
 }
 
 /// An opaque type used to create pipelines.
-pub struct Builder {
+pub struct Builder<'a, C> where C: ?Sized {
+  ctx: &'a mut C,
   binding_stack: Rc<RefCell<BindingStack>>,
+  _borrow: PhantomData<&'a mut ()>,
 }
 
-impl Builder {
+impl<'a, C> Builder<'a, C> where C: ?Sized + GraphicsContext {
   /// Create a new `Builder`.
   ///
   /// Even though you call this function by yourself, you’re likely to prefer using
   /// `GraphicsContext::pipeline_builder` instead.
-  pub fn new(gfx_state: Rc<RefCell<GraphicsState>>) -> Self {
+  pub fn new(ctx: &'a mut C) -> Self {
+    let state = ctx.state().clone();
+
     Builder {
-      binding_stack: Rc::new(RefCell::new(BindingStack::new(gfx_state))),
+      ctx,
+      binding_stack: Rc::new(RefCell::new(BindingStack::new(state))),
+      _borrow: PhantomData,
     }
   }
 
-  /// Create a new `Pipeline` and consume it immediately.
+  /// Create a new [`Pipeline`] and consume it immediately.
   ///
   /// A dynamic rendering pipeline is responsible of rendering into a `Framebuffer`.
   ///
@@ -183,8 +189,8 @@ impl Builder {
   /// `Framebuffer`.
   ///
   /// Pipelines also have a *clear color*, used to clear the framebuffer.
-  pub fn pipeline<'a, L, D, CS, DS, F>(
-    &self,
+  pub fn pipeline<'b, L, D, CS, DS, F>(
+    &'b mut self,
     framebuffer: &Framebuffer<L, D, CS, DS>,
     clear_color: [f32; 4],
     f: F,
@@ -193,12 +199,9 @@ impl Builder {
         D: Dimensionable,
         CS: ColorSlot<L, D>,
         DS: DepthSlot<L, D>,
-        F: FnOnce(Pipeline, ShadingGate) {
-    let binding_stack = &self.binding_stack;
-
+        F: FnOnce(Pipeline<'b>, ShadingGate<'b, C>) {
     unsafe {
-      let bs = binding_stack.borrow();
-      bs.gfx_state
+      self.ctx.state()
         .borrow_mut()
         .bind_draw_framebuffer(framebuffer.handle());
 
@@ -207,8 +210,12 @@ impl Builder {
       gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
     }
 
+    let binding_stack = &self.binding_stack;
     let p = Pipeline { binding_stack };
-    let shd_gt = ShadingGate { binding_stack };
+    let shd_gt = ShadingGate {
+      ctx: self.ctx,
+      binding_stack
+    };
 
     f(p, shd_gt);
   }
@@ -243,7 +250,7 @@ impl<'a> Pipeline<'a> {
     });
 
     unsafe {
-      let mut state = bstack.gfx_state.borrow_mut();
+      let mut state = bstack.state.borrow_mut();
       state.set_texture_unit(unit);
       state.bind_texture(texture.target(), texture.handle());
     }
@@ -267,7 +274,7 @@ impl<'a> Pipeline<'a> {
 
     unsafe {
       bstack
-        .gfx_state
+        .state
         .borrow_mut()
         .bind_buffer_base(buffer.handle(), binding);
     }
@@ -385,41 +392,44 @@ unsafe impl<'a, 'b, T> Uniformable for &'b BoundBuffer<'a, T> {
 }
 
 /// A shading gate provides you with a way to run shaders on rendering commands.
-pub struct ShadingGate<'a> {
+pub struct ShadingGate<'a, C> where C: ?Sized {
+  ctx: &'a mut C,
   binding_stack: &'a Rc<RefCell<BindingStack>>,
 }
 
-impl<'a> ShadingGate<'a> {
+impl<'a, C> ShadingGate<'a, C> where C: ?Sized + GraphicsContext {
   /// Run a shader on a set of rendering commands.
-  pub fn shade<In, Out, Uni, F>(&self, program: &'a Program<In, Out, Uni>, f: F)
+  pub fn shade<'b, In, Out, Uni, F>(&'b mut self, program: &Program<In, Out, Uni>, f: F)
   where In: Semantics,
         Uni: UniformInterface,
-        F: FnOnce(ProgramInterface<'a, Uni>, &RenderGate) {
+        F: FnOnce(ProgramInterface<Uni>, RenderGate<'b, C>) {
     unsafe {
       let bstack = self.binding_stack.borrow_mut();
-      bstack.gfx_state.borrow_mut().use_program(program.handle());
+      bstack.state.borrow_mut().use_program(program.handle());
     };
 
     let render_gate = RenderGate {
+      ctx: self.ctx,
       binding_stack: self.binding_stack,
     };
 
     let program_interface = program.interface();
-    f(program_interface, &render_gate);
+    f(program_interface, render_gate);
   }
 }
 
 /// Render gate, allowing you to alter the render state and render tessellations.
-pub struct RenderGate<'a> {
+pub struct RenderGate<'a, C> where C: ?Sized {
+  ctx: &'a mut C,
   binding_stack: &'a Rc<RefCell<BindingStack>>,
 }
 
-impl<'a> RenderGate<'a> {
+impl<'a, C> RenderGate<'a, C> where C: ?Sized + GraphicsContext {
   /// Alter the render state and draw tessellations.
-  pub fn render<F>(&self, rdr_st: RenderState, f: F) where F: FnOnce(&TessGate) {
+  pub fn render<'b, F>(&'b mut self, rdr_st: RenderState, f: F) where F: FnOnce(TessGate<'b, C>) {
     unsafe {
       let bstack = self.binding_stack.borrow_mut();
-      let mut gfx_state = bstack.gfx_state.borrow_mut();
+      let mut gfx_state = bstack.state.borrow_mut();
 
       match rdr_st.blending {
         Some((equation, src_factor, dst_factor)) => {
@@ -446,20 +456,22 @@ impl<'a> RenderGate<'a> {
       }
     }
 
-    let tess_gate = TessGate { _hidden: () };
+    let tess_gate = TessGate {
+      ctx: self.ctx,
+    };
 
-    f(&tess_gate);
+    f(tess_gate);
   }
 }
 
 /// Render tessellations.
-pub struct TessGate {
-  _hidden: ()
+pub struct TessGate<'a, C> where C: ?Sized {
+  ctx: &'a mut C,
 }
 
-impl TessGate {
+impl<'a, C> TessGate<'a, C> where C: ?Sized + GraphicsContext {
   /// Render a tessellation.
-  pub fn render<'a, C, T>(&self, ctx: &mut C, tess: T) where C: GraphicsContext, T: Into<TessSlice<'a>> {
-    tess.into().render(ctx);
+  pub fn render<'b, T>(&'b mut self, tess: T) where T: Into<TessSlice<'b>> {
+    tess.into().render(self.ctx);
   }
 }

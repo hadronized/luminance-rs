@@ -110,16 +110,16 @@ fn main() {
 
     surface
       .pipeline_builder()
-      .pipeline(&back_buffer, [0., 0., 0., 0.], |_, shd_gate| {
-        shd_gate.shade(&program, |iface, rdr_gate| {
+      .pipeline(&back_buffer, [0., 0., 0., 0.], |_, mut shd_gate| {
+        shd_gate.shade(&program, |iface, mut rdr_gate| {
           let query = iface.query();
 
           if let Ok(time_u) = query.ask("t") {
             time_u.update(t);
           }
 
-          rdr_gate.render(RenderState::default(), |tess_gate| {
-            tess_gate.render(&mut surface, &triangle);
+          rdr_gate.render(RenderState::default(), |mut tess_gate| {
+            tess_gate.render(&triangle);
           });
         });
       });

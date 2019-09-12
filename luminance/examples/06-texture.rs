@@ -96,19 +96,19 @@ fn run(texture_path: &Path) {
     // and use it in the shader
     surface
       .pipeline_builder()
-      .pipeline(&back_buffer, [0., 0., 0., 0.], |pipeline, shd_gate| {
+      .pipeline(&back_buffer, [0., 0., 0., 0.], |pipeline, mut shd_gate| {
         // bind our fancy texture to the GPU: it gives us a bound texture we can use with the shader
         let bound_tex = pipeline.bind_texture(&tex);
 
-        shd_gate.shade(&program, |iface, rdr_gate| {
+        shd_gate.shade(&program, |iface, mut rdr_gate| {
           // update the texture; strictly speaking, this update doesn’t do much: it just tells the GPU
           // to use the texture passed as argument (no allocation or copy is performed)
           iface.tex.update(&bound_tex);
 
-          rdr_gate.render(render_st, |tess_gate| {
+          rdr_gate.render(render_st, |mut tess_gate| {
             // render the tessellation to the surface the regular way and let the vertex shader’s
             // magic do the rest!
-            tess_gate.render(&mut surface, &tess);
+            tess_gate.render(&tess);
           });
         });
       });

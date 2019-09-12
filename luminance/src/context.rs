@@ -49,7 +49,7 @@ pub unsafe trait GraphicsContext {
   ///
   /// A pipeline builder is the only way to create new pipelines and issue draws. Feel free to dig
   /// in the documentation of `Builder` for further details.
-  fn pipeline_builder(&self) -> Builder {
-    Builder::new(self.state().clone())
+  fn pipeline_builder(&mut self) -> Builder<Self> {
+    Builder::new(self)
   }
 }
