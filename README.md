@@ -111,6 +111,8 @@ Those projects use luminance:
 - [Outline 2017 Invitro](https://github.com/phaazon/outline-2017-invitro).
   - A demoscene production by [@phaazon](https://github.com/phaazon),
   released at Revision 2017 in the PC Demo category.
+- [Dali Renderer](https://github.com/austinjones/dali-rs)
+  - A rendering library by [@austinjones](https://github.com/austinjones), designed to generate high-resolution digital paintings to be printed on canvas.
 
 [luminance]: ./luminance
 [luminance-derive]: ./luminance-derive
