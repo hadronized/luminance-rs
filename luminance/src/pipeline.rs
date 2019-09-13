@@ -125,7 +125,7 @@ use crate::pixel::{Pixel, SamplerType, Type as PxType};
 use crate::render_state::RenderState;
 use crate::shader::program::{Program, ProgramInterface, Type, Uniform, UniformInterface, Uniformable};
 use crate::state::GraphicsState;
-use crate::tess::TessSlice;
+use crate::tess::{TessSlice, TessBuilder};
 use crate::texture::{Dim, Dimensionable, Layerable, Texture};
 use crate::vertex::Semantics;
 
@@ -469,7 +469,12 @@ pub struct TessGate<'a, C> where C: ?Sized {
   ctx: &'a mut C,
 }
 
-impl<'a, C> TessGate<'a, C> where C: ?Sized + GraphicsContext {
+impl<'a, C: Sized> TessGate<'a, C> where C: ?Sized + GraphicsContext {
+  /// Create a TessBuilder, borrowed against the GraphicsContext.
+  pub fn builder(&mut self) -> TessBuilder<C> {
+    TessBuilder::new(self.ctx)
+  }
+
   /// Render a tessellation.
   pub fn render<'b, T>(&'b mut self, tess: T) where T: Into<TessSlice<'b>> {
     tess.into().render(self.ctx);
