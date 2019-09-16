@@ -100,7 +100,7 @@ impl Obj {
             let n = object.normals[key.2.ok_or_else(|| "missing normal for a vertex".to_owned())?];
             let position = VPos::new([p.x as f32, p.y as f32, p.z as f32]);
             let normal = VNor::new([n.x as f32, n.y as f32, n.z as f32]);
-            let vertex = Vertex { position, normal };
+            let vertex = Vertex::new(position, normal);
             let vertex_index = vertices.len() as VertexIndex;
 
             vertex_cache.insert(*key, vertex_index);

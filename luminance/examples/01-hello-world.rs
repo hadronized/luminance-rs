@@ -61,13 +61,13 @@ struct Vertex {
 // The vertices. We define two triangles.
 const TRI_VERTICES: [Vertex; 6] = [
   // First triangle – an RGB one.
-  Vertex { pos: VertexPosition::new([0.5, -0.5]), rgb: VertexColor::new([0, 255, 0]) },
-  Vertex { pos: VertexPosition::new([0.0, 0.5]), rgb: VertexColor::new([0, 0, 255]) },
-  Vertex { pos: VertexPosition::new([-0.5, -0.5]), rgb: VertexColor::new([255, 0, 0]) },
+  Vertex::new(VertexPosition::new([0.5, -0.5]), VertexColor::new([0, 255, 0])),
+  Vertex::new(VertexPosition::new([0.0, 0.5]), VertexColor::new([0, 0, 255])),
+  Vertex::new(VertexPosition::new([-0.5, -0.5]), VertexColor::new([255, 0, 0])),
   // Second triangle, a purple one, positioned differently.
-  Vertex { pos: VertexPosition::new([-0.5, 0.5]), rgb: VertexColor::new([255, 51, 255]) },
-  Vertex { pos: VertexPosition::new([0.0, -0.5]), rgb: VertexColor::new([51, 255, 255]) },
-  Vertex { pos: VertexPosition::new([0.5, 0.5]), rgb: VertexColor::new([51, 51, 255]) },
+  Vertex::new(VertexPosition::new([-0.5, 0.5]), VertexColor::new([255, 51, 255])),
+  Vertex::new(VertexPosition::new([0.0, -0.5]), VertexColor::new([51, 255, 255])),
+  Vertex::new(VertexPosition::new([0.5, 0.5]), VertexColor::new([51, 51, 255])),
 ];
 
 // A small struct wrapper used to deinterleave positions.

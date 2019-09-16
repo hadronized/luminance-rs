@@ -68,7 +68,8 @@ where A: Iterator<Item = &'a Attribute> + Clone {
   match struct_.fields {
     Fields::Named(named_fields) => {
       let mut indexed_vertex_attrib_descs = Vec::new();
-      let mut fields_tys = Vec::new();
+      let mut fields_types = Vec::new();
+      let mut fields_names = Vec::new();
 
       // partition and generate VertexBufferDesc
       for field in named_fields.named {
@@ -105,19 +106,28 @@ where A: Iterator<Item = &'a Attribute> + Clone {
         };
 
         indexed_vertex_attrib_descs.push(indexed_vertex_attrib_desc_q);
-        fields_tys.push(field_ty);
+        fields_types.push(field_ty);
+        fields_names.push(ident);
       }
 
       let struct_name = ident;
-      let impl_ = quote! {
+      let output = quote! {
+        // Vertex impl
         unsafe impl luminance::vertex::Vertex for #struct_name {
           fn vertex_desc() -> luminance::vertex::VertexDesc {
             vec![#(#indexed_vertex_attrib_descs),*]
           }
         }
+
+        // helper function for the generate type
+        impl #struct_name {
+          pub const fn new(#(#fields_names : #fields_types),*) -> Self {
+            #struct_name { #(#fields_names),* }
+          }
+        }
       };
 
-      Ok(impl_.into())
+      Ok(output.into())
     }
 
     Fields::Unnamed(_) => Err(StructImplError::UnsupportedUnnamed),
