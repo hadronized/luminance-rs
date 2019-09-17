@@ -9,6 +9,7 @@ const KNOWN_SUBKEYS: &[&str] = &["name", "repr", "wrapper"];
 #[derive(Debug)]
 pub(crate) enum SemanticsImplError {
   AttributeErrors(Vec<AttrError>),
+  NoField
 }
 
 impl fmt::Display for SemanticsImplError {
@@ -22,6 +23,8 @@ impl fmt::Display for SemanticsImplError {
 
         Ok(())
       }
+
+      SemanticsImplError::NoField => f.write_str("semantics cannot be empty sets")
     }
   }
 }
@@ -131,6 +134,10 @@ pub(crate) fn generate_enum_semantics_impl(
 
   if !errors.is_empty() {
     return Err(SemanticsImplError::AttributeErrors(errors));
+  }
+
+  if semantics_set.is_empty() {
+    return Err(SemanticsImplError::NoField);
   }
 
   // output generation
