@@ -1,6 +1,6 @@
 use gl;
 use gl::types::*;
-use luminance::buffer::BufferBackend;
+use luminance::buffer::Buffer as BufferBackend;
 use luminance::context::GraphicsContext;
 use luminance::linear::{M22, M33, M44};
 

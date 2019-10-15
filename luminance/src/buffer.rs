@@ -88,8 +88,11 @@
 
 use crate::context::GraphicsContext;
 
-/// Buffer support in backends.
-pub trait BufferBackend<'sliced, C, T> where C: GraphicsContext {
+/// A [`Buffer`] is a GPU region you can picture as an array.
+///
+/// You’re strongly advised to use either [`Buffer::from_slice`] or [`Buffer::repeat`] to create a
+/// [`Buffer`]. The [`Buffer::new`] should only be used if you know what you’re doing.
+pub trait Buffer<'sliced, C, T> where C: GraphicsContext {
   type Slice: 'sliced;
 
   type SliceMut: 'sliced;
