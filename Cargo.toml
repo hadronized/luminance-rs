@@ -4,6 +4,7 @@ members = [
   "bin/viewer",
   "luminance",
   "luminance-derive",
+  "luminance-gl",
   "luminance-glfw",
   "luminance-glutin",
   "luminance-windowing",
@@ -12,6 +13,7 @@ members = [
 [patch.crates-io]
 luminance = { path = "./luminance" }
 luminance-derive = { path = "./luminance-derive" }
+luminance-gl = { path = "./luminance-gl" }
 luminance-glfw = { path = "./luminance-glfw" }
 luminance-glutin = { path = "./luminance-glutin" }
 luminance-windowing = { path = "./luminance-windowing" }

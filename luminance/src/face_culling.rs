@@ -25,7 +25,7 @@ impl Default for FaceCulling {
 
 /// Should face culling be enabled?
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub(crate) enum FaceCullingState {
+pub enum FaceCullingState {
   /// Enable face culling.
   On,
   /// Disable face culling.

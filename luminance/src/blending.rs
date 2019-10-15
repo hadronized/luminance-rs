@@ -14,7 +14,7 @@
 
 /// Whether or not enable blending.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub(crate) enum BlendingState {
+pub enum BlendingState {
   /// Enable blending.
   On,
   /// Disable blending.

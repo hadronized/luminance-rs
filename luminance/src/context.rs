@@ -31,25 +31,17 @@ use alloc::rc::Rc;
 #[cfg(not(feature = "std"))]
 use core::cell::RefCell;
 
-use crate::pipeline::Builder;
-use crate::state::GraphicsState;
-
 /// Class of graphics context.
 ///
 /// Such a context must not be Send nor Sync, which means that you cannot share it between
 /// threads in any way (move / borrow).
 pub unsafe trait GraphicsContext {
+  type State;
+  type Builder;
+
   /// Get access to the graphics state of this context.
-  ///
-  /// This must return a `Rc<RefCell<GraphicsState>>` because the state will be shared by OpenGL
-  /// objects to ensure consistency with its state.
-  fn state(&self) -> &Rc<RefCell<GraphicsState>>;
+  fn state(&self) -> &Rc<RefCell<Self::State>>;
 
   /// Create a new pipeline builder.
-  ///
-  /// A pipeline builder is the only way to create new pipelines and issue draws. Feel free to dig
-  /// in the documentation of `Builder` for further details.
-  fn pipeline_builder(&mut self) -> Builder<Self> {
-    Builder::new(self)
-  }
+  fn pipeline_builder(&mut self) -> Self::Builder;
 }

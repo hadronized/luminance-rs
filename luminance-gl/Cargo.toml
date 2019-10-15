@@ -1,0 +1,17 @@
+[package]
+name = "luminance-gl"
+version = "0.1.0"
+license = "BSD-3-Clause"
+authors = ["Dimitri Sabadie <dimitri.sabadie@gmail.com>"]
+description = "Stateless and type-safe graphics framework"
+keywords = ["stateless", "type-safe", "graphics", "luminance"]
+categories = ["rendering::graphics-api"]
+homepage = "https://github.com/phaazon/luminance-rs"
+repository = "https://github.com/phaazon/luminance-rs"
+documentation = "https://docs.rs/luminance-gl"
+readme = "README.md"
+edition = "2018"
+
+[dependencies]
+luminance = "0.37"
+gl = "0.13"
