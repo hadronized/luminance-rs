@@ -184,12 +184,12 @@ pub trait Tess<C> {
   fn render(&self, ctx: &mut C, start_index: usize, vert_nb: usize, inst_nb: usize);
 }
 
-pub trait TessSlice<'a, C, B, V>: Tess<C> where V: Vertex, B: Buffer<'a, C, V> {
+pub trait VertexSlice<'a, C, B, V>: Tess<C> where V: Vertex, B: Buffer<'a, C, V> {
   /// Obtain a slice over the vertex buffer.
   fn as_slice(&'a mut self) -> Result<B::Slice, Self::Err>;
 }
 
-pub trait TessSliceMut<'a, C, B, V>: Tess<C> where V: Vertex, B: Buffer<'a, C, V> {
+pub trait VertexSliceMut<'a, C, B, V>: Tess<C> where V: Vertex, B: Buffer<'a, C, V> {
   /// Obtain a mutable slice over the vertex buffer.
   ///
   /// This function fails if you try to obtain a buffer from an attriteless [`Tess`] or
@@ -197,7 +197,7 @@ pub trait TessSliceMut<'a, C, B, V>: Tess<C> where V: Vertex, B: Buffer<'a, C, V
   fn as_slice_mut(&'a mut self) -> Result<B::SliceMut, Self::Err>;
 }
 
-pub trait TessIndexSlice<'a, C, B, I>: Tess<C> where I: TessIndex, B: Buffer<'a, C, I> {
+pub trait IndexSlice<'a, C, B, I>: Tess<C> where I: TessIndex, B: Buffer<'a, C, I> {
   /// Obtain a slice over the index buffer.
   ///
   /// This function fails if you try to obtain a buffer from an attriteless [`Tess`] or if no
@@ -205,7 +205,7 @@ pub trait TessIndexSlice<'a, C, B, I>: Tess<C> where I: TessIndex, B: Buffer<'a,
   fn as_index_slice(&'a mut self) -> Result<B::Slice, Self::Err>;
 }
 
-pub trait TessIndexSliceMut<'a, C, B, I>: Tess<C> where I: TessIndex, B: Buffer<'a, C, I> {
+pub trait IndexSliceMut<'a, C, B, I>: Tess<C> where I: TessIndex, B: Buffer<'a, C, I> {
   /// Obtain a mutable slice over the index buffer.
   ///
   /// This function fails if you try to obtain a buffer from an attriteless [`Tess`] or if no
@@ -213,20 +213,20 @@ pub trait TessIndexSliceMut<'a, C, B, I>: Tess<C> where I: TessIndex, B: Buffer<
   fn as_index_slice_mut(&'a mut self) -> Result<B::SliceMut, Self::Err>;
 }
 
-pub trait TessInstSlice<'a, C, B, V>: Tess<C> where V: Vertex, B: Buffer<'a, C, V> {
+pub trait InstanceSlice<'a, C, B, V>: Tess<C> where V: Vertex, B: Buffer<'a, C, V> {
   /// Obtain a slice over the instance buffer.
   ///
   /// This function fails if you try to obtain a buffer from an attriteless [`Tess`] or
   /// deinterleaved memory.
-  fn as_inst_slice(&'a mut self) -> Result<B::Slice, Self::Err>;
+  fn as_instance_slice(&'a mut self) -> Result<B::Slice, Self::Err>;
 }
 
-pub trait TessInstSliceMut<'a, C, B, V>: Tess<C> where V: Vertex, B: Buffer<'a, C, V> {
+pub trait InstanceSliceMut<'a, C, B, V>: Tess<C> where V: Vertex, B: Buffer<'a, C, V> {
   /// Obtain a slice over the instance buffer.
   ///
   /// This function fails if you try to obtain a buffer from an attriteless [`Tess`] or
   /// deinterleaved memory.
-  fn as_inst_slice_mut(&'a mut self) -> Result<B::SliceMut, Self::Err>;
+  fn as_instance_slice_mut(&'a mut self) -> Result<B::SliceMut, Self::Err>;
 }
 
 /// Vertices can be connected via several modes.
@@ -338,3 +338,14 @@ unsafe impl TessIndex for u16 {
 unsafe impl TessIndex for u32 {
   const INDEX_TYPE: TessIndexType = TessIndexType::U32;
 }
+
+// /// Tessellation slice.
+// ///
+// /// This type enables slicing a tessellation on the fly so that we can render patches of it.
+// /// Typically, you can obtain a slice by using the [`TessSliceIndex`] trait (the
+// /// [`TessSliceIndex::slice`] method) and combining it with some Rust range operators, such as
+// /// [`..`] or [`..=`].
+// ///
+// /// [`..`]: https://doc.rust-lang.org/std/ops/struct.RangeFull.html
+// /// [`..=`]: https://doc.rust-lang.org/std/ops/struct.RangeInclusive.html
+// //pub trait TessSlice

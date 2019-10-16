@@ -2,7 +2,7 @@ use gl;
 use gl::types::*;
 use luminance::buffer::Buffer as BufferBackend;
 use luminance::context::GraphicsContext;
-use luminance::tess::{Mode, Tess as TessBackend, TessBuilder as TessBuilderBackend, TessIndex, TessIndexSlice as TessIndexSliceBackend, TessIndexSliceMut as TessIndexSliceMutBackend, TessIndexType, TessInstSlice as TessInstSliceBackend, TessInstSliceMut as TessInstSliceMutBackend, TessSlice as TessSliceBackend, TessSliceMut as TessSliceMutBackend};
+use luminance::tess::{Mode, Tess as TessBackend, TessBuilder as TessBuilderBackend, TessIndex, IndexSlice as IndexSliceBackend, IndexSliceMut as IndexSliceMutBackend, TessIndexType, InstanceSlice as InstanceSliceBackend, InstanceSliceMut as InstanceSliceMutBackend, VertexSlice as VertexSliceBackend, VertexSliceMut as VertexSliceMutBackend};
 use luminance::vertex::{Normalized, Vertex, VertexAttribDesc, VertexAttribDim, VertexAttribType, VertexBufferDesc, VertexDesc, VertexInstancing};
 use luminance::vertex_restart::VertexRestart;
 use std::cell::RefCell;
@@ -1107,7 +1107,7 @@ impl<C> TessBackend<C> for Tess where C: GraphicsContext<State = GraphicsState> 
   }
 }
 
-impl<'a, C, B, V> TessSliceBackend<'a, C, B, V> for Tess
+impl<'a, C, B, V> VertexSliceBackend<'a, C, B, V> for Tess
 where C: GraphicsContext<State = GraphicsState>,
       B: BufferBackend<'a, C, V, Slice = BufferSlice<'a, V>>,
       V: 'a + Vertex {
@@ -1116,7 +1116,7 @@ where C: GraphicsContext<State = GraphicsState>,
   }
 }
 
-impl<'a, C, B, V> TessSliceMutBackend<'a, C, B, V> for Tess
+impl<'a, C, B, V> VertexSliceMutBackend<'a, C, B, V> for Tess
 where C: GraphicsContext<State = GraphicsState>,
       B: BufferBackend<'a, C, V, SliceMut = BufferSliceMut<'a, V>>,
       V: 'a + Vertex {
@@ -1126,7 +1126,7 @@ where C: GraphicsContext<State = GraphicsState>,
 }
 
 
-impl<'a, C, B, I> TessIndexSliceBackend<'a, C, B, I> for Tess
+impl<'a, C, B, I> IndexSliceBackend<'a, C, B, I> for Tess
 where C: GraphicsContext<State = GraphicsState>,
       B: BufferBackend<'a, C, I, Slice = BufferSlice<'a, I>>,
       I: 'a + TessIndex {
@@ -1135,7 +1135,7 @@ where C: GraphicsContext<State = GraphicsState>,
   }
 }
 
-impl<'a, C, B, I> TessIndexSliceMutBackend<'a, C, B, I> for Tess
+impl<'a, C, B, I> IndexSliceMutBackend<'a, C, B, I> for Tess
 where C: GraphicsContext<State = GraphicsState>,
       B: BufferBackend<'a, C, I, SliceMut = BufferSliceMut<'a, I>>,
       I: 'a + TessIndex {
@@ -1144,20 +1144,20 @@ where C: GraphicsContext<State = GraphicsState>,
   }
 }
 
-impl<'a, C, B, V> TessInstSliceBackend<'a, C, B, V> for Tess
+impl<'a, C, B, V> InstanceSliceBackend<'a, C, B, V> for Tess
 where C: GraphicsContext<State = GraphicsState>,
       B: BufferBackend<'a, C, V, Slice = BufferSlice<'a, V>>,
       V: 'a + Vertex {
-  fn as_inst_slice(&'a mut self) -> Result<B::Slice, Self::Err> {
+  fn as_instance_slice(&'a mut self) -> Result<B::Slice, Self::Err> {
     Tess::as_inst_slice(self)
   }
 }
 
-impl<'a, C, B, V> TessInstSliceMutBackend<'a, C, B, V> for Tess
+impl<'a, C, B, V> InstanceSliceMutBackend<'a, C, B, V> for Tess
 where C: GraphicsContext<State = GraphicsState>,
       B: BufferBackend<'a, C, V, SliceMut = BufferSliceMut<'a, V>>,
       V: 'a + Vertex {
-  fn as_inst_slice_mut(&'a mut self) -> Result<B::SliceMut, Self::Err> {
+  fn as_instance_slice_mut(&'a mut self) -> Result<B::SliceMut, Self::Err> {
     Tess::as_inst_slice_mut(self)
   }
 }
