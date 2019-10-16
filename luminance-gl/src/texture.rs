@@ -16,8 +16,6 @@ use crate::depth_test::depth_comparison_to_glenum;
 use crate::pixel::opengl_pixel_format;
 use crate::state::GraphicsState;
 
-/// Raw buffer. Any buffer can be converted to that type. However, keep in mind that even though
-/// type erasure is safe, creating a buffer from a raw buffer is not.
 pub struct RawTexture {
   handle: GLuint, // handle to the GPU texture object
   target: GLenum, // “type” of the texture; used for bindings

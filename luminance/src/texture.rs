@@ -81,7 +81,7 @@ use std::os::raw::c_void;
 use std::ptr;
 use std::rc::Rc;
 
-pub use crate::depth_test::DepthComparison;
+use crate::depth_test::DepthComparison;
 use crate::pixel::{Pixel, PixelFormat};
 
 /// How to wrap texture coordinates while sampling textures?
