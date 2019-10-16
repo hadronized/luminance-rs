@@ -72,7 +72,7 @@ impl GraphicsState {
   /// > Note: keep in mind you can create only one per thread. However, if you’re building without
   /// > standard library, this function will always return successfully. You have to take extra care
   /// > in this case.
-  pub fn new() -> Result<Self, StateQueryError> {
+  pub unsafe fn new() -> Result<Self, StateQueryError> {
     #[cfg(feature = "std")]
     {
       TLS_ACQUIRE_GFX_STATE.with(|rc| {
@@ -96,47 +96,45 @@ impl GraphicsState {
   }
 
   /// Get a `GraphicsContext` from the current OpenGL context.
-  pub(crate) fn get_from_context() -> Result<Self, StateQueryError> {
-    unsafe {
-      let blending_state = get_ctx_blending_state()?;
-      let blending_equation = get_ctx_blending_equation()?;
-      let blending_func = get_ctx_blending_factors()?;
-      let depth_test = get_ctx_depth_test()?;
-      let depth_test_comparison = DepthComparison::Less;
-      let face_culling_state = get_ctx_face_culling_state()?;
-      let face_culling_order = get_ctx_face_culling_order()?;
-      let face_culling_mode = get_ctx_face_culling_mode()?;
-      let vertex_restart = get_ctx_vertex_restart()?;
-      let current_texture_unit = get_ctx_current_texture_unit()?;
-      let bound_textures = vec![(gl::TEXTURE_2D, 0); 48]; // 48 is the platform minimal requirement
-      let bound_uniform_buffers = vec![0; 36]; // 36 is the platform minimal requirement
-      let bound_array_buffer = 0;
-      let bound_element_array_buffer = 0;
-      let bound_draw_framebuffer = get_ctx_bound_draw_framebuffer()?;
-      let bound_vertex_array = get_ctx_bound_vertex_array()?;
-      let current_program = get_ctx_current_program()?;
+  pub(crate) unsafe fn get_from_context() -> Result<Self, StateQueryError> {
+    let blending_state = get_ctx_blending_state()?;
+    let blending_equation = get_ctx_blending_equation()?;
+    let blending_func = get_ctx_blending_factors()?;
+    let depth_test = get_ctx_depth_test()?;
+    let depth_test_comparison = DepthComparison::Less;
+    let face_culling_state = get_ctx_face_culling_state()?;
+    let face_culling_order = get_ctx_face_culling_order()?;
+    let face_culling_mode = get_ctx_face_culling_mode()?;
+    let vertex_restart = get_ctx_vertex_restart()?;
+    let current_texture_unit = get_ctx_current_texture_unit()?;
+    let bound_textures = vec![(gl::TEXTURE_2D, 0); 48]; // 48 is the platform minimal requirement
+    let bound_uniform_buffers = vec![0; 36]; // 36 is the platform minimal requirement
+    let bound_array_buffer = 0;
+    let bound_element_array_buffer = 0;
+    let bound_draw_framebuffer = get_ctx_bound_draw_framebuffer()?;
+    let bound_vertex_array = get_ctx_bound_vertex_array()?;
+    let current_program = get_ctx_current_program()?;
 
-      Ok(GraphicsState {
-        _a: PhantomData,
-        blending_state,
-        blending_equation,
-        blending_func,
-        depth_test,
-        depth_test_comparison,
-        face_culling_state,
-        face_culling_order,
-        face_culling_mode,
-        vertex_restart,
-        current_texture_unit,
-        bound_textures,
-        bound_uniform_buffers,
-        bound_array_buffer,
-        bound_element_array_buffer,
-        bound_draw_framebuffer,
-        bound_vertex_array,
-        current_program,
-      })
-    }
+    Ok(GraphicsState {
+      _a: PhantomData,
+      blending_state,
+      blending_equation,
+      blending_func,
+      depth_test,
+      depth_test_comparison,
+      face_culling_state,
+      face_culling_order,
+      face_culling_mode,
+      vertex_restart,
+      current_texture_unit,
+      bound_textures,
+      bound_uniform_buffers,
+      bound_array_buffer,
+      bound_element_array_buffer,
+      bound_draw_framebuffer,
+      bound_vertex_array,
+      current_program,
+    })
   }
 
   pub(crate) unsafe fn set_blending_state(&mut self, state: BlendingState) {
