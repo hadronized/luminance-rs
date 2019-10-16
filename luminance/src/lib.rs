@@ -407,7 +407,7 @@ pub mod face_culling;
  pub mod linear;
 // mod metagl;
 // pub mod pipeline;
-// pub mod pixel;
+pub mod pixel;
 pub mod render_state;
 // pub mod shader;
 pub mod tess;
