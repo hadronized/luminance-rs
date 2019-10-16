@@ -339,13 +339,105 @@ unsafe impl TessIndex for u32 {
   const INDEX_TYPE: TessIndexType = TessIndexType::U32;
 }
 
-// /// Tessellation slice.
-// ///
-// /// This type enables slicing a tessellation on the fly so that we can render patches of it.
-// /// Typically, you can obtain a slice by using the [`TessSliceIndex`] trait (the
-// /// [`TessSliceIndex::slice`] method) and combining it with some Rust range operators, such as
-// /// [`..`] or [`..=`].
-// ///
-// /// [`..`]: https://doc.rust-lang.org/std/ops/struct.RangeFull.html
-// /// [`..=`]: https://doc.rust-lang.org/std/ops/struct.RangeInclusive.html
-// //pub trait TessSlice
+/// Tessellation slice.
+///
+/// This type enables slicing a tessellation on the fly so that we can render patches of it.
+/// Typically, you can obtain a slice by using the [`TessSliceIndex`] trait (the
+/// [`TessSliceIndex::slice`] method) and combining it with some Rust range operators, such as
+/// [`..`] or [`..=`].
+///
+/// [`..`]: https://doc.rust-lang.org/std/ops/struct.RangeFull.html
+/// [`..=`]: https://doc.rust-lang.org/std/ops/struct.RangeInclusive.html
+pub trait TessSlice<'a, C, T> where T: Tess<C> {
+  /// Create a tessellation render that will render the whole input tessellation with only one
+  /// instance.
+  fn one_whole(tess: &'a T) -> Self;
+
+  /// Create a tessellation render that will render the whole input tessellation with as many
+  /// instances as specified.
+  fn inst_whole(tess: &'a T, inst_nb: usize) -> Self;
+
+  /// Create a tessellation render for a part of the tessellation starting at the beginning of its
+  /// buffer with only one instance.
+  ///
+  /// The part is selected by giving the number of vertices to render.
+  ///
+  /// > Note: if you also need to use an arbitrary part of your tessellation (not starting at the
+  /// > first vertex in its buffer), have a look at `TessSlice::one_slice`.
+  ///
+  /// # Panic
+  ///
+  /// Panic if the number of vertices is higher to the capacity of the tessellation’s vertex buffer.
+  fn one_sub(tess: &'a T, vert_nb: usize) -> Self;
+
+  /// Create a tessellation render for a part of the tessellation starting at the beginning of its
+  /// buffer with as many instances as specified.
+  ///
+  /// The part is selected by giving the number of vertices to render.
+  ///
+  /// > Note: if you also need to use an arbitrary part of your tessellation (not starting at the
+  /// > first vertex in its buffer), have a look at `TessSlice::one_slice`.
+  ///
+  /// # Panic
+  ///
+  /// Panic if the number of vertices is higher to the capacity of the tessellation’s vertex buffer.
+  fn inst_sub(tess: &'a T, vert_nb: usize, inst_nb: usize) -> Self;
+
+  /// Create a tessellation render for a slice of the tessellation starting anywhere in its buffer
+  /// with only one instance.
+  ///
+  /// The part is selected by giving the start vertex and the number of vertices to render.
+  ///
+  /// # Panic
+  ///
+  /// Panic if the start vertex is higher to the capacity of the tessellation’s vertex buffer.
+  ///
+  /// Panic if the number of vertices is higher to the capacity of the tessellation’s vertex buffer.
+  fn one_slice(tess: &'a T, start: usize, nb: usize) -> Self;
+
+  /// Create a tessellation render for a slice of the tessellation starting anywhere in its buffer
+  /// with as many instances as specified.
+  ///
+  /// The part is selected by giving the start vertex and the number of vertices to render.
+  ///
+  /// # Panic
+  ///
+  /// Panic if the start vertex is higher to the capacity of the tessellation’s vertex buffer.
+  ///
+  /// Panic if the number of vertices is higher to the capacity of the tessellation’s vertex buffer.
+  fn inst_slice(tess: &'a T, start: usize, nb: usize, inst_nb: usize) -> Self;
+
+  /// Render a tessellation.
+  fn render(&self, ctx: &mut C);
+}
+
+/// The [`Tess`] slice index feature.
+///
+/// That trait allows to use the syntax `tess.slice(_)` where `_` is one of Rust range operators:
+///
+///   - [`..`](https://doc.rust-lang.org/std/ops/struct.RangeFull.html) for the whole range.
+///   - [`a .. b`](https://doc.rust-lang.org/std/ops/struct.Range.html) for a sub-range, excluding
+///     the right part.
+///   - [`a ..= b`](https://doc.rust-lang.org/std/ops/struct.RangeInclusive.html) for a sub-range,
+///     including the right part.
+///   - [`a ..`](https://doc.rust-lang.org/std/ops/struct.RangeFrom.html) for a sub-range open
+///     on the right part.
+///   - [`.. b`](https://doc.rust-lang.org/std/ops/struct.RangeTo.html) for a sub-range open on the
+///     left part and excluding the right part.
+///   - [`..= b](https://doc.rust-lang.org/std/ops/struct.RangeToInclusive.html) for a sub-range
+///     open on the left part and including the right part.
+///
+/// It’s technically possible to add any kind of index type, even though not really useful so far.
+///
+/// Additionally, you can use the `tess.inst_slice(range, inst_nb)` construct to also specify
+/// the render should be performed with `inst_nb` instances.
+pub trait TessSliceIndex<'a, Idx> {
+  type TessSlice;
+
+  /// Slice a tesselation object and yields a [`TessSlice`] according to the index range.
+  fn slice(&'a self, idx: Idx) -> Self::TessSlice;
+
+  /// Slice a tesselation object and yields a [`TessSlice`] according to the index range with as
+  /// many instances as specified.
+  fn inst_slice(&'a self, idx: Idx, inst_nb: usize) -> Self::TessSlice;
+}

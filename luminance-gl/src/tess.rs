@@ -2,7 +2,7 @@ use gl;
 use gl::types::*;
 use luminance::buffer::Buffer as BufferBackend;
 use luminance::context::GraphicsContext;
-use luminance::tess::{Mode, Tess as TessBackend, TessBuilder as TessBuilderBackend, TessIndex, IndexSlice as IndexSliceBackend, IndexSliceMut as IndexSliceMutBackend, TessIndexType, InstanceSlice as InstanceSliceBackend, InstanceSliceMut as InstanceSliceMutBackend, VertexSlice as VertexSliceBackend, VertexSliceMut as VertexSliceMutBackend};
+use luminance::tess::{Mode, Tess as TessBackend, TessBuilder as TessBuilderBackend, TessIndex, IndexSlice as IndexSliceBackend, IndexSliceMut as IndexSliceMutBackend, TessIndexType, InstanceSlice as InstanceSliceBackend, InstanceSliceMut as InstanceSliceMutBackend, TessSliceIndex, VertexSlice as VertexSliceBackend, VertexSliceMut as VertexSliceMutBackend};
 use luminance::vertex::{Normalized, Vertex, VertexAttribDesc, VertexAttribDim, VertexAttribType, VertexBufferDesc, VertexDesc, VertexInstancing};
 use luminance::vertex_restart::VertexRestart;
 use std::cell::RefCell;
@@ -963,95 +963,78 @@ impl<'a> From<&'a Tess> for TessSlice<'a> {
   }
 }
 
-/// The [`Tess`] slice index feature.
-///
-/// That trait allows to use the syntax `tess.slice(_)` where `_` is one of Rust range operators:
-///
-///   - [`..`](https://doc.rust-lang.org/std/ops/struct.RangeFull.html) for the whole range.
-///   - [`a .. b`](https://doc.rust-lang.org/std/ops/struct.Range.html) for a sub-range, excluding
-///     the right part.
-///   - [`a ..= b`](https://doc.rust-lang.org/std/ops/struct.RangeInclusive.html) for a sub-range,
-///     including the right part.
-///   - [`a ..`](https://doc.rust-lang.org/std/ops/struct.RangeFrom.html) for a sub-range open
-///     on the right part.
-///   - [`.. b`](https://doc.rust-lang.org/std/ops/struct.RangeTo.html) for a sub-range open on the
-///     left part and excluding the right part.
-///   - [`..= b](https://doc.rust-lang.org/std/ops/struct.RangeToInclusive.html) for a sub-range
-///     open on the left part and including the right part.
-///
-/// It’s technically possible to add any kind of index type, even though not really useful so far.
-///
-/// Additionally, you can use the `tess.inst_slice(range, inst_nb)` construct to also specify
-/// the render should be performed with `inst_nb` instances.
-pub trait TessSliceIndex<Idx> {
-  /// Slice a tesselation object and yields a [`TessSlice`] according to the index range.
-  fn slice(&self, idx: Idx) -> TessSlice;
+impl<'a> TessSliceIndex<'a, RangeFull> for Tess {
+  type TessSlice = TessSlice<'a>;
 
-  /// Slice a tesselation object and yields a [`TessSlice`] according to the index range with as
-  /// many instances as specified.
-  fn inst_slice(&self, idx: Idx, inst_nb: usize) -> TessSlice;
-}
-
-impl TessSliceIndex<RangeFull> for Tess {
-  fn slice(&self, _: RangeFull) -> TessSlice {
+  fn slice(&'a self, _: RangeFull) -> Self::TessSlice {
     TessSlice::one_whole(self)
   }
 
-  fn inst_slice(&self, _: RangeFull, inst_nb: usize) -> TessSlice {
+  fn inst_slice(&'a self, _: RangeFull, inst_nb: usize) -> Self::TessSlice {
     TessSlice::inst_whole(self, inst_nb)
   }
 }
 
-impl TessSliceIndex<RangeTo<usize>> for Tess {
-  fn slice(&self, to: RangeTo<usize>) -> TessSlice {
+impl<'a> TessSliceIndex<'a, RangeTo<usize>> for Tess {
+  type TessSlice = TessSlice<'a>;
+
+  fn slice(&'a self, to: RangeTo<usize>) -> Self::TessSlice {
     TessSlice::one_sub(self, to.end)
   }
 
-  fn inst_slice(&self, to: RangeTo<usize>, inst_nb: usize) -> TessSlice {
+  fn inst_slice(&'a self, to: RangeTo<usize>, inst_nb: usize) -> Self::TessSlice {
     TessSlice::inst_sub(self, to.end, inst_nb)
   }
 }
 
-impl TessSliceIndex<RangeFrom<usize>> for Tess {
-  fn slice(&self, from: RangeFrom<usize>) -> TessSlice {
+impl<'a> TessSliceIndex<'a, RangeFrom<usize>> for Tess {
+  type TessSlice = TessSlice<'a>;
+
+  fn slice(&'a self, from: RangeFrom<usize>) -> Self::TessSlice {
     TessSlice::one_slice(self, from.start, self.vert_nb - from.start)
   }
 
-  fn inst_slice(&self, from: RangeFrom<usize>, inst_nb: usize) -> TessSlice {
+  fn inst_slice(&'a self, from: RangeFrom<usize>, inst_nb: usize) -> Self::TessSlice {
     TessSlice::inst_slice(self, from.start, self.vert_nb - from.start, inst_nb)
   }
 }
 
-impl TessSliceIndex<Range<usize>> for Tess {
-  fn slice(&self, range: Range<usize>) -> TessSlice {
+impl<'a> TessSliceIndex<'a, Range<usize>> for Tess {
+  type TessSlice = TessSlice<'a>;
+
+  fn slice(&'a self, range: Range<usize>) -> Self::TessSlice {
     TessSlice::one_slice(self, range.start, range.end - range.start)
   }
 
-  fn inst_slice(&self, range: Range<usize>, inst_nb: usize) -> TessSlice {
+  fn inst_slice(&'a self, range: Range<usize>, inst_nb: usize) -> Self::TessSlice {
     TessSlice::inst_slice(self, range.start, range.end - range.start, inst_nb)
   }
 }
 
-impl TessSliceIndex<RangeInclusive<usize>> for Tess {
-  fn slice(&self, range: RangeInclusive<usize>) -> TessSlice {
+impl<'a> TessSliceIndex<'a, RangeInclusive<usize>> for Tess {
+  type TessSlice = TessSlice<'a>;
+
+  fn slice(&'a self, range: RangeInclusive<usize>) -> Self::TessSlice {
     let start = *range.start();
     let end = *range.end();
     TessSlice::one_slice(self, start, end - start + 1)
   }
 
-  fn inst_slice(&self, range: RangeInclusive<usize>, inst_nb: usize) -> TessSlice {
+  fn inst_slice(&'a self, range: RangeInclusive<usize>, inst_nb: usize) -> Self::TessSlice {
     let start = *range.start();
     let end = *range.end();
     TessSlice::inst_slice(self, start, end - start + 1, inst_nb)
   }
 }
 
-impl TessSliceIndex<RangeToInclusive<usize>> for Tess {
-  fn slice(&self, to: RangeToInclusive<usize>) -> TessSlice {
+impl<'a> TessSliceIndex<'a, RangeToInclusive<usize>> for Tess {
+  type TessSlice = TessSlice<'a>;
+
+  fn slice(&'a self, to: RangeToInclusive<usize>) -> Self::TessSlice {
     TessSlice::one_sub(self, to.end + 1)
   }
 
-  fn inst_slice(&self, to: RangeToInclusive<usize>, inst_nb: usize) -> TessSlice {
+  fn inst_slice(&'a self, to: RangeToInclusive<usize>, inst_nb: usize) -> TessSlice {
     TessSlice::inst_sub(self, to.end + 1, inst_nb)
   }
 }
