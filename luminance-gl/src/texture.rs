@@ -2,7 +2,7 @@ use gl;
 use gl::types::*;
 use luminance::context::GraphicsContext;
 use luminance::pixel::{Pixel, PixelFormat};
-use luminance::texture::{Dim, Dimensionable, GenMipmaps, Layerable, Layering, MagFilter, MinFilter, Sampler, Wrap};
+use luminance::texture::{Dim, Dimensionable, GenMipmaps, Layerable, Layering, MagFilter, MinFilter, Sampler, Texture as TextureBackend, Wrap};
 use std::cell::RefCell;
 use std::fmt;
 use std::marker::PhantomData;
@@ -743,4 +743,67 @@ impl fmt::Display for TextureError {
 // Capacity of the dimension, which is the product of the width, height and depth.
 fn dim_capacity<D>(size: D::Size) -> u32 where D: Dimensionable {
   D::width(size) * D::height(size) * D::depth(size)
+}
+
+impl<C, L, D, P> TextureBackend<C, L, D, P> for Texture<L, D, P>
+where C:GraphicsContext<State = GraphicsState>,
+      L: Layerable,
+      D: Dimensionable,
+      P: Pixel {
+  type Sampler = Sampler;
+
+  type Err = TextureError;
+
+  fn new(
+    ctx: &mut C,
+    size: D::Size,
+    mipmaps: usize,
+    sampler: Self::Sampler
+  ) -> Result<Self, Self::Err> {
+    Texture::new(ctx, size, mipmaps, sampler)
+  }
+
+  fn mipmaps(&self) -> usize {
+    Texture::mipmaps(self)
+  }
+
+  fn clear_part(
+    &self,
+    gen_mipmaps: GenMipmaps,
+    offset: D::Offset,
+    size: D::Size,
+    pixel: P::Encoding
+  ) -> Result<(), Self::Err>
+  where P::Encoding: Copy {
+    Texture::clear_part(self, gen_mipmaps, offset, size, pixel)
+  }
+
+  fn upload_part(
+    &self,
+    gen_mipmaps: GenMipmaps,
+    offset: D::Offset,
+    size: D::Size,
+    texels: &[P::Encoding],
+  ) -> Result<(), Self::Err> {
+    Texture::upload_part(self, gen_mipmaps, offset, size, texels)
+  }
+
+  fn upload_part_raw(
+    &self,
+    gen_mipmaps: GenMipmaps,
+    offset: D::Offset,
+    size: D::Size,
+    texels: &[P::RawEncoding],
+  ) -> Result<(), Self::Err> {
+    Texture::upload_part_raw(self, gen_mipmaps, offset, size, texels)
+  }
+
+  /// Get the raw texels associated with this texture.
+  fn get_raw_texels(&self) -> Vec<P::RawEncoding> where P: Pixel, P::RawEncoding: Copy + Default {
+    Texture::get_raw_texels(self)
+  }
+
+  fn size(&self) -> D::Size {
+    Texture::size(self)
+  }
 }

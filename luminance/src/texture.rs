@@ -84,6 +84,111 @@ use std::rc::Rc;
 use crate::depth_test::DepthComparison;
 use crate::pixel::{Pixel, PixelFormat};
 
+pub trait Texture<C, L, D, P>: Sized
+where L: Layerable,
+      D: Dimensionable,
+      P: Pixel {
+  type Sampler;
+
+  type Err;
+
+  /// Create a new texture.
+  ///
+  ///   - The `mipmaps` parameter must be set to `0` if you want only one “layer of texels”.
+  ///     creating a texture without any layer wouldn’t make any sense, so if you want three layers,
+  ///     you will want the _base_ layer plus two mipmaps layers: you will then pass `2` as value
+  ///     here.
+  ///   - The `sampler` parameter allows to customize the way the texture will be sampled in
+  ///     shader stages. Refer to the documentation of [`Sampler`] for further details.
+  fn new(
+    ctx: &mut C,
+    size: D::Size,
+    mipmaps: usize,
+    sampler: Self::Sampler
+  ) -> Result<Self, Self::Err>;
+
+  /// Number of mipmaps in the texture.
+  fn mipmaps(&self) -> usize;
+
+  /// Clear a part of a texture.
+  ///
+  /// The part being cleared is defined by a rectangle in which the `offset` represents the
+  /// left-upper corner and the `size` gives the dimension of the rectangle. All the covered texels
+  /// by this rectangle will be cleared to the `pixel` value.
+  fn clear_part(
+    &self,
+    gen_mipmaps: GenMipmaps,
+    offset: D::Offset,
+    size: D::Size,
+    pixel: P::Encoding
+  ) -> Result<(), Self::Err>
+  where P::Encoding: Copy;
+
+  /// Clear a whole texture with a `pixel` value.
+  fn clear(&self, gen_mipmaps: GenMipmaps, pixel: P::Encoding) -> Result<(), Self::Err>
+  where P::Encoding: Copy {
+    self.clear_part(gen_mipmaps, D::ZERO_OFFSET, self.size(), pixel)
+  }
+
+  /// Upload texels to a part of a texture.
+  ///
+  /// The part being updated is defined by a rectangle in which the `offset` represents the
+  /// left-upper corner and the `size` gives the dimension of the rectangle. All the covered texels
+  /// by this rectangle will be updated by the `texels` slice.
+  fn upload_part(
+    &self,
+    gen_mipmaps: GenMipmaps,
+    offset: D::Offset,
+    size: D::Size,
+    texels: &[P::Encoding],
+  ) -> Result<(), Self::Err>;
+
+  /// Upload `texels` to the whole texture.
+  fn upload(
+    &self,
+    gen_mipmaps: GenMipmaps,
+    texels: &[P::Encoding],
+  ) -> Result<(), Self::Err> {
+    self.upload_part(gen_mipmaps, D::ZERO_OFFSET, self.size(), texels)
+  }
+
+  /// Upload raw `texels` to a part of a texture.
+  ///
+  /// This function is similar to `upload_part` but it works on `P::RawEncoding` instead of
+  /// `P::Encoding`. This useful when the texels are represented as a contiguous array of raw
+  /// components of the texels.
+  fn upload_part_raw(
+    &self,
+    gen_mipmaps: GenMipmaps,
+    offset: D::Offset,
+    size: D::Size,
+    texels: &[P::RawEncoding],
+  ) -> Result<(), Self::Err>;
+
+  /// Upload raw `texels` to the whole texture.
+  fn upload_raw(
+    &self,
+    gen_mipmaps: GenMipmaps,
+    texels: &[P::RawEncoding]
+  ) -> Result<(), Self::Err> {
+    self.upload_part_raw(gen_mipmaps, D::ZERO_OFFSET, self.size(), texels)
+  }
+
+  /// Get the raw texels associated with this texture.
+  fn get_raw_texels(&self) -> Vec<P::RawEncoding> where P: Pixel, P::RawEncoding: Copy + Default;
+
+  /// Get the inner size of the texture.
+  ///
+  /// That value represents the _dimension_ of the texture. Depending on the type of texture, its
+  /// dimensionality varies. For instance:
+  ///
+  ///   - 1D textures have a single value, giving the length of the texture.
+  ///   - 2D textures have two values for their _width_ and _height_.
+  ///   - 3D textures have three values: _width_, _height_ and _depth_.
+  ///   - Etc. etc.
+  fn size(&self) -> D::Size;
+}
+
 /// How to wrap texture coordinates while sampling textures?
 #[derive(Clone, Copy, Debug)]
 pub enum Wrap {
