@@ -544,34 +544,34 @@ where C: GraphicsContext<State = GraphicsState>,
   }
 
   fn at(&self, i: usize) -> Option<T> where T: Copy {
-    self.at(i)
+    Buffer::at(self, i)
   }
 
   fn whole(&self) -> Vec<T> where T: Copy {
-    self.whole()
+    Buffer::whole(self)
   }
 
   fn set(&mut self, i: usize, x: T) -> Result<(), Self::Err> where T: Copy {
-    self.set(i, x)
+    Buffer::set(self, i, x)
   }
 
   fn write_whole(&mut self, values: &[T]) -> Result<(), Self::Err> {
-    self.write_whole(values)
+    Buffer::write_whole(self, values)
   }
 
   fn clear(&mut self, x: T) -> Result<(), Self::Err> where T: Copy {
-    self.clear(x)
+    Buffer::clear(self, x)
   }
 
   fn fill<V>(&mut self, values: V) -> Result<(), Self::Err> where V: AsRef<[T]> {
-    self.fill(values)
+    Buffer::fill(self, values)
   }
 
   fn as_slice(&'sliced mut self) -> Result<Self::Slice, Self::Err> {
-    self.as_slice()
+    Buffer::as_slice(self)
   }
 
   fn as_slice_mut(&'sliced mut self) -> Result<Self::SliceMut, Self::Err> {
-    self.as_slice_mut()
+    Buffer::as_slice_mut(self)
   }
 }
