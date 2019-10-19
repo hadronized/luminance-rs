@@ -32,7 +32,7 @@ provides information about the internal architecture and the public API yielded 
 
 ## Context & Problems
 
-[luminance] is a graphics library that tacles the problem of common graphics APIs and more
+[luminance] is a graphics library that tackles the problem of common graphics APIs and more
 especially [OpenGL]. Those APIs suffer from a set of problems that are not trivially removed:
 
   - Most build upon the C programming language, which is an unsafe, low-level systems programming
@@ -42,21 +42,19 @@ especially [OpenGL]. Those APIs suffer from a set of problems that are not trivi
   - It’s possible to generate bindings (often unsafe) in other languages by using generators (for
     OpenGL, Khronos gives a `gl.xml` file that provides everything needed to generate bindings).
     However, since OpenGL is loosely typed (i.e. all objects are hidden behind types like
-    `GLuint` or `GLint`, which makes it very hard not to confuse two objects’ types, for instance).
-    Also, that leads to runtime problems with unneeded checks (i.e. check that a value has the right
-    type, for instance).
+    `GLuint` or `GLenum`, which makes it very hard not to confuse two objects’ types, for instance).
+    it leads to runtime problems with unneeded checks (i.e. check that a value has the right type
+    type, for instance) — if you don’t check types, you might end up with really weird behaviors.
   - The global state is something that makes an **OpenGL** function context-sensitive. It means that
     you always need to be sure that the right objects are bound and that you’re calling the function
     at the right moment. This is a very bad situation for pretty much any developer who would like
     to provide a more explicit and easy experience to their end-users.
 
-[luminance] tacles these problems by providing a type-safe, memory-safe and stateless crate. All
+[luminance] tackles these problems by providing a type-safe, memory-safe and stateless crate. All
 the global state handling is done internally and a public interface is exposed in a way the user
 doesn’t know they actually use a stateful API.
 
-Another situation arose: how do we compile our Rust code to run on WASM, or on Android? Currently,
-this situation is not in the scope of [luminance], but this very document plans to bring this
-feature on the table.
+Another situation arose: how do we compile our Rust code to run on WASM, or on Android?
 
 Finally, we would like [luminance] to be able to target several versions of OpenGL and, if possible,
 [Vulkan] too, as it becomes (has become? :)) a standard in the graphics industry.
@@ -67,7 +65,7 @@ multi-platform support.
 
 ## Existing solutions
 
-Some solutions already exists that solve all those problems. The most famous one being [gfx]. [gfx]
+Some solutions already exist that solve all those problems. The most famous one being [gfx]. [gfx]
 is, currently, a set of crates:
 
   - [gfx-hal]: the *hardware abstraction layer* of [gfx].
