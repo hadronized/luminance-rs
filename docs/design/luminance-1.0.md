@@ -8,21 +8,24 @@ provides information about the internal architecture and the public API yielded 
 
 * [Context & Problems](#context--problems)
 * [Existing solutions](#existing-solutions)
-  * [Pre-luminance-1.0](#pre-luminance-10)
 * [Design](#design)
+  * [Ecosystem](#ecosystem)
   * [Vertex](#vertex)
-  * [Vertex semantics](#vertex-semantics)
+    * [Vertex semantics](#vertex-semantics)
   * [Tessellations](#tessellations)
     * [Attributeless tessellations](#attributeless-tessellations)
     * [Vertex instancing](#vertex-instancing)
     * [Geometry instancing](#geometry-instancing)
+    * [Slicing](#slicing)
     * [Buffer mapping](#buffer-mapping)
   * [Shaders](#shaders)
     * [Customizing shaders with uniform interfaces](#customizing-shaders-with-uniform-interfaces)
+    * [Adapting and re-adapting shader programs](#adapting-and-re-adapting-shader-programs)
   * [Framebuffers](#framebuffers)
   * [Textures](#textures)
+    * [Pixels](#pixels)
   * [Graphics pipelines](#graphics-pipelines)
-  * [The driver architecture](#the-driver-architecture)
+  * [The backend architecture](#the-backend-architecture)
     * [On distributing implementations](#on-distributing-implementations)
 * [Rationale](#rationale)
   * [Release candidates](#release-candidates)
@@ -85,42 +88,61 @@ abandoned since. The implication is that [luminance]’s designs are way differe
 productions), even though currently, [luminance] has only been used with *demos* and not *intros*
 (typically 64k).
 
-### Pre-luminance-1.0
-
-The latest [luminance] version before `luminance-1.0` is [luminance-0.30.1]. This version has been
-stable and quite pleasant to work with but also presents several drawbacks:
-
-  - The current code, implemented with the *OpenGL 3.3* specification in mind, lacks several
-    features of modern graphics APIs, such as cross-platform support, compute shaders, etc.
-  - It is tight to *OpenGL 3.3* and cannot use any other versions.
-  - It cannot currently use *Vulkan*.
-  - Some abstractions rely on *hidden-semantics*. This is fixed by the introduction of several new
-    concepts (staging between [luminance-0.30.1] and `luminance-1.0`).
-
 ## Design
 
-The core concepts of [luminance] are going to be described in this section. Most of the concepts
-have been around for several months or even years (most of them come from the [Haskell version],
-reimagined to work efficiently in Rust).
-
-A companion crate exists in order to make the whole [luminance] experience easier and smoother: the
-[luminance-derive] crate.
+The core concepts of [luminance] are described in this section. Most of the concepts have been around
+for several months or even years (most of them come from the [Haskell version], rethought to work
+efficiently in Rust).
 
 > Disclaimer: the following content describes the `1.0` version of [luminance].
+
+### Ecosystem
+
+[luminance] is a set of crates, each having a specific scope:
+
+- [luminance]: this crate is the most abstract and serves as interface. It contains all the design
+  code that makes luminance what it is. You will find several common and concrete symbols too, like
+  pixel types and formats, texture dimensions, traits, vertex definitions, etc.
+- [luminance-derive]: an optional yet important companion crate. This crate helps people implement
+  several traits from [luminance] by exposing _derive proc-macros_.
+- [luminance-windowing]: an interoperability library for windowing purposes. It exports several
+  simple and naive type to open windows and handle events. It covers the most basics needs so it
+  might not always be suited for everything you do.
+- [luminance-glfw]: GLFW support for [luminance] and [luminance-windowing].
+- [luminance-glutin]: Glutin support for [luminance] and [luminance-windowing].
+- [luminance-gl]: OpenGL implementation of [luminance].
+- [luminance-gles]: OpenGL ES implementation of [luminance].
+- [luminance-webgl]: WebGL implementation of [luminance].
+
+The current design allows a new crate to implement traits exposed in [luminance] to support a new
+graphics backend. That’s what [luminance-gl] and [luminance-webgl] do, for instance. As another
+example, we could write a [luminance-vk] to support Vulkan at some point, too.
+
+“Using luminance” really just means choosing a backend, for instance [luminance-gles], and using it
+along with [luminance] to build graphics code. To actually run the application, one needs to create
+a rendering surface to handle both renders and system events. Either this is done manually or via
+[luminance-windowing] and a crate implementing it, for instance [luminance-glfw].
+
+> It is important to understand that [luminance] is just about graphics code, not windowing code.
+> This clear separation allows to “execute” luminance code whatever the windowing setup. A contract
+> exists between what is expected by luminance and the windowing setup, but this will be detailed
+> later in this document. The important point is that you can implement that contract on your own
+> (and at your own risks) if you want to.
 
 ### Vertex
 
 [luminance] allows you to create objects made out of geometrical points. Those points have *a
-structure* that is not enforced by [luminance]: it is on the user of [luminance] to define such a
-structure. A trait — the `Vertex` trait — is responsible for ensuring that the structure is correct.
-Because implementing this trait is `unsafe` and not as trivial as you might think, you’re highly
-advised to use the `Vertex` proc-macro available via the [luminance-derive] crate.
+structure* that is not enforced by [luminance]: it is on the user of to define such a structure. A
+trait — the `Vertex` trait — is responsible for ensuring that the structure is correct. Because
+implementing this trait is `unsafe` and not as trivial as you might think, you’re highly
+advised to use the `Vertex` _derive proc-macro_ available via the [luminance-derive] crate.
 
 Basically, `struct` types are typically the ones you will be using if you use the [luminance-derive]
 crate. Each field must use a special type that implements the `Semantics` trait (more on this in the
-next section). Your struct must be tagged with the appropriate `Vertex` annotation to bind it to a
+next section). Your `struct` must be tagged with the appropriate `Vertex` annotation to bind it to a
 semantics. This is needed so that [luminance] can perform compile-time check between your vertex
-type and the vertex semantics it refers to.
+type and the vertex semantics it refers to, but also to map your structure in shader stages, when you
+send geometrical data down a graphics pipeline.
 
 ```rust
 #[derive(Vertex)]
@@ -149,7 +171,7 @@ vertices. Feel free to have a look at the documentation of the `Vertex` proc-mac
 Instancing is also supported via a special property set on the semantics mapping. See the
 [Vertex instancing](#vertex-instancing) section for further details.
 
-### Vertex semantics
+#### Vertex semantics
 
 [luminance] revolves around the concept of *vertex semantics*. Semantics are pretty central to the
 whole design of `luminance-1.0` because, as seen in the previous section, they provide enough
@@ -158,7 +180,12 @@ harmony without sacrificing on composition.
 
 Vertex semantics are introduced via the `Semantics` trait. This trait defines the interface of
 vertex semantics. Again, you don’t have to worry too much about implementing it if you are using the
-[luminance-derive] crate.
+[luminance-derive] crate, but if you really want to implement it by hand, you will have to ensure
+you implement it correctly. Especially, each semantics should be mapped to a _unique index_
+(`usize`), have a unique name (`&'static str`) and you must be able to provide a set of every
+possible values semantics can have (`Vec<SemanticDesc>`). Violating one of the uniqueness rules
+described above or not providing all the possible values in the semantics set will result in
+incorrect setup of either GPU memory buffers or shader variables fetches.
 
 The idea is the following: you create an `enum` that is to be used everywhere in your application /
 library. You don’t have to follow this rule but if you do, it will make everything way easier. That
@@ -199,38 +226,40 @@ mapping your type to a single value that gives the semantics of that attribute t
 ### Tessellations
 
 Tessellations have been supported since the beginning of [luminance] because they’re currently the
-single way to initiate a render in a framebuffer. A tessellation is an object that gathers several
-concepts required for rendering:
+single way to initiate a render. A tessellation is an object that gathers several concepts required
+for rendering:
 
-  - Some vertices, or none. Vertices are stored in *buffers*. If you decide not to use any buffer
-    and then are running without vertices, you can still use a tessellation to perform a render.
-    See the [Attributeless tessellations](#attributeless-tessellations) section for further details.
-  - For indexed rendering only, some indices. Indices are used to construct primitives by indexing
-    the buffers of vertices. If you don’t use any, it is assumed you want a non-indexed, standard
-    rendering.
-  - A *primitive mode*, which is simply a mode of connecting vertices to each other. You can find
-   *points* (no connection), *lines* (two by two), *line strips* (continuous lines), *triangles*,
-   etc.
-  - Optionally some vertex instancing attributes. See the [Vertex instancing](#vertex-instancing)
-    chapter for further details.
-  - The default number of vertices to render. That allows [luminance] to be able to render a *whole*
-    tessellation without requiring you to keep track of the number of vertices inside the
-    tessellation.
-  - The default number of indices to render. Same thing as above.
-  - The primitive restart index. In case of indexed rendering, this special value is used to notify
-    the graphics pipeline when to break a *strip* or *fan* primitive to start a new primitive.
+- Some vertices, or none. Vertices are stored in *buffers*. If you decide not to use any buffer
+  and then are running without vertices, you can still use a tessellation to perform a render.
+  See the [Attributeless tessellations](#attributeless-tessellations) section for further details.
+- For indexed rendering only, some indices. Indices are used to construct primitives by indexing
+  the buffers of vertices. If you don’t use any, it is assumed you want a non-indexed, standard
+  rendering.
+- A *primitive mode*, which is simply a mode of connecting vertices to each other. You can find
+  *points* (no connection), *lines* (two by two), *line strips* (continuous lines), *triangles*,
+  etc.
+- Optionally some vertex instancing attributes. See the [Vertex instancing](#vertex-instancing)
+  chapter for further details.
+- The default number of vertices to render. That allows [luminance] to be able to render a *whole*
+  tessellation without requiring you to keep track of the number of vertices inside the
+  tessellation.
+- The default number of indices to render. Same thing as above.
+- The primitive restart index. In case of indexed rendering, this special value is used to notify
+  the graphics pipeline when to break a *strip* or *fan* primitive to start a new primitive.
 
-Tessellations are built via the [builder pattern].
+Tessellations are built via the [builder pattern] and heavily depend on the vertex definition of
+the previous section. It is not possible, by default, to pass every type you want as geometrical.
+You must use a vertex-compatible type.
 
 #### Attributeless tessellations
 
 Some tessellations are special as they have no vertices and no indices. It might feel strange at
-first but this is a perfectly fine and wanted situation. We call those tessellations *attributeless*
-tessellations, meaning that they don’t have attributes for the points you want to render. However,
-they still have points. Imagine an attributeless tessellation made of 32 points. Those points are
-akin to 32 units (`()`) at this point. However, since you can easily guess which vertex is being
-rendered when you are in your vertex shader, you can “spawn” attributes out of the void by
-hardcoding them in the shader.
+first but this is a perfectly fine and desirable situation. We call those tessellations
+*attributeless* tessellations, meaning that they don’t have attributes for the points you want to
+render. However, they still have points. Imagine an attributeless tessellation made of 32 points.
+Those points are akin to 32 units (`()`). However, since you can easily guess which vertex is being
+rendered when you are in your vertex shader — via its index, provided by the graphics pipeline when
+running a shader — you can “spawn” attributes out of the void by hardcoding them in shader stages.
 
 This feature is very frequent in [demoscene] when programming *intros* or *demos*. They allow you
 to render simple or implicit geometry without having to fill your GPU memory.
@@ -241,25 +270,59 @@ setting both the primitive mode and the number of vertices to render.
 #### Vertex instancing
 
 Tessellations accept additional and special buffers: *vertex instancing buffers*. Those are buffers
-of values which types implement `Vertex` too, but they are quite different as they are used as
-properties for instances, not vertices.
+of values which types must be vertex-compatible too, but they are quite different as they are used as
+properties for instances, not vertices. Keep in mind that the vertex type you use must be mapped to
+the same semantics as the one used for regular vertices as they share the same indexing space.
 
 #### Geometry instancing
 
 Geometry instancing is performed by allowing you to render several instances of your tessellation at
 render time. It is then your responsibility to customize your shader to take instancing into
-account.
+account. As with _attributelless tessellations_ where the graphics pipeline gives you the index of
+each vertex being treated, geometry instancing has the graphics pipeline gives you the index of the
+instancing being rendered. You can use that index to lookup indexed property to customize each
+instances.
+
+#### Slicing
+
+Tessellations by default are not very useful for the graphics pipeline. In order to “render” a
+tessellation, a graphics pipeline needs to know which part of it you want to render. You can render
+the whole tessellation, only a few vertices at the beginning, at the end, etc.
+
+That concept is called a `TessSlice` and obtaining one is a cheap and easy operation. It’s highly
+encouraged to use the standard operators for representing ranges (`..`, `a ..`, `.. b`, `a .. b`,
+`a ..= b` and `..= b`).
+
+> For convenience purposes, `&Tess` can be converted to `TessSlice`.
+
+That feature is useful to pack several objects into a single GPU memory buffer and render them by
+slicing the whole buffer.
 
 #### Buffer mapping
 
 It is possible to retrieve immutable and mutable slices of buffers (both vertices and instances’
-data). However, it is only possible to do it if you use interleaved memory and you don’t use
-attributeless rendering.
+data as well as index buffers). However, it is only possible to do it if you use interleaved memory
+and you don’t use attributeless rendering.
+
+Buffer mapping is often needed when you want to update a tessellation on the fly with user inputs,
+for instance. Instead of recreating a tessellation on the fly, it’s faster to map buffers and change
+their contents.
+
+By combining several features, such as buffer mapping and slicing, you can implement a tessellation
+which the number of points is dynamic.
 
 ### Shaders
 
 Shaders in [luminance] are not really special: they gather *shader stages* by compiling them from
-sources (typically strings) and link them into *shader programs*.
+sources (typically strings) and link them into *shader programs*. They are strongly typed with
+three type variables:
+
+- The _uniform interface_ type, explain below.
+- The _vertex semantics_. As explained in the vertex chapter, that type allows to know how to map
+  vertex attributes (e.g. in GLSL, `in` declared variables) to actual GPU memory buffers without
+  having to explicitly state it in the shader source (e.g. `layout (location = X)` is not needed!).
+- The _render targets_ type. That type allows to state exactly what the shader program will output
+  to. It’s akin to _uniform interface_ but serves as connectivity with _framebuffers_.
 
 Shaders cannot be used directly and require the use of [Graphics pipelines](#graphics-pipelines).
 
@@ -268,30 +331,58 @@ Shaders cannot be used directly and require the use of [Graphics pipelines](#gra
 Currently, shaders are parametered by several types. One of them is called the *uniform interface*
 as it defines an interface between the GPU shader object and your code. This interface is
 *contravariant*: it will be held for you until you actually run a *graphics pipeline* with the
-associated shader. At this point, you will have access to the interface.
+given shader program. At this point, you will have access to the interface and will be in position
+to update GPU’s shader memory variables (e.g. `uniform` in GLSL).
 
 Uniform interfaces are built at shader program creation. This allows for several optimizations to be
 done, such as caching graphics calls to prevent fetching data from the GPU every time you want to
-update a uniform value.
+update a uniform value or for ease purposes, such as remapping indexes (i.e. `layout (location = X)`
+in GLSL is not needed because [luminance] takes care of that for you thanks to _vertex semantics_).
 
 It is also important to note that a special exception exists to update uniforms on the GPU:
 *dynamic uniform lookups*. Those allow you to lookup a uniform variable without passing through the
 interface. That has obviously a runtime cost and the current API is very explicit about it. It’s
-also a fallible operation as type mismatch is checked.
+also a fallible operation as type mismatch is checked. However, you might want to use that feature
+when dealing with unknown (at compile-time) uniform interfaces, such as material editors or GUIs,
+for instance.
+
+Uniform interface types must implement the `UniformInterface` trait but, again, you’re strongly
+advised to use [luminance-derive] and the _derive proc-macro_ `UniformInterface` to do it with
+`struct` automatically. Each `Uniform` variables can be name-remapped but also be _unbound_,
+meaning that if the uniform interface fails to map them (because they don’t exist on the shader
+program side or are inactive), they will be silently ignored and set to a no-op state.
+
+#### Adapting and re-adapting shader programs
+
+Once a shader program is built, you cannot mutate it anymore — i.e. add shader stages, link again,
+perform uniform interface regeneration, etc. That might be limiting in some specific and niche
+cases, so there exists two methods coming in different flavours to avoid having to recreate a shader
+program: adaptation.
+
+Adaptation is what to seek when you want to recreate a uniform interface without having to recompile
+and link the shader program. Because of the nature of uniform interfaces, it’s possible to switch
+from one type to another by using adaptation and re-adaptation feature.
 
 ### Framebuffers
 
 Framebuffers play an import role in [luminance]. They are rendered images into by graphics
 pipelines. Framebuffers, in [luminance], have several important properties:
 
-  - Their width and height.
+  - Their dimensions and layer property. The most common kind of framebuffer is a 2D, flat
+    framebuffer, which is basically an object holding a 2D surface of pixels. Layering is an
+    advanced feature allowing to create layers inside a framebuffer.
   - A *color slot*. A color slot is typically a texture or a set of several textures that represent
-    render targets.
-  - A *depth slot*. A depth slot can either be nothing or a texture and play the same role as a
+    render targets. It’s also possible to find framebuffers with the `()` color slot: those are
+    special framebuffers that won’t get anything explicitly output to from shaders. They can be
+    useful to implement some special techniques that require depths information only, for instance.
+  - A *depth slot*. A depth slot can either be nothing or a texture and plays the same role as a
     *color slot*, but for depth information flowing through the graphics pipeline.
 
 As for with shaders, you cannot use a framebuffer directly and are required to use it inside a
 graphics pipeline.
+
+The typical usage of framebuffers is to render into your scene and retrieve rendered pixels via
+color or depth slots.
 
 ### Textures
 
@@ -302,8 +393,32 @@ defined by:
   - The layout (a flat image or a layered texture).
   - The dimension (1D, 2D, 3D, cubemap, etc.).
 
-Textures play an important role in customizing the visual aspect of your application. As other
-resources, you need to use them in a graphics pipeline to unlock their power.
+Textures play an important role in customizing the visual aspect of your application. You can use
+them in _uniform interfaces_ to customize renders or you can ask access to them via _framebuffers_.
+
+#### Pixels
+
+Pixels have received a special attention in [luminance]. They are represented with several types and
+traits, giving enough information about them to unlock several features in shaders and textures.
+
+First, pixel types must implement the `Pixel` trait, reifying format data. The format of a pixel is
+a gathering of several information:
+
+- Its encoding format. That gives information about the number of channels are required to
+  represent such a pixel as well as, for each channel, the number of bits of information.
+- Its type. The type serves as how the bits should be interpreted. For instance, an 8-bit RGB pixel
+  format is not enough to know how we should interpret those three channels, because it could be
+  8-bit signed integers, 8-bit unsigned integers, etc. The type is also used as a tag to allow
+  special pixel formats to exist, such as _normalized_ pixel formats, which store data as integers
+  but expose them as floating point value when sampled from a shader stage.
+- Its raw encoding, which is an associated Rust type allowing for interoperability when uploading
+  data to a texture efficiently or retrieving from external sources (e.g. the
+  [image](https://crates.io/crates/image) crate).
+- Its sampler type, which allows to create uniform interfaces that will work with several flavours
+  of pixels without having to create one interface for each.
+
+Pixel types are used in several places: framebuffers _color slots_ and _depth slots_, textures,
+shader uniform interfaces, etc.
 
 ### Graphics pipelines
 
@@ -313,16 +428,17 @@ dependency graph, some resources, in order to be used or rendered to or whatever
 resources to be available, done or in use too.
 
 When [luminance] was imagined, it was using *OpenGL 3.3* in mind (even older and younger versions in
-the [Haskell version]). Within such a graphics API, resources need to be available (bound) while
-some other resources are performing some work. For instance, in order to render, you need a shader
-and a framebuffer to be bound. But you might also imagine that you will want to use several shaders
-(to perform several kind of renders) into the same framebuffer. The other way around is also
-possible: you might want to render with the same shader into several, different framebuffers.
+the [Haskell version], ranging from 2.0 to 4.5). Within such a graphics API, resources need to be
+available (bound) while some other resources are performing some work. For instance, in order to
+render, you need a shader and a framebuffer to be bound. But you might also imagine that you will
+want to use several shaders (to perform several kind of renders) into the same framebuffer. The other
+way around is also possible: you might want to render with the same shader into several, different
+framebuffers.
 
 In [luminance], the control-flow of your code is used as a dependency graph. Because a typical code
-AST has scopes, scopes are used to naturally implement a scoped resource handling. What it means is
-that when you start using a framebuffer, you are given an object that will live until the
-framebuffer’s use lives, creating a virtual scope for you to play with one or several shaders.
+AST has scopes, scopes are used to naturally implement scoped resource handling. What it means is
+that when you start using a framebuffer, you are given an object that will live until you don’t actually
+need it anymore, creating a virtual scope for you to play with one or several shaders.
 
 You typically have this hierarchy of scopes:
 
@@ -350,7 +466,7 @@ at least two and play around with the *color slots* and/or *depth slots* of the 
 Introducing a render with a shader first allows to share shaders for tessellations. A shader will
 shade future renders into the framebuffer you used to create the pipeline object. Using a pipeline
 creates a scoped object called a *shading gate*. Shading gates are the only way to create subsequent
-renders. Shading gates also provide you your *uniform interface* via a *query* object. That query
+renders. Shading gates also provide you with your *uniform interface* via a *query* object. That query
 object allows you to access the uniform interface to customize your shader’s behavior or dynamically
 change uniform values if you prefer.
 
@@ -363,7 +479,7 @@ dependency graph you will use. A tessellation gate is used to render tessellatio
 via the use of *tessellation slices*.
 
 All the gate objects are passed to subsequent part of the dependency graph via arguments to lambdas.
-That allows lifetimes to be captured and prevent you to leak objects out and break the unsafe
+That allows lifetimes to be captured and prevents you to leak objects out and break the unsafe
 graphics API.
 
 At any point, you can use special extern objects in your pipeline. Tessellations are handled at the
@@ -375,12 +491,11 @@ placing some calls at any place you want. Those objects are currently:
 
 Those resources can then be used to customize renders from anywhere in the dependency graph.
 
-### The driver architecture
+### The backend architecture
 
-The driver architecture is a new and experimental feature of [luminance] that is the most important
-change in the 1.0 version. Drivers are a way to abstract everything that was discussed so far
-behind a simpler, type-unsafe and type-erased interface, in order to implement all the features
-discussed so far.
+The backend architecture is a new feature of [luminance] that is the most important change in the
+1.0 version. Drivers are a way to abstract everything that was discussed so far behind a simpler,
+type-unsafe and type-erased interface, in order to implement all the features discussed so far.
 
 The way drivers work is the following: every namespace of feature is assigned a trait, that must be
 implemented to use the feature. For instance, tessellations are set behind the `TessDriver` trait.
@@ -467,13 +582,19 @@ will occur only:
     deprecated but I still have the rights to push to it.
 
 [luminance]: https://crates.io/crates/luminance
+[luminance-derive]: https://crates.io/crates/luminance-derive
+[luminance-gl]: https://crates.io/crates/luminance-gl
+[luminance-gles]: https://crates.io/crates/luminance-gl
+[luminance-glfw]: https://crates.io/crates/luminance-glfw
+[luminance-glutin]: https://crates.io/crates/luminance-glutin
+[luminance-windowing]: https://crates.io/crates/luminance-windowing
+[luminance-webgl]: https://crates.io/crates/luminance-windowing
 [OpenGL]: https://www.opengl.org
 [Vulkan]: https://www.khronos.org/vulkan
 [gfx]: https://crates.io/crates/gfx
 [gfx-hal]: https://crates.io/crates/gfx-hal
 [gfx-warden]: https://crates.io/crates/gfx-warden
 [luminance-0.30.1]: https://crates.io/crates/luminance/0.30.1
-[luminance-derive]: ../../luminance-derive
 [builder pattern]: https://doc.rust-lang.org/1.0.0/style/ownership/builders.html
 [demoscene]: https://en.wikipedia.org/wiki/Demoscene
 [Haskell version]: https://hackage.haskell.org/package/luminance
