@@ -72,17 +72,8 @@
 //!
 //! [`PixelFormat`]: crate::pixel::PixelFormat
 
-use std::cell::RefCell;
-use std::fmt;
-use std::marker::PhantomData;
-use std::mem;
-use std::ops::{Deref, DerefMut};
-use std::os::raw::c_void;
-use std::ptr;
-use std::rc::Rc;
-
 use crate::depth_test::DepthComparison;
-use crate::pixel::{Pixel, PixelFormat};
+use crate::pixel::Pixel;
 
 pub trait Texture<C, L, D, P>: Sized
 where L: Layerable,

@@ -1,6 +1,5 @@
 use gl;
 use gl::types::*;
-use std::cell::RefCell;
 use std::fmt;
 use std::marker::PhantomData;
 

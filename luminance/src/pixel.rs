@@ -18,6 +18,9 @@ pub unsafe trait Pixel {
 
   /// Reify to `PixelFormat`.
   fn pixel_format() -> PixelFormat;
+
+  /// Pixel format.
+  const PIXEL_FORMAT: PixelFormat;
 }
 
 /// Constraint on `Pixel` for color ones.
@@ -212,6 +215,11 @@ macro_rules! impl_Pixel {
           format: $format,
         }
       }
+
+      const PIXEL_FORMAT: PixelFormat = PixelFormat {
+        encoding: Type::$encoding_ty,
+        format: $format,
+      };
     }
   };
 }
