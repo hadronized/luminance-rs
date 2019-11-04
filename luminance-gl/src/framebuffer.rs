@@ -31,8 +31,8 @@
 use gl;
 use gl::types::*;
 use luminance::context::GraphicsContext;
-use luminance::framebuffer::{ColorSlot, DepthSlot};
-use luminance::pixel::{ColorPixel, DepthPixel, PixelFormat, RenderablePixel};
+use luminance::framebuffer::{ColorSlot, DepthSlot, ReifyTexture};
+use luminance::pixel::{ColorPixel, DepthPixel, PixelFormat, RenderablePixel, Pixel};
 use luminance::texture::{Dim2, Dimensionable, Flat, Layerable};
 use std::cell::RefCell;
 use std::fmt;
@@ -101,6 +101,11 @@ impl fmt::Display for IncompleteReason {
   }
 }
 
+// State used to reify textures.
+struct ReifyState {
+  textures: Vec<GLuint>
+}
+
 /// Framebuffer with static layering, dimension, access and slots formats.
 ///
 /// A `Framebuffer` is a *GPU* special object used to render to. Because framebuffers have a
@@ -119,8 +124,8 @@ pub struct Framebuffer<L, D, CS, DS>
 where L: Layerable,
       D: Dimensionable,
       D::Size: Copy,
-      CS: ColorSlot<L, D>,
-      DS: DepthSlot<L, D> {
+      CS: ColorSlot<GraphicsState, L, D, ReifyState>,
+      DS: DepthSlot<GraphicsState, L, D, ReifyState>, {
   handle: GLuint,
   renderbuffer: Option<GLuint>,
   dimension: D::Size,
@@ -155,8 +160,8 @@ impl<L, D, CS, DS> Drop for Framebuffer<L, D, CS, DS>
 where L: Layerable,
       D: Dimensionable,
       D::Size: Copy,
-      CS: ColorSlot<L, D>,
-      DS: DepthSlot<L, D> {
+      CS: ColorSlot<GraphicsState, L, D, ReifyState>,
+      DS: DepthSlot<GraphicsState, L, D, ReifyState> {
   fn drop(&mut self) {
     self.destroy();
   }
@@ -166,8 +171,8 @@ impl<L, D, CS, DS> Framebuffer<L, D, CS, DS>
 where L: Layerable,
       D: Dimensionable,
       D::Size: Copy,
-      CS: ColorSlot<L, D>,
-      DS: DepthSlot<L, D> {
+      CS: ColorSlot<GraphicsState, L, D, ReifyState>,
+      DS: DepthSlot<GraphicsState, L, D, ReifyState> {
   /// Create a new framebuffer.
   ///
   /// You’re always handed at least the base level of the texture. If you require any *additional*
@@ -336,79 +341,32 @@ fn get_status() -> Result<(), IncompleteReason> {
   }
 }
 
-// Trait used to reify a color slot from types.
-trait ReifyColorSlot<L, D>: ColorSlot<L, D>
-where L: Layerable,
-      D: Dimensionable,
-      D::Size: Copy {
-  /// Reify a list of raw textures.
-  fn reify_textures<C, I>(
+impl<L, D, I> ReifyTexture<GraphicsState, L, D, I>
+where
+  Self: Pixel,
+  L: Layerable,
+  D: Dimensionable,
+  I: Iterator<Item = GLuint>,
+{
+  type Texture = Texture<L, D, Self>;
+
+  fn reify_texture<C>(
     ctx: &mut C,
     size: D::Size,
     mipmaps: usize,
     textures: &mut I,
-  ) -> Self::ColorTextures
-  where
-    C: GraphicsContext<State = GraphicsState>,
-    I: Iterator<Item = GLuint>;
-}
-
-impl<L, D, P> ReifyColorSlot<L, D> for P
-where L: Layerable,
-      D: Dimensionable,
-      D::Size: Copy,
-      Self: ColorPixel + RenderablePixel + ColorSlot<L, D, ColorTextures = Texture<L, D, P>> {
-  fn reify_textures<C, I>(ctx: &mut C, size: D::Size, mipmaps: usize, textures: &mut I) -> Self::ColorTextures
-  where C: GraphicsContext<State = GraphicsState>,
-        I: Iterator<Item = GLuint> {
-    let color_texture = textures.next().unwrap();
+  ) -> Self::Texture
+  where C: GraphicsContext<State = GraphicsState> {
+    let texture = textures.next().unwrap();
 
     unsafe {
       let raw = RawTexture::new(
         ctx.state().clone(),
-        color_texture,
+        texture,
         opengl_target(L::layering(), D::dim()),
       );
+
       Texture::from_raw(raw, size, mipmaps)
     }
   }
 }
-
-macro_rules! impl_reify_color_slot_tuple {
-  ($($pf:ident),*) => {
-    impl<L, D, $($pf),*> ReifyColorSlot<L, D> for ($($pf),*)
-    where L: Layerable,
-          D: Dimensionable,
-          D::Size: Copy,
-          $(
-            $pf: ColorPixel + RenderablePixel + ColorSlot<L, D, ColorTextures = Texture<L, D, $pf>>
-          ),* {
-      fn reify_textures<C, I>(
-        ctx: &mut C,
-        size: D::Size,
-        mipmaps: usize,
-        textures: &mut I
-      ) -> Self::ColorTextures
-      where C: GraphicsContext,
-            I: Iterator<Item = GLuint> {
-        ($($pf::reify_textures(ctx, size, mipmaps, textures)),*)
-      }
-    }
-  }
-}
-
-macro_rules! impl_reify_color_slot_tuples {
-  ($first:ident , $second:ident) => {
-    // stop at pairs
-    impl_reify_color_slot_tuple!($first, $second);
-  };
-
-  ($first:ident , $($pf:ident),*) => {
-    // implement the same list without the first type (reduced by one)
-    impl_reify_color_slot_tuples!($($pf),*);
-    // implement the current list
-    impl_reify_color_slot_tuple!($first, $($pf),*);
-  };
-}
-
-impl_reify_color_slot_tuples!(PF, PE, PD, PC, PB, PA, P9, P8, P7, P6, P5, P4, P3, P2, P1, P0);
