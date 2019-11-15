@@ -12,7 +12,7 @@ use luminance::context::GraphicsContext as _;
 use luminance::render_state::RenderState;
 use luminance::shader::program::Program;
 use luminance::tess::{Mode, TessBuilder};
-use luminance_glfw::{Action, GlfwSurface, Key, Surface, WindowEvent, WindowDim, WindowOpt};
+use luminance_glfw::{Action, GlfwSurface, Key, Surface, WindowDim, WindowEvent, WindowOpt};
 
 const VS: &'static str = include_str!("attributeless-vs.glsl");
 const FS: &'static str = include_str!("simple-fs.glsl");

@@ -8,16 +8,16 @@
 mod common;
 
 use common::{Semantics, Vertex, VertexColor, VertexPosition};
-use image::{ColorType, save_buffer};
+use image::{save_buffer, ColorType};
 use luminance::context::GraphicsContext as _;
 use luminance::framebuffer::Framebuffer;
+use luminance::pixel::NormRGBA8UI;
 use luminance::render_state::RenderState;
 use luminance::shader::program::Program;
 use luminance::tess::{Mode, TessBuilder};
-use luminance::texture::{Flat, Dim2};
-use luminance::pixel::NormRGBA8UI;
+use luminance::texture::{Dim2, Flat};
 use luminance_derive::Vertex;
-use luminance_glfw::{Action, GlfwSurface, Key, Surface, WindowEvent, WindowDim, WindowOpt};
+use luminance_glfw::{Action, GlfwSurface, Key, Surface, WindowDim, WindowEvent, WindowOpt};
 
 // We get the shader at compile time from local files
 const VS: &'static str = include_str!("simple-vs.glsl");
@@ -26,27 +26,45 @@ const FS: &'static str = include_str!("simple-fs.glsl");
 // The vertices. We define two triangles.
 const TRI_VERTICES: [Vertex; 6] = [
   // first triangle – an RGB one
-  Vertex { pos: VertexPosition::new([0.5, -0.5]), rgb: VertexColor::new([0., 1., 0.]) },
-  Vertex { pos: VertexPosition::new([0.0, 0.5]), rgb: VertexColor::new([0., 0., 1.]) },
-  Vertex { pos: VertexPosition::new([-0.5, -0.5]), rgb: VertexColor::new([1., 0., 0.]) },
+  Vertex {
+    pos: VertexPosition::new([0.5, -0.5]),
+    rgb: VertexColor::new([0., 1., 0.]),
+  },
+  Vertex {
+    pos: VertexPosition::new([0.0, 0.5]),
+    rgb: VertexColor::new([0., 0., 1.]),
+  },
+  Vertex {
+    pos: VertexPosition::new([-0.5, -0.5]),
+    rgb: VertexColor::new([1., 0., 0.]),
+  },
   // second triangle, a purple one, positioned differently
-  Vertex { pos: VertexPosition::new([-0.5, 0.5]), rgb: VertexColor::new([1., 0.2, 1.]) },
-  Vertex { pos: VertexPosition::new([0.0, -0.5]), rgb: VertexColor::new([0.2, 1., 1.]) },
-  Vertex { pos: VertexPosition::new([0.5, 0.5]), rgb: VertexColor::new([0.2, 0.2, 1.]) },
+  Vertex {
+    pos: VertexPosition::new([-0.5, 0.5]),
+    rgb: VertexColor::new([1., 0.2, 1.]),
+  },
+  Vertex {
+    pos: VertexPosition::new([0.0, -0.5]),
+    rgb: VertexColor::new([0.2, 1., 1.]),
+  },
+  Vertex {
+    pos: VertexPosition::new([0.5, 0.5]),
+    rgb: VertexColor::new([0.2, 0.2, 1.]),
+  },
 ];
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Vertex)]
 #[vertex(sem = "Semantics")]
 struct Positions {
-  pos: VertexPosition
+  pos: VertexPosition,
 }
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Vertex)]
 #[vertex(sem = "Semantics")]
 struct Colors {
-  color: VertexColor
+  color: VertexColor,
 }
 
 fn main() {
@@ -55,7 +73,8 @@ fn main() {
     WindowDim::Windowed(960, 540),
     "Hello, world!",
     WindowOpt::default(),
-  ).expect("GLFW surface creation");
+  )
+  .expect("GLFW surface creation");
 
   // we need a program to “shade” our triangles and to tell luminance which is the input vertex
   // type, and we’re not interested in the other two type variables for this sample

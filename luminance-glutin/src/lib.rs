@@ -6,19 +6,19 @@
 #![deny(missing_docs)]
 
 use gl;
+pub use glutin::dpi::{LogicalPosition, LogicalSize};
 pub use glutin::{
   ContextError, CreationError, DeviceEvent, DeviceId, ElementState, Event, KeyboardInput,
-  ModifiersState, MouseScrollDelta, Touch, TouchPhase, VirtualKeyCode, WindowEvent, WindowId,
-  MouseButton
+  ModifiersState, MouseButton, MouseScrollDelta, Touch, TouchPhase, VirtualKeyCode, WindowEvent,
+  WindowId,
 };
-pub use glutin::dpi::{LogicalPosition, LogicalSize};
 pub use luminance_windowing::{CursorMode, Surface, WindowDim, WindowOpt};
 
-use glutin::{
-  Api, ContextBuilder, EventsLoop, GlProfile, GlRequest, PossiblyCurrent,
-  WindowBuilder, WindowedContext
-};
 use glutin::dpi::PhysicalSize;
+use glutin::{
+  Api, ContextBuilder, EventsLoop, GlProfile, GlRequest, PossiblyCurrent, WindowBuilder,
+  WindowedContext,
+};
 use luminance::context::GraphicsContext;
 use luminance::state::{GraphicsState, StateQueryError};
 use std::cell::RefCell;
@@ -34,7 +34,7 @@ pub enum Error {
   /// OpenGL context error.
   ContextError(ContextError),
   /// Graphics state error that might occur when querying the initial state.
-  GraphicsStateError(StateQueryError)
+  GraphicsStateError(StateQueryError),
 }
 
 impl From<CreationError> for Error {
@@ -60,7 +60,7 @@ pub struct GlutinSurface {
   gfx_state: Rc<RefCell<GraphicsState>>,
   opts: WindowOpt,
   // a list of event that has happened
-  event_queue: Vec<Event>
+  event_queue: Vec<Event>,
 }
 
 unsafe impl GraphicsContext for GlutinSurface {
@@ -79,11 +79,12 @@ impl Surface for GlutinSurface {
     let window_builder = WindowBuilder::new().with_title(title);
     let window_builder = match dim {
       WindowDim::Windowed(w, h) => window_builder.with_dimensions((w, h).into()),
-      WindowDim::Fullscreen => window_builder.with_fullscreen(Some(event_loop.get_primary_monitor())),
-      WindowDim::FullscreenRestricted(w, h) =>
-        window_builder
-          .with_dimensions((w, h).into())
-          .with_fullscreen(Some(event_loop.get_primary_monitor()))
+      WindowDim::Fullscreen => {
+        window_builder.with_fullscreen(Some(event_loop.get_primary_monitor()))
+      }
+      WindowDim::FullscreenRestricted(w, h) => window_builder
+        .with_dimensions((w, h).into())
+        .with_fullscreen(Some(event_loop.get_primary_monitor())),
     };
 
     let windowed_ctx = ContextBuilder::new()
@@ -112,7 +113,7 @@ impl Surface for GlutinSurface {
       event_loop,
       gfx_state: Rc::new(RefCell::new(gfx_state)),
       opts: win_opt,
-      event_queue: Vec::new()
+      event_queue: Vec::new(),
     };
 
     Ok(surface)
@@ -125,14 +126,17 @@ impl Surface for GlutinSurface {
   fn set_cursor_mode(&mut self, mode: CursorMode) -> &mut Self {
     match mode {
       CursorMode::Visible => self.ctx.window().hide_cursor(false),
-      CursorMode::Invisible | CursorMode::Disabled => self.ctx.window().hide_cursor(true)
+      CursorMode::Invisible | CursorMode::Disabled => self.ctx.window().hide_cursor(true),
     }
 
     self.opts = self.opts.set_cursor_mode(mode);
     self
   }
 
-  fn set_num_samples<S>(&mut self, _samples: S) -> &mut Self where S: Into<Option<u32>> {
+  fn set_num_samples<S>(&mut self, _samples: S) -> &mut Self
+  where
+    S: Into<Option<u32>>,
+  {
     panic!("not supported")
   }
 

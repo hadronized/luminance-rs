@@ -32,12 +32,12 @@ use gl;
 use gl::types::*;
 use luminance::context::GraphicsContext;
 use luminance::framebuffer::{ColorSlot, DepthSlot, ReifyTexture};
-use luminance::pixel::{ColorPixel, DepthPixel, PixelFormat, RenderablePixel, Pixel};
+use luminance::pixel::{ColorPixel, DepthPixel, Pixel, PixelFormat, RenderablePixel};
 use luminance::texture::{Dim2, Dimensionable, Flat, Layerable};
 use std::cell::RefCell;
 use std::fmt;
-use std::rc::Rc;
 use std::marker::PhantomData;
+use std::rc::Rc;
 
 use crate::state::{Bind, GraphicsState};
 use crate::texture::{create_texture, opengl_target, RawTexture, Texture, TextureError};
@@ -103,7 +103,7 @@ impl fmt::Display for IncompleteReason {
 
 // State used to reify textures.
 struct ReifyState {
-  textures: Vec<GLuint>
+  textures: Vec<GLuint>,
 }
 
 /// Framebuffer with static layering, dimension, access and slots formats.
@@ -121,11 +121,13 @@ struct ReifyState {
 /// you use several color slots, you’ll be performing what’s called *MRT* (*M* ultiple *R* ender
 /// *T* argets), enabling to render to several textures at once.
 pub struct Framebuffer<L, D, CS, DS>
-where L: Layerable,
-      D: Dimensionable,
-      D::Size: Copy,
-      CS: ColorSlot<GraphicsState, L, D, ReifyState>,
-      DS: DepthSlot<GraphicsState, L, D, ReifyState>, {
+where
+  L: Layerable,
+  D: Dimensionable,
+  D::Size: Copy,
+  CS: ColorSlot<GraphicsState, L, D, ReifyState>,
+  DS: DepthSlot<GraphicsState, L, D, ReifyState>,
+{
   handle: GLuint,
   renderbuffer: Option<GLuint>,
   dimension: D::Size,
@@ -138,11 +140,10 @@ where L: Layerable,
 
 impl Framebuffer<Flat, Dim2, (), ()> {
   /// Get the back buffer with the given dimension.
-  pub fn back_buffer<C>(
-    ctx: &mut C,
-    dimension: <Dim2 as Dimensionable>::Size
-  ) -> Self
-  where C: GraphicsContext<State = GraphicsState> {
+  pub fn back_buffer<C>(ctx: &mut C, dimension: <Dim2 as Dimensionable>::Size) -> Self
+  where
+    C: GraphicsContext<State = GraphicsState>,
+  {
     Framebuffer {
       handle: 0,
       renderbuffer: None,
@@ -157,22 +158,26 @@ impl Framebuffer<Flat, Dim2, (), ()> {
 }
 
 impl<L, D, CS, DS> Drop for Framebuffer<L, D, CS, DS>
-where L: Layerable,
-      D: Dimensionable,
-      D::Size: Copy,
-      CS: ColorSlot<GraphicsState, L, D, ReifyState>,
-      DS: DepthSlot<GraphicsState, L, D, ReifyState> {
+where
+  L: Layerable,
+  D: Dimensionable,
+  D::Size: Copy,
+  CS: ColorSlot<GraphicsState, L, D, ReifyState>,
+  DS: DepthSlot<GraphicsState, L, D, ReifyState>,
+{
   fn drop(&mut self) {
     self.destroy();
   }
 }
 
 impl<L, D, CS, DS> Framebuffer<L, D, CS, DS>
-where L: Layerable,
-      D: Dimensionable,
-      D::Size: Copy,
-      CS: ColorSlot<GraphicsState, L, D, ReifyState>,
-      DS: DepthSlot<GraphicsState, L, D, ReifyState> {
+where
+  L: Layerable,
+  D: Dimensionable,
+  D::Size: Copy,
+  CS: ColorSlot<GraphicsState, L, D, ReifyState>,
+  DS: DepthSlot<GraphicsState, L, D, ReifyState>,
+{
   /// Create a new framebuffer.
   ///
   /// You’re always handed at least the base level of the texture. If you require any *additional*
@@ -182,7 +187,9 @@ where L: Layerable,
     dimension: D::Size,
     mipmaps: usize,
   ) -> Result<Framebuffer<L, D, CS, DS>, FramebufferError>
-  where C: GraphicsContext<State = GraphicsState> {
+  where
+    C: GraphicsContext<State = GraphicsState>,
+  {
     let mipmaps = mipmaps + 1;
     let mut handle: GLuint = 0;
     let color_formats = CS::COLOR_FORMATS;
@@ -209,7 +216,12 @@ where L: Layerable,
           ctx.state().borrow_mut().bind_texture(target, *texture);
           create_texture::<L, D>(target, dimension, mipmaps, *format, Default::default())
             .map_err(FramebufferError::TextureError)?;
-          gl::FramebufferTexture(gl::FRAMEBUFFER, gl::COLOR_ATTACHMENT0 + i as GLenum, *texture, 0);
+          gl::FramebufferTexture(
+            gl::FRAMEBUFFER,
+            gl::COLOR_ATTACHMENT0 + i as GLenum,
+            *texture,
+            0,
+          );
         }
 
         // specify the list of color buffers to draw to
@@ -337,7 +349,10 @@ fn get_status() -> Result<(), IncompleteReason> {
     gl::FRAMEBUFFER_UNSUPPORTED => Err(IncompleteReason::Unsupported),
     gl::FRAMEBUFFER_INCOMPLETE_MULTISAMPLE => Err(IncompleteReason::IncompleteMultisample),
     gl::FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS => Err(IncompleteReason::IncompleteLayerTargets),
-    _ => panic!("unknown OpenGL framebuffer incomplete status! status={}", status),
+    _ => panic!(
+      "unknown OpenGL framebuffer incomplete status! status={}",
+      status
+    ),
   }
 }
 
@@ -350,13 +365,10 @@ where
 {
   type Texture = Texture<L, D, Self>;
 
-  fn reify_texture<C>(
-    ctx: &mut C,
-    size: D::Size,
-    mipmaps: usize,
-    textures: &mut I,
-  ) -> Self::Texture
-  where C: GraphicsContext<State = GraphicsState> {
+  fn reify_texture<C>(ctx: &mut C, size: D::Size, mipmaps: usize, textures: &mut I) -> Self::Texture
+  where
+    C: GraphicsContext<State = GraphicsState>,
+  {
     let texture = textures.next().unwrap();
 
     unsafe {

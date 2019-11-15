@@ -104,28 +104,34 @@ pub trait Buffer<'sliced, C, T> {
   unsafe fn new(ctx: &mut C, len: usize) -> Self;
 
   /// Create a buffer out of a slice.
-  fn from_slice<S>(
-    ctx: &mut C,
-    slice: S
-  ) -> Self
-  where S: AsRef<[T]>;
+  fn from_slice<S>(ctx: &mut C, slice: S) -> Self
+  where
+    S: AsRef<[T]>;
 
   /// Create a new [`Buffer`] with a given number of elements and ininitialize all the elements to
   /// the same value.
-  fn repeat(ctx: &mut C, len: usize, value: T) -> Self where T: Copy;
+  fn repeat(ctx: &mut C, len: usize, value: T) -> Self
+  where
+    T: Copy;
 
   /// Retrieve an element from the [`Buffer`].
   ///
   /// This version checks boundaries.
-  fn at(&self, i: usize) -> Option<T> where T: Copy;
+  fn at(&self, i: usize) -> Option<T>
+  where
+    T: Copy;
 
   /// Retrieve the whole content of the [`Buffer`].
-  fn whole(&self) -> Vec<T> where T: Copy;
+  fn whole(&self) -> Vec<T>
+  where
+    T: Copy;
 
   /// Set a value at a given index in the [`Buffer`].
   ///
   /// This version checks boundaries.
-  fn set(&mut self, i: usize, x: T) -> Result<(), Self::Err> where T: Copy;
+  fn set(&mut self, i: usize, x: T) -> Result<(), Self::Err>
+  where
+    T: Copy;
 
   /// Write a whole slice into a buffer.
   ///
@@ -137,10 +143,14 @@ pub trait Buffer<'sliced, C, T> {
   fn write_whole(&mut self, values: &[T]) -> Result<(), Self::Err>;
 
   /// Fill the [`Buffer`] with a single value.
-  fn clear(&mut self, x: T) -> Result<(), Self::Err> where T: Copy;
+  fn clear(&mut self, x: T) -> Result<(), Self::Err>
+  where
+    T: Copy;
 
   /// Fill the whole buffer with an array.
-  fn fill<V>(&mut self, values: V) -> Result<(), Self::Err> where V: AsRef<[T]>;
+  fn fill<V>(&mut self, values: V) -> Result<(), Self::Err>
+  where
+    V: AsRef<[T]>;
 
   /// Obtain an immutable slice view into the buffer.
   fn as_slice(&'sliced mut self) -> Result<Self::Slice, Self::Err>;

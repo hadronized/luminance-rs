@@ -15,12 +15,12 @@
 
 mod common;
 
-use crate::common::{Semantics, Vertex, VertexPosition, VertexColor};
+use crate::common::{Semantics, Vertex, VertexColor, VertexPosition};
 use luminance::context::GraphicsContext as _;
 use luminance::render_state::RenderState;
 use luminance::shader::program::Program;
 use luminance::tess::{Mode, TessBuilder};
-use luminance_glfw::{Action, GlfwSurface, Key, Surface, WindowEvent, WindowDim, WindowOpt};
+use luminance_glfw::{Action, GlfwSurface, Key, Surface, WindowDim, WindowEvent, WindowOpt};
 use std::time::Instant;
 
 const VS: &'static str = include_str!("displacement-vs.glsl");
@@ -28,9 +28,18 @@ const FS: &'static str = include_str!("displacement-fs.glsl");
 
 // Only one triangle this time.
 const TRI_VERTICES: [Vertex; 3] = [
-  Vertex { pos: VertexPosition::new([0.5, -0.5]), rgb: VertexColor::new([1., 0., 0.]) },
-  Vertex { pos: VertexPosition::new([0.0, 0.5]), rgb: VertexColor::new([0., 1., 0.]) },
-  Vertex { pos: VertexPosition::new([-0.5, -0.5]), rgb: VertexColor::new([0., 0., 1.]) },
+  Vertex {
+    pos: VertexPosition::new([0.5, -0.5]),
+    rgb: VertexColor::new([1., 0., 0.]),
+  },
+  Vertex {
+    pos: VertexPosition::new([0.0, 0.5]),
+    rgb: VertexColor::new([0., 1., 0.]),
+  },
+  Vertex {
+    pos: VertexPosition::new([-0.5, -0.5]),
+    rgb: VertexColor::new([0., 0., 1.]),
+  },
 ];
 
 fn main() {

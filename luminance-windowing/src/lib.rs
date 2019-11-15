@@ -56,7 +56,7 @@ pub enum CursorMode {
   /// The cursor exists yet has been disabled.
   Invisible,
   /// The cursor is disabled.
-  Disabled
+  Disabled,
 }
 
 /// Different window options.
@@ -102,7 +102,10 @@ impl WindowOpt {
   ///
   /// Pass `None` to disable multisampling.
   #[inline]
-  pub fn set_num_samples<S>(self, samples: S) -> Self where S: Into<Option<u32>> {
+  pub fn set_num_samples<S>(self, samples: S) -> Self
+  where
+    S: Into<Option<u32>>,
+  {
     WindowOpt {
       num_samples: samples.into(),
       ..self
@@ -138,7 +141,9 @@ pub trait Surface: GraphicsContext + Sized {
   fn set_cursor_mode(&mut self, mode: CursorMode) -> &mut Self;
 
   /// Change the multisampling state.
-  fn set_num_samples<S>(&mut self, samples: S) -> &mut Self where S: Into<Option<u32>>;
+  fn set_num_samples<S>(&mut self, samples: S) -> &mut Self
+  where
+    S: Into<Option<u32>>;
 
   /// Size of the surface’s framebuffer.
   fn size(&self) -> [u32; 2];

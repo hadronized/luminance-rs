@@ -1,5 +1,5 @@
 use luminance::vertex::{
-  HasSemantics, Semantics, Vertex, VertexAttrib, VertexBufferDesc, VertexInstancing
+  HasSemantics, Semantics, Vertex, VertexAttrib, VertexBufferDesc, VertexInstancing,
 };
 use luminance_derive::{Semantics, Vertex};
 
@@ -12,7 +12,7 @@ fn derive_simple_semantics() {
     #[sem(name = "normal", repr = "[f32; 3]", wrapper = "VertexNormal")]
     Normal,
     #[sem(name = "color", repr = "[f32; 4]", wrapper = "VertexColor")]
-    Color
+    Color,
   }
 
   #[derive(Clone, Copy, Debug, Vertex)]
@@ -21,7 +21,7 @@ fn derive_simple_semantics() {
   struct Vertex {
     pos: VertexPosition,
     nor: VertexNormal,
-    col: VertexColor
+    col: VertexColor,
   }
 
   assert_eq!(Semantics::Position.index(), 0);
@@ -37,9 +37,21 @@ fn derive_simple_semantics() {
   assert_eq!(VertexPosition::new([1., 2., 3.]).repr, [1., 2., 3.]);
 
   let expected_desc = vec![
-    VertexBufferDesc::new(Semantics::Position, VertexInstancing::On, <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_DESC),
-    VertexBufferDesc::new(Semantics::Normal, VertexInstancing::On, <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_DESC),
-    VertexBufferDesc::new(Semantics::Color, VertexInstancing::On, <[f32; 4] as VertexAttrib>::VERTEX_ATTRIB_DESC),
+    VertexBufferDesc::new(
+      Semantics::Position,
+      VertexInstancing::On,
+      <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_DESC,
+    ),
+    VertexBufferDesc::new(
+      Semantics::Normal,
+      VertexInstancing::On,
+      <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_DESC,
+    ),
+    VertexBufferDesc::new(
+      Semantics::Color,
+      VertexInstancing::On,
+      <[f32; 4] as VertexAttrib>::VERTEX_ATTRIB_DESC,
+    ),
   ];
 
   assert_eq!(Vertex::vertex_desc(), expected_desc);
@@ -54,11 +66,15 @@ fn derive_struct_tuple_vertex() {
     #[sem(name = "normal", repr = "[f32; 3]", wrapper = "VertexNormal")]
     Normal,
     #[sem(name = "color", repr = "[u8; 4]", wrapper = "VertexColor")]
-    Color
+    Color,
   }
 
   #[derive(Clone, Copy, Debug, Vertex)]
   #[repr(C)]
   #[vertex(sem = "Semantics")]
-  struct Vertex(VertexPosition, VertexNormal, #[vertex(normalized = "true")] VertexColor);
+  struct Vertex(
+    VertexPosition,
+    VertexNormal,
+    #[vertex(normalized = "true")] VertexColor,
+  );
 }

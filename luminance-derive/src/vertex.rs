@@ -1,4 +1,4 @@
-use crate::attrib::{AttrError, get_field_attr_once};
+use crate::attrib::{get_field_attr_once, AttrError};
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use std::fmt;
@@ -17,10 +17,8 @@ pub(crate) enum StructImplError {
 impl fmt::Display for StructImplError {
   fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
     match *self {
-      StructImplError::SemanticsError(ref e) =>
-        write!(f, "error with semantics type; {}", e),
-      StructImplError::FieldError(ref e) =>
-        write!(f, "error with vertex attribute field; {}", e),
+      StructImplError::SemanticsError(ref e) => write!(f, "error with semantics type; {}", e),
+      StructImplError::FieldError(ref e) => write!(f, "error with vertex attribute field; {}", e),
       StructImplError::UnsupportedUnit => f.write_str("unsupported unit struct"),
     }
   }
@@ -30,17 +28,14 @@ impl fmt::Display for StructImplError {
 pub(crate) fn generate_vertex_impl<'a, A>(
   ident: Ident,
   attrs: A,
-  struct_: DataStruct
+  struct_: DataStruct,
 ) -> Result<TokenStream, StructImplError>
-where A: Iterator<Item = &'a Attribute> + Clone {
+where
+  A: Iterator<Item = &'a Attribute> + Clone,
+{
   // search the semantics name
-  let sem_type: Type = get_field_attr_once(
-    &ident,
-    attrs.clone(),
-    "vertex",
-    "sem",
-    KNOWN_SUBKEYS
-  ).map_err(StructImplError::SemanticsError)?;
+  let sem_type: Type = get_field_attr_once(&ident, attrs.clone(), "vertex", "sem", KNOWN_SUBKEYS)
+    .map_err(StructImplError::SemanticsError)?;
 
   let instancing = get_instancing(&ident, attrs.clone())?;
 
@@ -59,7 +54,7 @@ where A: Iterator<Item = &'a Attribute> + Clone {
           &instancing,
           &mut indexed_vertex_attrib_descs,
           &mut fields_types,
-          None
+          None,
         )?;
       }
 
@@ -82,15 +77,20 @@ where A: Iterator<Item = &'a Attribute> + Clone {
           &instancing,
           &mut indexed_vertex_attrib_descs,
           &mut fields_types,
-          &mut fields_names
+          &mut fields_names,
         )?;
       }
 
-      let output = process_struct(ident, indexed_vertex_attrib_descs, fields_names, fields_types);
+      let output = process_struct(
+        ident,
+        indexed_vertex_attrib_descs,
+        fields_names,
+        fields_types,
+      );
       Ok(output.into())
     }
 
-    Fields::Unit => Err(StructImplError::UnsupportedUnit)
+    Fields::Unit => Err(StructImplError::UnsupportedUnit),
   }
 }
 
@@ -103,29 +103,26 @@ fn process_field<'a, FN>(
   fields_types: &mut Vec<Type>,
   fields_names: FN,
 ) -> Result<(), StructImplError>
-where FN: Into<Option<&'a mut Vec<Ident>>> {
+where
+  FN: Into<Option<&'a mut Vec<Ident>>>,
+{
   // search for the normalized argument; if not there, we don’t normalize anything
-  let normalized = get_field_attr_once(
-    &ident,
-    &field.attrs,
-    "vertex",
-    "normalized",
-    KNOWN_SUBKEYS
-  ).map(|b: LitBool| b.value)
+  let normalized = get_field_attr_once(&ident, &field.attrs, "vertex", "normalized", KNOWN_SUBKEYS)
+    .map(|b: LitBool| b.value)
     .or_else(|e| match e {
       AttrError::CannotFindAttribute(..) => Ok(false),
-      _ => Err(e)
+      _ => Err(e),
     })
     .map_err(StructImplError::FieldError)?;
 
   let field_ty = &field.ty;
   let vertex_attrib_desc = if normalized {
-    quote!{ (<#field_ty as luminance::vertex::VertexAttrib>::VERTEX_ATTRIB_DESC).normalize() }
+    quote! { (<#field_ty as luminance::vertex::VertexAttrib>::VERTEX_ATTRIB_DESC).normalize() }
   } else {
-    quote!{ <#field_ty as luminance::vertex::VertexAttrib>::VERTEX_ATTRIB_DESC }
+    quote! { <#field_ty as luminance::vertex::VertexAttrib>::VERTEX_ATTRIB_DESC }
   };
 
-  let indexed_vertex_attrib_desc_q = quote!{
+  let indexed_vertex_attrib_desc_q = quote! {
     luminance::vertex::VertexBufferDesc::new::<#sem_type>(
       <#field_ty as luminance::vertex::HasSemantics>::SEMANTICS,
       #instancing,
@@ -150,11 +147,13 @@ fn process_struct(
   struct_name: Ident,
   indexed_vertex_attrib_descs: Vec<proc_macro2::TokenStream>,
   fields_names: Vec<Ident>,
-  fields_types: Vec<Type>
+  fields_types: Vec<Type>,
 ) -> proc_macro2::TokenStream {
   let fn_new = if fields_names.is_empty() {
     // struct tuple
-    let i: Vec<_> = (0 .. fields_types.len()).map(|i| format_ident!("field_{}", i)).collect();
+    let i: Vec<_> = (0..fields_types.len())
+      .map(|i| format_ident!("field_{}", i))
+      .collect();
 
     quote! {
       impl #struct_name {
@@ -188,27 +187,24 @@ fn process_struct(
 
 fn get_instancing<'a, A>(
   ident: &Ident,
-  attrs: A
+  attrs: A,
 ) -> Result<proc_macro2::TokenStream, StructImplError>
-where A: IntoIterator<Item = &'a Attribute> {
+where
+  A: IntoIterator<Item = &'a Attribute>,
+{
   // search for the instancing argument; if not there, we don’t use vertex instancing
-  get_field_attr_once(
-    &ident,
-    attrs,
-    "vertex",
-    "instanced",
-    KNOWN_SUBKEYS
-  ).map(|b: LitBool| {
+  get_field_attr_once(&ident, attrs, "vertex", "instanced", KNOWN_SUBKEYS)
+    .map(|b: LitBool| {
       if b.value {
         quote! { luminance::vertex::VertexInstancing::On }
       } else {
         quote! { luminance::vertex::VertexInstancing::Off }
       }
-  }).or_else(|e| match e {
-    AttrError::CannotFindAttribute(..) => {
-      Ok(quote! { luminance::vertex::VertexInstancing::Off })
-    }
+    })
+    .or_else(|e| match e {
+      AttrError::CannotFindAttribute(..) => Ok(quote! { luminance::vertex::VertexInstancing::Off }),
 
-    _ => Err(e)
-  }).map_err(StructImplError::FieldError)
+      _ => Err(e),
+    })
+    .map_err(StructImplError::FieldError)
 }

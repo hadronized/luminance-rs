@@ -20,7 +20,7 @@ use luminance::shader::program::{Program, Uniform};
 use luminance::tess::{Mode, TessBuilder};
 use luminance::texture::{Dim2, Flat, GenMipmaps, Sampler, Texture};
 use luminance_derive::UniformInterface;
-use luminance_glfw::{Action, GlfwSurface, Key, Surface, WindowEvent, WindowDim, WindowOpt};
+use luminance_glfw::{Action, GlfwSurface, Key, Surface, WindowDim, WindowEvent, WindowOpt};
 use std::env; // used to get the CLI arguments
 use std::path::Path;
 
@@ -39,7 +39,7 @@ fn main() {
 #[derive(UniformInterface)]
 struct ShaderInterface {
   // the 'static lifetime acts as “anything” here
-  tex: Uniform<&'static BoundTexture<'static, Flat, Dim2, NormUnsigned>>
+  tex: Uniform<&'static BoundTexture<'static, Flat, Dim2, NormUnsigned>>,
 }
 
 fn run(texture_path: &Path) {
@@ -50,7 +50,8 @@ fn run(texture_path: &Path) {
     WindowDim::Windowed(width, height),
     "Hello, world!",
     WindowOpt::default(),
-  ).expect("GLFW surface creation");
+  )
+  .expect("GLFW surface creation");
 
   let tex = load_from_disk(&mut surface, img);
 
@@ -69,7 +70,8 @@ fn run(texture_path: &Path) {
     .unwrap();
 
   let mut back_buffer = surface.back_buffer().unwrap();
-  let render_st = RenderState::default().set_blending((Equation::Additive, Factor::SrcAlpha, Factor::Zero));
+  let render_st =
+    RenderState::default().set_blending((Equation::Additive, Factor::SrcAlpha, Factor::Zero));
   let mut resize = false;
 
   println!("rendering!");
@@ -94,9 +96,10 @@ fn run(texture_path: &Path) {
 
     // here, we need to bind the pipeline variable; it will enable us to bind the texture to the GPU
     // and use it in the shader
-    surface
-      .pipeline_builder()
-      .pipeline(&back_buffer, [0., 0., 0., 0.], |pipeline, mut shd_gate| {
+    surface.pipeline_builder().pipeline(
+      &back_buffer,
+      [0., 0., 0., 0.],
+      |pipeline, mut shd_gate| {
         // bind our fancy texture to the GPU: it gives us a bound texture we can use with the shader
         let bound_tex = pipeline.bind_texture(&tex);
 
@@ -111,7 +114,8 @@ fn run(texture_path: &Path) {
             tess_gate.render(&tess);
           });
         });
-      });
+      },
+    );
 
     surface.swap_buffers();
   }
@@ -122,7 +126,10 @@ fn read_image(path: &Path) -> Option<image::RgbImage> {
   image::open(path).map(|img| img.flipv().to_rgb()).ok()
 }
 
-fn load_from_disk(surface: &mut GlfwSurface, img: image::RgbImage) -> Texture<Flat, Dim2, NormRGB8UI> {
+fn load_from_disk(
+  surface: &mut GlfwSurface,
+  img: image::RgbImage,
+) -> Texture<Flat, Dim2, NormRGB8UI> {
   let (width, height) = img.dimensions();
   let texels = img.into_raw();
 

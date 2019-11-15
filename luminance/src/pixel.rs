@@ -334,7 +334,13 @@ impl_RenderablePixel!(R32UI);
 #[derive(Clone, Copy, Debug)]
 pub struct NormR32UI;
 
-impl_Pixel!(NormR32UI, u32, u32, NormUnsigned, Format::R(Size::ThirtyTwo));
+impl_Pixel!(
+  NormR32UI,
+  u32,
+  u32,
+  NormUnsigned,
+  Format::R(Size::ThirtyTwo)
+);
 impl_ColorPixel!(NormR32UI);
 impl_RenderablePixel!(NormR32UI);
 
@@ -350,7 +356,13 @@ impl_RenderablePixel!(R32F);
 #[derive(Clone, Copy, Debug)]
 pub struct RG8I;
 
-impl_Pixel!(RG8I, (i8, i8), i8, Integral, Format::RG(Size::Eight, Size::Eight));
+impl_Pixel!(
+  RG8I,
+  (i8, i8),
+  i8,
+  Integral,
+  Format::RG(Size::Eight, Size::Eight)
+);
 impl_ColorPixel!(RG8I);
 impl_RenderablePixel!(RG8I);
 
@@ -358,7 +370,13 @@ impl_RenderablePixel!(RG8I);
 #[derive(Clone, Copy, Debug)]
 pub struct NormRG8I;
 
-impl_Pixel!(NormRG8I, (i8, i8), i8, NormIntegral, Format::RG(Size::Eight, Size::Eight));
+impl_Pixel!(
+  NormRG8I,
+  (i8, i8),
+  i8,
+  NormIntegral,
+  Format::RG(Size::Eight, Size::Eight)
+);
 impl_ColorPixel!(NormRG8I);
 impl_RenderablePixel!(NormRG8I);
 
@@ -408,7 +426,13 @@ impl_RenderablePixel!(RG16I);
 #[derive(Clone, Copy, Debug)]
 pub struct NormRG16I;
 
-impl_Pixel!(NormRG16I, (i16, i16), i16, NormIntegral, Format::RG(Size::Sixteen, Size::Sixteen));
+impl_Pixel!(
+  NormRG16I,
+  (i16, i16),
+  i16,
+  NormIntegral,
+  Format::RG(Size::Sixteen, Size::Sixteen)
+);
 impl_ColorPixel!(NormRG16I);
 impl_RenderablePixel!(NormRG16I);
 
@@ -430,7 +454,13 @@ impl_RenderablePixel!(RG16UI);
 #[derive(Clone, Copy, Debug)]
 pub struct NormRG16UI;
 
-impl_Pixel!(NormRG16UI, (u16, u16), u16, NormUnsigned, Format::RG(Size::Sixteen, Size::Sixteen));
+impl_Pixel!(
+  NormRG16UI,
+  (u16, u16),
+  u16,
+  NormUnsigned,
+  Format::RG(Size::Sixteen, Size::Sixteen)
+);
 impl_ColorPixel!(NormRG16UI);
 impl_RenderablePixel!(NormRG16UI);
 
@@ -452,7 +482,13 @@ impl_RenderablePixel!(RG32I);
 #[derive(Clone, Copy, Debug)]
 pub struct NormRG32I;
 
-impl_Pixel!(NormRG32I, (i32, i32), i32, NormIntegral, Format::RG(Size::ThirtyTwo, Size::ThirtyTwo));
+impl_Pixel!(
+  NormRG32I,
+  (i32, i32),
+  i32,
+  NormIntegral,
+  Format::RG(Size::ThirtyTwo, Size::ThirtyTwo)
+);
 impl_ColorPixel!(NormRG32I);
 impl_RenderablePixel!(NormRG32I);
 
@@ -474,7 +510,13 @@ impl_RenderablePixel!(RG32UI);
 #[derive(Clone, Copy, Debug)]
 pub struct NormRG32UI;
 
-impl_Pixel!(NormRG32UI, (u32, u32), u32, NormUnsigned, Format::RG(Size::ThirtyTwo, Size::ThirtyTwo));
+impl_Pixel!(
+  NormRG32UI,
+  (u32, u32),
+  u32,
+  NormUnsigned,
+  Format::RG(Size::ThirtyTwo, Size::ThirtyTwo)
+);
 impl_ColorPixel!(NormRG32UI);
 impl_RenderablePixel!(NormRG32UI);
 
@@ -805,7 +847,12 @@ impl_Pixel!(
   (i32, i32, i32, i32),
   i32,
   Integral,
-  Format::RGBA(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo)
+  Format::RGBA(
+    Size::ThirtyTwo,
+    Size::ThirtyTwo,
+    Size::ThirtyTwo,
+    Size::ThirtyTwo
+  )
 );
 impl_ColorPixel!(RGBA32I);
 impl_RenderablePixel!(RGBA32I);
@@ -820,7 +867,12 @@ impl_Pixel!(
   (i32, i32, i32, i32),
   i32,
   NormIntegral,
-  Format::RGBA(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo)
+  Format::RGBA(
+    Size::ThirtyTwo,
+    Size::ThirtyTwo,
+    Size::ThirtyTwo,
+    Size::ThirtyTwo
+  )
 );
 impl_ColorPixel!(NormRGBA32I);
 impl_RenderablePixel!(NormRGBA32I);
@@ -834,7 +886,12 @@ impl_Pixel!(
   (u32, u32, u32, u32),
   u32,
   Unsigned,
-  Format::RGBA(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo)
+  Format::RGBA(
+    Size::ThirtyTwo,
+    Size::ThirtyTwo,
+    Size::ThirtyTwo,
+    Size::ThirtyTwo
+  )
 );
 impl_ColorPixel!(RGBA32UI);
 impl_RenderablePixel!(RGBA32UI);
@@ -849,7 +906,12 @@ impl_Pixel!(
   (u32, u32, u32, u32),
   u32,
   NormUnsigned,
-  Format::RGBA(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo)
+  Format::RGBA(
+    Size::ThirtyTwo,
+    Size::ThirtyTwo,
+    Size::ThirtyTwo,
+    Size::ThirtyTwo
+  )
 );
 impl_ColorPixel!(NormRGBA32UI);
 impl_RenderablePixel!(NormRGBA32UI);
@@ -863,7 +925,12 @@ impl_Pixel!(
   (f32, f32, f32, f32),
   f32,
   Floating,
-  Format::RGBA(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo)
+  Format::RGBA(
+    Size::ThirtyTwo,
+    Size::ThirtyTwo,
+    Size::ThirtyTwo,
+    Size::ThirtyTwo
+  )
 );
 impl_ColorPixel!(RGBA32F);
 impl_RenderablePixel!(RGBA32F);

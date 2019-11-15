@@ -127,13 +127,22 @@ pub trait TessBuilder<'a, C>: Sized {
   /// buffer. Second, you can opt-in to use deinterleaved memory, in which case you will have
   /// several, smaller buffers of borrowed data and you will issue a call to this method for all of
   /// them.
-  fn add_vertices<V, W>(self, vertices: W) -> Self where W: AsRef<[V]>, V: Vertex;
+  fn add_vertices<V, W>(self, vertices: W) -> Self
+  where
+    W: AsRef<[V]>,
+    V: Vertex;
 
   /// Add instances to be part of the tessellation.
-  fn add_instances<V, W>(self, instances: W) -> Self where W: AsRef<[V]>, V: Vertex;
+  fn add_instances<V, W>(self, instances: W) -> Self
+  where
+    W: AsRef<[V]>,
+    V: Vertex;
 
   /// Set vertex indices in order to specify how vertices should be picked by the GPU pipeline.
-  fn set_indices<T, I>(self, indices: T) -> Self where T: AsRef<[I]>, I: TessIndex;
+  fn set_indices<T, I>(self, indices: T) -> Self
+  where
+    T: AsRef<[I]>,
+    I: TessIndex;
 
   /// Set the primitive mode for the building [`Tess`].
   fn set_mode(self, mode: Mode) -> Self;
@@ -184,12 +193,20 @@ pub trait Tess<C> {
   fn render(&self, ctx: &mut C, start_index: usize, vert_nb: usize, inst_nb: usize);
 }
 
-pub trait VertexSlice<'a, C, B, V>: Tess<C> where V: Vertex, B: Buffer<'a, C, V> {
+pub trait VertexSlice<'a, C, B, V>: Tess<C>
+where
+  V: Vertex,
+  B: Buffer<'a, C, V>,
+{
   /// Obtain a slice over the vertex buffer.
   fn as_slice(&'a mut self) -> Result<B::Slice, Self::Err>;
 }
 
-pub trait VertexSliceMut<'a, C, B, V>: Tess<C> where V: Vertex, B: Buffer<'a, C, V> {
+pub trait VertexSliceMut<'a, C, B, V>: Tess<C>
+where
+  V: Vertex,
+  B: Buffer<'a, C, V>,
+{
   /// Obtain a mutable slice over the vertex buffer.
   ///
   /// This function fails if you try to obtain a buffer from an attriteless [`Tess`] or
@@ -197,7 +214,11 @@ pub trait VertexSliceMut<'a, C, B, V>: Tess<C> where V: Vertex, B: Buffer<'a, C,
   fn as_slice_mut(&'a mut self) -> Result<B::SliceMut, Self::Err>;
 }
 
-pub trait IndexSlice<'a, C, B, I>: Tess<C> where I: TessIndex, B: Buffer<'a, C, I> {
+pub trait IndexSlice<'a, C, B, I>: Tess<C>
+where
+  I: TessIndex,
+  B: Buffer<'a, C, I>,
+{
   /// Obtain a slice over the index buffer.
   ///
   /// This function fails if you try to obtain a buffer from an attriteless [`Tess`] or if no
@@ -205,7 +226,11 @@ pub trait IndexSlice<'a, C, B, I>: Tess<C> where I: TessIndex, B: Buffer<'a, C, 
   fn as_index_slice(&'a mut self) -> Result<B::Slice, Self::Err>;
 }
 
-pub trait IndexSliceMut<'a, C, B, I>: Tess<C> where I: TessIndex, B: Buffer<'a, C, I> {
+pub trait IndexSliceMut<'a, C, B, I>: Tess<C>
+where
+  I: TessIndex,
+  B: Buffer<'a, C, I>,
+{
   /// Obtain a mutable slice over the index buffer.
   ///
   /// This function fails if you try to obtain a buffer from an attriteless [`Tess`] or if no
@@ -213,7 +238,11 @@ pub trait IndexSliceMut<'a, C, B, I>: Tess<C> where I: TessIndex, B: Buffer<'a, 
   fn as_index_slice_mut(&'a mut self) -> Result<B::SliceMut, Self::Err>;
 }
 
-pub trait InstanceSlice<'a, C, B, V>: Tess<C> where V: Vertex, B: Buffer<'a, C, V> {
+pub trait InstanceSlice<'a, C, B, V>: Tess<C>
+where
+  V: Vertex,
+  B: Buffer<'a, C, V>,
+{
   /// Obtain a slice over the instance buffer.
   ///
   /// This function fails if you try to obtain a buffer from an attriteless [`Tess`] or
@@ -221,7 +250,11 @@ pub trait InstanceSlice<'a, C, B, V>: Tess<C> where V: Vertex, B: Buffer<'a, C, 
   fn as_instance_slice(&'a mut self) -> Result<B::Slice, Self::Err>;
 }
 
-pub trait InstanceSliceMut<'a, C, B, V>: Tess<C> where V: Vertex, B: Buffer<'a, C, V> {
+pub trait InstanceSliceMut<'a, C, B, V>: Tess<C>
+where
+  V: Vertex,
+  B: Buffer<'a, C, V>,
+{
   /// Obtain a slice over the instance buffer.
   ///
   /// This function fails if you try to obtain a buffer from an attriteless [`Tess`] or
@@ -348,7 +381,10 @@ unsafe impl TessIndex for u32 {
 ///
 /// [`..`]: https://doc.rust-lang.org/std/ops/struct.RangeFull.html
 /// [`..=`]: https://doc.rust-lang.org/std/ops/struct.RangeInclusive.html
-pub trait TessSlice<'a, C, T> where T: Tess<C> {
+pub trait TessSlice<'a, C, T>
+where
+  T: Tess<C>,
+{
   /// Create a tessellation render that will render the whole input tessellation with only one
   /// instance.
   fn one_whole(tess: &'a T) -> Self;

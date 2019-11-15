@@ -45,7 +45,9 @@ impl fmt::Display for GlfwSurfaceError {
       GlfwSurfaceError::WindowCreationFailed => f.write_str("failed to create window"),
       GlfwSurfaceError::NoPrimaryMonitor => f.write_str("no primary monitor"),
       GlfwSurfaceError::NoVideoMode => f.write_str("no video mode"),
-      GlfwSurfaceError::GraphicsStateError(ref e) => write!(f, "failed to get graphics state: {}", e),
+      GlfwSurfaceError::GraphicsStateError(ref e) => {
+        write!(f, "failed to get graphics state: {}", e)
+      }
     }
   }
 }
@@ -58,7 +60,7 @@ pub struct GlfwSurface {
   window: Window,
   events_rx: Receiver<(f64, WindowEvent)>,
   gfx_state: Rc<RefCell<GraphicsState>>,
-  opts: WindowOpt
+  opts: WindowOpt,
 }
 
 unsafe impl GraphicsContext for GlfwSurface {
@@ -80,7 +82,9 @@ impl Surface for GlfwSurface {
     let mut glfw = glfw::init(error_cbk).map_err(GlfwSurfaceError::InitError)?;
 
     // OpenGL hints
-    glfw.window_hint(glfw::WindowHint::OpenGlProfile(glfw::OpenGlProfileHint::Core));
+    glfw.window_hint(glfw::WindowHint::OpenGlProfile(
+      glfw::OpenGlProfileHint::Core,
+    ));
     glfw.window_hint(glfw::WindowHint::OpenGlForwardCompat(true));
     glfw.window_hint(glfw::WindowHint::ContextVersionMajor(3));
     glfw.window_hint(glfw::WindowHint::ContextVersionMinor(3));
@@ -93,7 +97,9 @@ impl Surface for GlfwSurface {
         .ok_or(GlfwSurfaceError::WindowCreationFailed)?,
       WindowDim::Fullscreen => glfw.with_primary_monitor(|glfw, monitor| {
         let monitor = monitor.ok_or(GlfwSurfaceError::NoPrimaryMonitor)?;
-        let vmode = monitor.get_video_mode().ok_or(GlfwSurfaceError::NoVideoMode)?;
+        let vmode = monitor
+          .get_video_mode()
+          .ok_or(GlfwSurfaceError::NoVideoMode)?;
         let (w, h) = (vmode.width, vmode.height);
 
         Ok(
@@ -117,8 +123,8 @@ impl Surface for GlfwSurface {
 
     match win_opt.cursor_mode() {
       CursorMode::Visible => window.set_cursor_mode(GlfwCursorMode::Normal),
-      CursorMode::Invisible =>  window.set_cursor_mode(GlfwCursorMode::Hidden),
-      CursorMode::Disabled =>  window.set_cursor_mode(GlfwCursorMode::Disabled),
+      CursorMode::Invisible => window.set_cursor_mode(GlfwCursorMode::Hidden),
+      CursorMode::Disabled => window.set_cursor_mode(GlfwCursorMode::Disabled),
     }
 
     window.set_all_polling(true);
@@ -132,7 +138,7 @@ impl Surface for GlfwSurface {
       window,
       events_rx,
       gfx_state: Rc::new(RefCell::new(gfx_state)),
-      opts: win_opt
+      opts: win_opt,
     };
 
     Ok(surface)
@@ -145,17 +151,23 @@ impl Surface for GlfwSurface {
   fn set_cursor_mode(&mut self, mode: CursorMode) -> &mut Self {
     match mode {
       CursorMode::Visible => self.window.set_cursor_mode(GlfwCursorMode::Normal),
-      CursorMode::Invisible =>  self.window.set_cursor_mode(GlfwCursorMode::Hidden),
-      CursorMode::Disabled =>  self.window.set_cursor_mode(GlfwCursorMode::Disabled),
+      CursorMode::Invisible => self.window.set_cursor_mode(GlfwCursorMode::Hidden),
+      CursorMode::Disabled => self.window.set_cursor_mode(GlfwCursorMode::Disabled),
     }
 
     self.opts = self.opts.set_cursor_mode(mode);
     self
   }
 
-  fn set_num_samples<S>(&mut self, samples: S) -> &mut Self where S: Into<Option<u32>> {
+  fn set_num_samples<S>(&mut self, samples: S) -> &mut Self
+  where
+    S: Into<Option<u32>>,
+  {
     let samples = samples.into();
-    self.window.glfw.window_hint(glfw::WindowHint::Samples(samples));
+    self
+      .window
+      .glfw
+      .window_hint(glfw::WindowHint::Samples(samples));
     self.opts = self.opts.set_num_samples(samples);
     self
   }

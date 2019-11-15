@@ -38,7 +38,7 @@ use crate::semantics::generate_enum_semantics_impl;
 use crate::uniform_interface::generate_uniform_interface_impl;
 use crate::vertex::generate_vertex_impl;
 use proc_macro::TokenStream;
-use syn::{self, Data, DeriveInput, parse_macro_input};
+use syn::{self, parse_macro_input, Data, DeriveInput};
 
 /// The [`Vertex`] derive proc-macro.
 ///
@@ -118,14 +118,12 @@ pub fn derive_vertex(input: TokenStream) -> TokenStream {
 
   match di.data {
     // for now, we only handle structs
-    Data::Struct(struct_) => {
-      match generate_vertex_impl(di.ident, di.attrs.iter(), struct_) {
-        Ok(impl_) => impl_,
-        Err(e) => panic!("{}", e)
-      }
-    }
+    Data::Struct(struct_) => match generate_vertex_impl(di.ident, di.attrs.iter(), struct_) {
+      Ok(impl_) => impl_,
+      Err(e) => panic!("{}", e),
+    },
 
-    _ => panic!("only structs are currently supported for deriving Vertex")
+    _ => panic!("only structs are currently supported for deriving Vertex"),
   }
 }
 
@@ -138,14 +136,12 @@ pub fn derive_semantics(input: TokenStream) -> TokenStream {
 
   match di.data {
     // for now, we only handle enums
-    Data::Enum(enum_) => {
-      match generate_enum_semantics_impl(di.ident, enum_) {
-        Ok(impl_) => impl_,
-        Err(e) => panic!("{}", e)
-      }
-    }
+    Data::Enum(enum_) => match generate_enum_semantics_impl(di.ident, enum_) {
+      Ok(impl_) => impl_,
+      Err(e) => panic!("{}", e),
+    },
 
-    _ => panic!("only enums are currently supported for deriving VertexAttribSem")
+    _ => panic!("only enums are currently supported for deriving VertexAttribSem"),
   }
 }
 
@@ -224,13 +220,11 @@ pub fn derive_uniform_interface(input: TokenStream) -> TokenStream {
 
   match di.data {
     // for now, we only handle structs
-    Data::Struct(struct_) => {
-      match generate_uniform_interface_impl(di.ident, struct_) {
-        Ok(impl_) => impl_,
-        Err(e) => panic!("{}", e)
-      }
-    }
+    Data::Struct(struct_) => match generate_uniform_interface_impl(di.ident, struct_) {
+      Ok(impl_) => impl_,
+      Err(e) => panic!("{}", e),
+    },
 
-    _ => panic!("only structs are currently supported for deriving UniformInterface")
+    _ => panic!("only structs are currently supported for deriving UniformInterface"),
   }
 }

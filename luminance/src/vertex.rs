@@ -50,20 +50,23 @@ pub struct VertexBufferDesc {
   /// Whether _vertex instancing_ should be used with that vertex attribute.
   pub instancing: VertexInstancing,
   /// Vertex attribute descriptor.
-  pub attrib_desc: VertexAttribDesc
+  pub attrib_desc: VertexAttribDesc,
 }
 
 impl VertexBufferDesc {
   /// Create a new [`VertexBufferDesc`].
-  pub fn new<S>(
-    sem: S,
-    instancing: VertexInstancing,
-    attrib_desc: VertexAttribDesc
-  ) -> Self
-  where S: Semantics {
+  pub fn new<S>(sem: S, instancing: VertexInstancing, attrib_desc: VertexAttribDesc) -> Self
+  where
+    S: Semantics,
+  {
     let index = sem.index();
     let name = sem.name();
-    VertexBufferDesc { index, name, instancing, attrib_desc }
+    VertexBufferDesc {
+      index,
+      name,
+      instancing,
+      attrib_desc,
+    }
   }
 }
 
@@ -105,7 +108,10 @@ pub struct VertexAttribDesc {
 impl VertexAttribDesc {
   /// Normalize a vertex attribute format’s type.
   pub fn normalize(self) -> Self {
-    VertexAttribDesc { ty: self.ty.normalize(), ..self }
+    VertexAttribDesc {
+      ty: self.ty.normalize(),
+      ..self
+    }
   }
 }
 
@@ -135,7 +141,7 @@ impl VertexAttribType {
     match self {
       VertexAttribType::Integral(Normalized::No) => VertexAttribType::Integral(Normalized::Yes),
       VertexAttribType::Unsigned(Normalized::No) => VertexAttribType::Unsigned(Normalized::Yes),
-      _ => self
+      _ => self,
     }
   }
 }
@@ -149,9 +155,8 @@ pub enum Normalized {
   /// Normalize integral values and expose them as floating-point values.
   Yes,
   /// Do not perform any normalization and hence leave integral values as-is.
-  No
+  No,
 }
-
 
 /// Possible dimension of vertex attributes.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -295,7 +300,7 @@ macro_rules! impl_vertex_attribute {
 impl_vertex_attribute!(i8, VertexAttribType::Integral(Normalized::No));
 impl_vertex_attribute!(i16, VertexAttribType::Integral(Normalized::No));
 impl_vertex_attribute!(i32, VertexAttribType::Integral(Normalized::No));
-impl_vertex_attribute!(u8,  VertexAttribType::Unsigned(Normalized::No));
+impl_vertex_attribute!(u8, VertexAttribType::Unsigned(Normalized::No));
 impl_vertex_attribute!(u16, VertexAttribType::Unsigned(Normalized::No));
 impl_vertex_attribute!(u32, VertexAttribType::Unsigned(Normalized::No));
 impl_vertex_attribute!(f32, VertexAttribType::Floating);

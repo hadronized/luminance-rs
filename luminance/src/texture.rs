@@ -76,9 +76,11 @@ use crate::depth_test::DepthComparison;
 use crate::pixel::Pixel;
 
 pub trait Texture<C, L, D, P>: Sized
-where L: Layerable,
-      D: Dimensionable,
-      P: Pixel {
+where
+  L: Layerable,
+  D: Dimensionable,
+  P: Pixel,
+{
   type Sampler;
 
   type Err;
@@ -95,7 +97,7 @@ where L: Layerable,
     ctx: &mut C,
     size: D::Size,
     mipmaps: usize,
-    sampler: Self::Sampler
+    sampler: Self::Sampler,
   ) -> Result<Self, Self::Err>;
 
   /// Number of mipmaps in the texture.
@@ -111,13 +113,16 @@ where L: Layerable,
     gen_mipmaps: GenMipmaps,
     offset: D::Offset,
     size: D::Size,
-    pixel: P::Encoding
+    pixel: P::Encoding,
   ) -> Result<(), Self::Err>
-  where P::Encoding: Copy;
+  where
+    P::Encoding: Copy;
 
   /// Clear a whole texture with a `pixel` value.
   fn clear(&self, gen_mipmaps: GenMipmaps, pixel: P::Encoding) -> Result<(), Self::Err>
-  where P::Encoding: Copy {
+  where
+    P::Encoding: Copy,
+  {
     self.clear_part(gen_mipmaps, D::ZERO_OFFSET, self.size(), pixel)
   }
 
@@ -135,11 +140,7 @@ where L: Layerable,
   ) -> Result<(), Self::Err>;
 
   /// Upload `texels` to the whole texture.
-  fn upload(
-    &self,
-    gen_mipmaps: GenMipmaps,
-    texels: &[P::Encoding],
-  ) -> Result<(), Self::Err> {
+  fn upload(&self, gen_mipmaps: GenMipmaps, texels: &[P::Encoding]) -> Result<(), Self::Err> {
     self.upload_part(gen_mipmaps, D::ZERO_OFFSET, self.size(), texels)
   }
 
@@ -160,13 +161,16 @@ where L: Layerable,
   fn upload_raw(
     &self,
     gen_mipmaps: GenMipmaps,
-    texels: &[P::RawEncoding]
+    texels: &[P::RawEncoding],
   ) -> Result<(), Self::Err> {
     self.upload_part_raw(gen_mipmaps, D::ZERO_OFFSET, self.size(), texels)
   }
 
   /// Get the raw texels associated with this texture.
-  fn get_raw_texels(&self) -> Vec<P::RawEncoding> where P: Pixel, P::RawEncoding: Copy + Default;
+  fn get_raw_texels(&self) -> Vec<P::RawEncoding>
+  where
+    P: Pixel,
+    P::RawEncoding: Copy + Default;
 
   /// Get the inner size of the texture.
   ///
@@ -500,7 +504,6 @@ impl Layerable for Layered {
   }
 }
 
-
 /// Whether mipmaps should be generated.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum GenMipmaps {
@@ -509,9 +512,8 @@ pub enum GenMipmaps {
   /// Mipmaps are generated when creating textures but also when uploading texels, clearing, etc.
   Yes,
   /// Never generate mipmaps.
-  No
+  No,
 }
-
 
 /// A `Sampler` object gives hint on how a `Texture` should be sampled.
 #[derive(Clone, Copy, Debug)]

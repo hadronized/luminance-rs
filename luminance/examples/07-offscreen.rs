@@ -7,17 +7,17 @@
 
 mod common;
 
-use crate::common::{Semantics, Vertex, VertexPosition, VertexColor};
+use crate::common::{Semantics, Vertex, VertexColor, VertexPosition};
 use luminance::context::GraphicsContext as _;
 use luminance::framebuffer::Framebuffer;
 use luminance::pipeline::BoundTexture;
-use luminance::pixel::{RGBA32F, Floating};
+use luminance::pixel::{Floating, RGBA32F};
 use luminance::render_state::RenderState;
 use luminance::shader::program::{BuiltProgram, Program, Uniform};
 use luminance::tess::{Mode, TessBuilder};
 use luminance::texture::{Dim2, Flat};
 use luminance_derive::UniformInterface;
-use luminance_glfw::{Action, GlfwSurface, Key, Surface, WindowEvent, WindowDim, WindowOpt};
+use luminance_glfw::{Action, GlfwSurface, Key, Surface, WindowDim, WindowEvent, WindowOpt};
 
 // we get the shader at compile time from local files
 const VS: &'static str = include_str!("simple-vs.glsl");
@@ -30,9 +30,18 @@ const COPY_FS: &'static str = include_str!("copy-fs.glsl");
 // a single triangle is enough here
 const TRI_VERTICES: [Vertex; 3] = [
   // triangle – an RGB one
-  Vertex { pos: VertexPosition::new([0.5, -0.5]), rgb: VertexColor::new([0., 1., 0.]) },
-  Vertex { pos: VertexPosition::new([0.0, 0.5]), rgb: VertexColor::new([0., 0., 1.]) },
-  Vertex { pos: VertexPosition::new([-0.5, -0.5]), rgb: VertexColor::new([1., 0., 0.]) },
+  Vertex {
+    pos: VertexPosition::new([0.5, -0.5]),
+    rgb: VertexColor::new([0., 1., 0.]),
+  },
+  Vertex {
+    pos: VertexPosition::new([0.0, 0.5]),
+    rgb: VertexColor::new([0., 0., 1.]),
+  },
+  Vertex {
+    pos: VertexPosition::new([-0.5, -0.5]),
+    rgb: VertexColor::new([1., 0., 0.]),
+  },
 ];
 
 // the shader uniform interface is defined there
@@ -40,7 +49,7 @@ const TRI_VERTICES: [Vertex; 3] = [
 struct ShaderInterface {
   // we only need the source texture (from the framebuffer) to fetch from
   #[uniform(unbound, name = "source_texture")]
-  texture: Uniform<&'static BoundTexture<'static, Flat, Dim2, Floating>>
+  texture: Uniform<&'static BoundTexture<'static, Flat, Dim2, Floating>>,
 }
 
 fn main() {
@@ -54,9 +63,11 @@ fn main() {
   let program = Program::<Semantics, (), ()>::from_strings(None, VS, None, FS)
     .expect("program creation")
     .ignore_warnings();
-  let BuiltProgram { program: copy_program, warnings } =
-    Program::<(), (), ShaderInterface>::from_strings(None, COPY_VS, None, COPY_FS)
-      .expect("copy program creation");
+  let BuiltProgram {
+    program: copy_program,
+    warnings,
+  } = Program::<(), (), ShaderInterface>::from_strings(None, COPY_VS, None, COPY_FS)
+    .expect("copy program creation");
 
   for warning in &warnings {
     eprintln!("copy shader warning: {:?}", warning);
@@ -79,8 +90,8 @@ fn main() {
   let mut back_buffer = surface.back_buffer().unwrap();
   // offscreen buffer that we will render in the first place
   let size = surface.size();
-  let mut offscreen_buffer =
-    Framebuffer::<Flat, Dim2, RGBA32F, ()>::new(&mut surface, size, 0).expect("framebuffer creation");
+  let mut offscreen_buffer = Framebuffer::<Flat, Dim2, RGBA32F, ()>::new(&mut surface, size, 0)
+    .expect("framebuffer creation");
 
   // hack to update the offscreen buffer if needed; this is needed because we cannot update the
   // offscreen buffer from within the event loop
