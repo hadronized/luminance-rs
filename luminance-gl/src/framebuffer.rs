@@ -102,8 +102,14 @@ impl fmt::Display for IncompleteReason {
 }
 
 // State used to reify textures.
-struct ReifyState {
+pub struct ReifyState {
   textures: Vec<GLuint>,
+}
+
+impl ReifyState {
+  fn new(textures: Vec<GLuint>) -> Self {
+    ReifyState { textures }
+  }
 }
 
 /// Framebuffer with static layering, dimension, access and slots formats.
@@ -196,7 +202,6 @@ where
     let depth_format = DS::DEPTH_FORMAT;
     let target = opengl_target(L::layering(), D::dim());
     let mut textures = vec![0; color_formats.len() + if depth_format.is_some() { 1 } else { 0 }];
-    let mut depth_texture: Option<GLuint> = None;
     let mut depth_renderbuffer: Option<GLuint> = None;
 
     unsafe {
@@ -204,8 +209,8 @@ where
 
       ctx.state().borrow_mut().bind_draw_framebuffer(handle);
 
-      // generate all the required textures once; the textures vec will be reduced and dispatched
-      // into other containers afterwards (in ColorSlot::reify_textures)
+      // generate all the required textures once; the textures vector will be reduced and dispatched
+      // into other containers afterwards (in CS::reify_textures and DS::reify_texture)
       gl::GenTextures((textures.len()) as GLint, textures.as_mut_ptr());
 
       // color textures
@@ -234,14 +239,12 @@ where
 
       // depth texture, if exists
       if let Some(format) = depth_format {
-        let texture = textures.pop().unwrap();
+        let texture = *textures.last().unwrap();
 
         ctx.state().borrow_mut().bind_texture(target, texture);
         create_texture::<L, D>(target, dimension, mipmaps, format, Default::default())
           .map_err(FramebufferError::TextureError)?;
         gl::FramebufferTexture(gl::FRAMEBUFFER, gl::DEPTH_ATTACHMENT, texture, 0);
-
-        depth_texture = Some(texture);
       } else {
         let mut renderbuffer: GLuint = 0;
 
@@ -267,12 +270,13 @@ where
 
       ctx.state().borrow_mut().bind_texture(target, 0); // FIXME: see whether really needed
 
+      let mut reify_state = ReifyState::new(textures);
       let framebuffer = Framebuffer {
         handle,
         renderbuffer: depth_renderbuffer,
         dimension,
-        color_slot: CS::reify_textures(ctx, dimension, mipmaps, &mut textures.into_iter()),
-        depth_slot: DS::reify_texture(ctx, dimension, mipmaps, depth_texture),
+        color_slot: CS::reify_textures(ctx, dimension, mipmaps, &mut reify_state),
+        depth_slot: DS::reify_texture(ctx, dimension, mipmaps, &mut reify_state),
         state: ctx.state().clone(),
         _l: PhantomData,
         _d: PhantomData,
@@ -356,20 +360,19 @@ fn get_status() -> Result<(), IncompleteReason> {
   }
 }
 
-impl<L, D, I> ReifyTexture<GraphicsState, L, D, I>
+impl<L, D, P> ReifyTexture<GraphicsState, L, D, P> for ReifyState
 where
-  Self: Pixel,
+  P: Pixel,
   L: Layerable,
   D: Dimensionable,
-  I: Iterator<Item = GLuint>,
 {
-  type Texture = Texture<L, D, Self>;
+  type Texture = Texture<L, D, P>;
 
-  fn reify_texture<C>(ctx: &mut C, size: D::Size, mipmaps: usize, textures: &mut I) -> Self::Texture
+  fn reify_texture<C>(ctx: &mut C, size: D::Size, mipmaps: usize, state: &mut Self) -> Self::Texture
   where
     C: GraphicsContext<State = GraphicsState>,
   {
-    let texture = textures.next().unwrap();
+    let texture = state.textures.pop().unwrap();
 
     unsafe {
       let raw = RawTexture::new(
