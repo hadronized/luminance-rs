@@ -5,4 +5,5 @@
 //! contains types and functions that you’ll be linked from the `program` module.
 
 //pub mod program;
+pub mod program2;
 pub mod stage;
