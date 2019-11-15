@@ -108,10 +108,7 @@ impl Surface for GlutinSurface {
     // init OpenGL
     gl::load_with(|s| ctx.get_proc_address(s) as *const c_void);
 
-    match win_opt.cursor_mode() {
-      CursorMode::Visible => ctx.window().set_cursor_visible(true),
-      CursorMode::Invisible | CursorMode::Disabled => ctx.window().set_cursor_visible(false),
-    }
+    set_window_cursor_mode(ctx.window(), win_opt.cursor_mode());
 
     ctx.window().set_visible(true);
 
@@ -132,11 +129,7 @@ impl Surface for GlutinSurface {
   }
 
   fn set_cursor_mode(&mut self, mode: CursorMode) -> &mut Self {
-    match mode {
-      CursorMode::Visible => self.ctx.window().set_cursor_visible(true),
-      CursorMode::Invisible | CursorMode::Disabled => self.ctx.window().set_cursor_visible(false)
-    }
-
+    set_window_cursor_mode(self.ctx.window(), mode);
     self.opts = self.opts.set_cursor_mode(mode);
     self
   }
@@ -177,5 +170,24 @@ impl Surface for GlutinSurface {
 
   fn swap_buffers(&mut self) {
     self.ctx.swap_buffers().unwrap();
+  }
+}
+
+fn set_window_cursor_mode(window: &Window, mode: CursorMode) {
+  match mode {
+    CursorMode::Visible => {
+      window.set_cursor_visible(true);
+      window.set_cursor_grab(false).unwrap();
+    }
+    CursorMode::Invisible => {
+      window.set_cursor_visible(false);
+      window.set_cursor_grab(false).unwrap();
+    }
+    // glutin doesn’t support truly disabled cursors, but we can achieve
+    // something like it by hiding and grabbing the cursor.
+    CursorMode::Disabled => {
+      window.set_cursor_visible(false);
+      window.set_cursor_grab(true).unwrap();
+    }
   }
 }
