@@ -408,7 +408,7 @@ pub mod linear;
 // pub mod pipeline;
 pub mod pixel;
 pub mod render_state;
-// pub mod shader;
+pub mod shader;
 pub mod tess;
 pub mod texture;
 pub mod vertex;
