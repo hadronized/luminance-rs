@@ -6,24 +6,33 @@
 #![deny(missing_docs)]
 
 use gl;
-pub use glutin::{
-  ContextError, CreationError, DeviceEvent, DeviceId, ElementState, Event, KeyboardInput,
-  ModifiersState, MouseScrollDelta, Touch, TouchPhase, VirtualKeyCode, WindowEvent, WindowId,
-  MouseButton
-};
 pub use glutin::dpi::{LogicalPosition, LogicalSize};
+pub use glutin::{
+  event::{
+    DeviceEvent, DeviceId, ElementState, Event, KeyboardInput, ModifiersState, MouseButton,
+    MouseScrollDelta, Touch, TouchPhase, VirtualKeyCode, WindowEvent,
+  },
+  window::WindowId,
+  ContextError, CreationError,
+};
 pub use luminance_windowing::{CursorMode, Surface, WindowDim, WindowOpt};
 
-use glutin::{
-  Api, ContextBuilder, EventsLoop, GlProfile, GlRequest, PossiblyCurrent,
-  WindowBuilder, WindowedContext
-};
 use glutin::dpi::PhysicalSize;
+use glutin::{
+  event_loop::{ControlFlow, EventLoop},
+  platform::desktop::EventLoopExtDesktop,
+  window::{Fullscreen, Window, WindowBuilder},
+  Api, ContextBuilder, GlProfile, GlRequest, PossiblyCurrent, WindowedContext,
+};
 use luminance::context::GraphicsContext;
 use luminance::state::{GraphicsState, StateQueryError};
 use std::cell::RefCell;
 use std::os::raw::c_void;
 use std::rc::Rc;
+
+// If we poll the event loop ≤1 times per `run_return` invocations, we'll go too
+// fast to catch any actual events, or something like that.
+const NUMBER_OF_POLLS: u16 = 8;
 
 /// Error that might occur when creating a Glutin surface.
 #[derive(Debug)]
@@ -56,11 +65,11 @@ impl From<ContextError> for Error {
 /// [luminance]: https://crates.io/crates/luminance
 pub struct GlutinSurface {
   ctx: WindowedContext<PossiblyCurrent>,
-  event_loop: EventsLoop,
+  event_loop: EventLoop<()>,
   gfx_state: Rc<RefCell<GraphicsState>>,
   opts: WindowOpt,
   // a list of event that has happened
-  event_queue: Vec<Event>
+  event_queue: Vec<Event<()>>
 }
 
 unsafe impl GraphicsContext for GlutinSurface {
@@ -71,19 +80,20 @@ unsafe impl GraphicsContext for GlutinSurface {
 
 impl Surface for GlutinSurface {
   type Error = Error;
-  type Event = Event;
+  type Event = Event<()>;
 
   fn new(dim: WindowDim, title: &str, win_opt: WindowOpt) -> Result<Self, Self::Error> {
-    let event_loop = EventsLoop::new();
+    let event_loop = EventLoop::new();
 
     let window_builder = WindowBuilder::new().with_title(title);
     let window_builder = match dim {
-      WindowDim::Windowed(w, h) => window_builder.with_dimensions((w, h).into()),
-      WindowDim::Fullscreen => window_builder.with_fullscreen(Some(event_loop.get_primary_monitor())),
-      WindowDim::FullscreenRestricted(w, h) =>
-        window_builder
-          .with_dimensions((w, h).into())
-          .with_fullscreen(Some(event_loop.get_primary_monitor()))
+      WindowDim::Windowed(w, h) => window_builder.with_inner_size((w, h).into()),
+      WindowDim::Fullscreen => {
+        window_builder.with_fullscreen(Some(Fullscreen::Borderless(event_loop.primary_monitor())))
+      }
+      WindowDim::FullscreenRestricted(w, h) => window_builder
+        .with_inner_size((w, h).into())
+        .with_fullscreen(Some(Fullscreen::Borderless(event_loop.primary_monitor())))
     };
 
     let windowed_ctx = ContextBuilder::new()
@@ -99,12 +109,11 @@ impl Surface for GlutinSurface {
     gl::load_with(|s| ctx.get_proc_address(s) as *const c_void);
 
     match win_opt.cursor_mode() {
-      CursorMode::Visible => ctx.window().hide_cursor(false),
-      // glutin doesn’t support disabled cursors; default to invisible
-      CursorMode::Invisible | CursorMode::Disabled => ctx.window().hide_cursor(true),
+      CursorMode::Visible => ctx.window().set_cursor_visible(true),
+      CursorMode::Invisible | CursorMode::Disabled => ctx.window().set_cursor_visible(false),
     }
 
-    ctx.window().show();
+    ctx.window().set_visible(true);
 
     let gfx_state = GraphicsState::new().map_err(Error::GraphicsStateError)?;
     let surface = GlutinSurface {
@@ -124,8 +133,8 @@ impl Surface for GlutinSurface {
 
   fn set_cursor_mode(&mut self, mode: CursorMode) -> &mut Self {
     match mode {
-      CursorMode::Visible => self.ctx.window().hide_cursor(false),
-      CursorMode::Invisible | CursorMode::Disabled => self.ctx.window().hide_cursor(true)
+      CursorMode::Visible => self.ctx.window().set_cursor_visible(true),
+      CursorMode::Invisible | CursorMode::Disabled => self.ctx.window().set_cursor_visible(false)
     }
 
     self.opts = self.opts.set_cursor_mode(mode);
@@ -137,8 +146,8 @@ impl Surface for GlutinSurface {
   }
 
   fn size(&self) -> [u32; 2] {
-    let logical = self.ctx.window().get_inner_size().unwrap();
-    let (w, h) = PhysicalSize::from_logical(logical, self.ctx.window().get_hidpi_factor()).into();
+    let logical = self.ctx.window().inner_size();
+    let (w, h) = PhysicalSize::from_logical(logical, self.ctx.window().hidpi_factor()).into();
     [w, h]
   }
 
@@ -150,8 +159,17 @@ impl Surface for GlutinSurface {
     self.event_queue.clear();
 
     let queue = &mut self.event_queue;
-    self.event_loop.poll_events(|event| {
-      queue.push(event);
+    let mut n = NUMBER_OF_POLLS;
+    self.event_loop.run_return(|event, _, control_flow| {
+      match event {
+        Event::NewEvents(_) | Event::EventsCleared | Event::LoopDestroyed => (),
+        _ => queue.push(event),
+      }
+      if n == 0 {
+        *control_flow = ControlFlow::Exit;
+      } else {
+        n -= 1;
+      }
     });
 
     Box::new(self.event_queue.iter().cloned())
