@@ -72,6 +72,13 @@ pub struct GlutinSurface {
   event_queue: Vec<Event<()>>
 }
 
+impl GlutinSurface {
+  /// Changes the position of the cursor in window coordinates
+  pub fn set_cursor_position(&self, pos: LogicalPosition) {
+    self.ctx.window().set_cursor_position(pos).unwrap();
+  }
+}
+
 unsafe impl GraphicsContext for GlutinSurface {
   fn state(&self) -> &Rc<RefCell<GraphicsState>> {
     &self.gfx_state
