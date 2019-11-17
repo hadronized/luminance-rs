@@ -1,4 +1,5 @@
 use std::fmt;
+use std::ops::Deref;
 
 /// Types that can behave as `Uniform`.
 pub unsafe trait Uniformable<T>: Sized {
@@ -124,4 +125,90 @@ impl fmt::Display for Type {
       Type::BufferBinding => f.write_str("buffer binding"),
     }
   }
+}
+
+pub trait UniformBuild<T> {
+  type Uniform: Uniformable<T>;
+
+  type UniformWarning;
+
+  fn ask_specific<S>(&mut self, name: S) -> Result<Self::Uniform, Self::UniformWarning>
+  where
+    S: AsRef<str>;
+
+  fn ask_unbound_specific<S>(&mut self, name: S) -> Self::Uniform
+  where
+    S: AsRef<str>;
+
+  fn unbound_specific(&mut self) -> Self::Uniform;
+}
+
+pub trait UniformBuilder {
+  fn ask<T, S>(&mut self, name: S) -> Result<Self::Uniform, Self::UniformWarning>
+  where
+    Self: UniformBuild<T>,
+    S: AsRef<str>,
+  {
+    self.ask_specific(name)
+  }
+
+  fn ask_unbound<T, S>(&mut self, name: S) -> Self::Uniform
+  where
+    Self: UniformBuild<T>,
+    S: AsRef<str>,
+  {
+    self.ask_unbound_specific(name)
+  }
+
+  fn unbound<T>(&mut self) -> Self::Uniform
+  where
+    Self: UniformBuild<T>,
+  {
+    self.unbound_specific()
+  }
+}
+
+impl<T> UniformBuilder for T {}
+
+//pub trait UniformInterface<E = ()>: Sized {
+//  fn uniform_interface<'a>(builder: &mut UniformBuilder<'a>, env: E) -> Result<Self, ProgramError>;
+//}
+//
+//impl UniformInterface for () {
+//  fn uniform_interface<'a>(_: &mut UniformBuilder<'a>, _: ()) -> Result<Self, ProgramError> {
+//    Ok(())
+//  }
+//}
+
+pub struct TessellationStages<'a, Stage> {
+  pub control: &'a Stage,
+  pub evaluation: &'a Stage,
+}
+
+pub trait Program<'a>: Sized {
+  type Err;
+
+  type Stage;
+
+  type UniformBuilder: UniformBuilder;
+
+  fn new<'b, T, G>(
+    vertex: &'b Self::Stage,
+    tess: T,
+    geometry: G,
+    fragment: &'b Self::Stage,
+  ) -> Result<Self, Self::Err>
+  where
+    T: Into<Option<TessellationStages<'b, Self::Stage>>>,
+    G: Into<Option<&'b Self::Stage>>;
+
+  fn link(&'a self) -> Result<(), Self::Err>;
+
+  fn uniform_builder(&'a self) -> Self::UniformBuilder;
+}
+
+pub trait ProgramInterface<'a, Uni>: Deref<Target = Uni> {
+  type UniformBuilder: UniformBuilder;
+
+  fn query(&'a self) -> Self::UniformBuilder;
 }

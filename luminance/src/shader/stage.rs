@@ -38,7 +38,7 @@ pub trait Stage<C>: Sized {
   type Err;
 
   /// Create a new shader stage.
-  fn new<S>(ty: Type, src: S) -> Result<Self, Self::Err>
+  fn new<S>(ctx: &mut C, ty: Type, src: S) -> Result<Self, Self::Err>
   where
     S: AsRef<str>;
 }

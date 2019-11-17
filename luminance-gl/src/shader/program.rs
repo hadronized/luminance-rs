@@ -1,10 +1,317 @@
 use gl;
 use gl::types::*;
-use luminance::shader::program2::{Type, Uniformable};
+use luminance::shader::program2::{
+  ProgramInterface as ProgramInterfaceBackend, TessellationStages, Type, UniformBuild,
+  UniformBuilder as UniformBuilderBackend, Uniformable,
+};
+use luminance::vertex::Semantics;
 use std::ffi::CString;
 use std::fmt;
 use std::marker::PhantomData;
+use std::ops::Deref;
 use std::ptr::null_mut;
+
+use crate::shader::stage::{Stage, StageError};
+
+/// Errors that a `Program` can generate.
+#[derive(Debug)]
+pub enum ProgramError {
+  /// A shader stage failed to compile or validate its state.
+  StageError(StageError),
+  /// Program link failed. You can inspect the reason by looking at the contained `String`.
+  LinkFailed(String),
+  /// Some uniform configuration is ill-formed. It can be a problem of inactive uniform, mismatch
+  /// type, etc. Check the `UniformWarning` type for more information.
+  UniformWarning(UniformWarning),
+  /// Some vertex attribute is ill-formed.
+  VertexAttribWarning(VertexAttribWarning),
+}
+
+impl fmt::Display for ProgramError {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    match *self {
+      ProgramError::StageError(ref e) => write!(f, "shader program has stage error: {}", e),
+
+      ProgramError::LinkFailed(ref s) => write!(f, "shader program failed to link: {}", s),
+
+      ProgramError::UniformWarning(ref e) => {
+        write!(f, "shader program contains uniform warning(s): {}", e)
+      }
+      ProgramError::VertexAttribWarning(ref e) => write!(
+        f,
+        "shader program contains vertex attribute warning(s): {}",
+        e
+      ),
+    }
+  }
+}
+
+/// Warnings related to vertex attributes issues.
+#[derive(Debug)]
+pub enum VertexAttribWarning {
+  /// Inactive vertex attribute (not read).
+  Inactive(String),
+}
+
+impl fmt::Display for VertexAttribWarning {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    match *self {
+      VertexAttribWarning::Inactive(ref s) => write!(f, "inactive {} vertex attribute", s),
+    }
+  }
+}
+
+/// Program warnings, not necessarily considered blocking errors.
+#[derive(Debug)]
+pub enum ProgramWarning {
+  /// Some uniform configuration is ill-formed. It can be a problem of inactive uniform, mismatch
+  /// type, etc. Check the `UniformWarning` type for more information.
+  Uniform(UniformWarning),
+  /// Some vertex attribute is ill-formed.
+  VertexAttrib(VertexAttribWarning),
+}
+
+impl fmt::Display for ProgramWarning {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    match *self {
+      ProgramWarning::Uniform(ref e) => write!(f, "uniform warning: {}", e),
+      ProgramWarning::VertexAttrib(ref e) => write!(f, "vertex attribute warning: {}", e),
+    }
+  }
+}
+
+/// A raw shader program.
+///
+/// This is a type-erased version of a `Program`.
+#[derive(Debug)]
+pub struct RawProgram {
+  handle: GLuint,
+}
+
+impl RawProgram {
+  /// Create a new program by attaching shader stages.
+  fn new<'a, T, G>(
+    vertex: &'a Stage,
+    tess: T,
+    geometry: G,
+    fragment: &'a Stage,
+  ) -> Result<Self, ProgramError>
+  where
+    T: Into<Option<TessellationStages<'a, Stage>>>,
+    G: Into<Option<&'a Stage>>,
+  {
+    unsafe {
+      let handle = gl::CreateProgram();
+
+      gl::AttachShader(handle, vertex.handle());
+
+      if let Some(TessellationStages {
+        control,
+        evaluation,
+      }) = tess.into()
+      {
+        gl::AttachShader(handle, control.handle());
+        gl::AttachShader(handle, evaluation.handle());
+      }
+
+      if let Some(geometry) = geometry.into() {
+        gl::AttachShader(handle, geometry.handle());
+      }
+
+      gl::AttachShader(handle, fragment.handle());
+
+      let program = RawProgram { handle };
+      program.link().map(move |_| program)
+    }
+  }
+
+  /// Link a program.
+  fn link(&self) -> Result<(), ProgramError> {
+    let handle = self.handle;
+
+    unsafe {
+      gl::LinkProgram(handle);
+
+      let mut linked: GLint = gl::FALSE.into();
+      gl::GetProgramiv(handle, gl::LINK_STATUS, &mut linked);
+
+      if linked == gl::TRUE.into() {
+        Ok(())
+      } else {
+        let mut log_len: GLint = 0;
+        gl::GetProgramiv(handle, gl::INFO_LOG_LENGTH, &mut log_len);
+
+        let mut log: Vec<u8> = Vec::with_capacity(log_len as usize);
+        gl::GetProgramInfoLog(handle, log_len, null_mut(), log.as_mut_ptr() as *mut GLchar);
+
+        gl::DeleteProgram(handle);
+
+        log.set_len(log_len as usize);
+
+        Err(ProgramError::LinkFailed(String::from_utf8(log).unwrap()))
+      }
+    }
+  }
+
+  #[inline]
+  pub(crate) fn handle(&self) -> GLuint {
+    self.handle
+  }
+}
+
+impl Drop for RawProgram {
+  fn drop(&mut self) {
+    unsafe { gl::DeleteProgram(self.handle) }
+  }
+}
+
+pub struct UniformBuilder<'a> {
+  raw: &'a RawProgram,
+  warnings: Vec<UniformWarning>,
+}
+
+impl<'a> UniformBuilder<'a> {
+  fn new(raw: &'a RawProgram) -> Self {
+    UniformBuilder {
+      raw,
+      warnings: Vec::new(),
+    }
+  }
+
+  fn ask<T>(&mut self, name: &str) -> Result<Uniform<T>, UniformWarning>
+  where
+    Uniform<T>: Uniformable<T>,
+  {
+    let uniform = match Uniform::<T>::TY {
+      Type::BufferBinding => self.ask_uniform_block(name)?,
+      _ => self.ask_uniform(name)?,
+    };
+
+    uniform_type_match(self.raw.handle, name, Uniform::<T>::TY)?;
+
+    Ok(uniform)
+  }
+
+  /// Get an unbound [`Uniform`].
+  ///
+  /// Unbound [`Uniform`]s are not any different from typical [`Uniform`]s but when resolving
+  /// mapping in the _shader program_, if the [`Uniform`] is found inactive or doesn’t exist,
+  /// instead of returning an error, this function will return an _unbound uniform_, which is a
+  /// uniform that does nothing interesting.
+  ///
+  /// That function is useful if you don’t really care about silently sending values down a shader
+  /// program and getting them ignored. It might be the case for optional uniforms, for instance.
+  fn ask_unbound<T>(&mut self, name: &str) -> Uniform<T>
+  where
+    Uniform<T>: Uniformable<T>,
+  {
+    match self.ask(name) {
+      Ok(uniform) => uniform,
+      Err(warning) => {
+        self.warnings.push(warning);
+        self.unbound()
+      }
+    }
+  }
+
+  fn ask_uniform<T>(&self, name: &str) -> Result<Uniform<T>, UniformWarning>
+  where
+    Uniform<T>: Uniformable<T>,
+  {
+    let location = {
+      let c_name = CString::new(name.as_bytes()).unwrap();
+      unsafe { gl::GetUniformLocation(self.raw.handle, c_name.as_ptr() as *const GLchar) }
+    };
+
+    if location < 0 {
+      Err(UniformWarning::Inactive(name.to_owned()))
+    } else {
+      Ok(Uniform::new(self.raw.handle, location))
+    }
+  }
+
+  fn ask_uniform_block<T>(&self, name: &str) -> Result<Uniform<T>, UniformWarning>
+  where
+    Uniform<T>: Uniformable<T>,
+  {
+    let location = {
+      let c_name = CString::new(name.as_bytes()).unwrap();
+      unsafe { gl::GetUniformBlockIndex(self.raw.handle, c_name.as_ptr() as *const GLchar) }
+    };
+
+    if location == gl::INVALID_INDEX {
+      Err(UniformWarning::Inactive(name.to_owned()))
+    } else {
+      Ok(Uniform::new(self.raw.handle, location as GLint))
+    }
+  }
+
+  /// Special uniform that won’t do anything.
+  ///
+  /// Use that function when you need a uniform to complete a uniform interface but you’re sure you
+  /// won’t use it.
+  fn unbound<T>(&self) -> Uniform<T>
+  where
+    Uniform<T>: Uniformable<T>,
+  {
+    Uniform::unbound(self.raw.handle)
+  }
+}
+
+impl<'a, T> UniformBuild<T> for UniformBuilder<'a>
+where
+  Uniform<T>: Uniformable<T>,
+{
+  type Uniform = Uniform<T>;
+
+  type UniformWarning = UniformWarning;
+
+  fn ask_specific<S>(&mut self, name: S) -> Result<Self::Uniform, Self::UniformWarning>
+  where
+    S: AsRef<str>,
+  {
+    UniformBuilder::ask(self, name.as_ref())
+  }
+
+  fn ask_unbound_specific<S>(&mut self, name: S) -> Self::Uniform
+  where
+    S: AsRef<str>,
+  {
+    UniformBuilder::ask_unbound(self, name.as_ref())
+  }
+
+  fn unbound_specific(&mut self) -> Self::Uniform {
+    UniformBuilder::unbound(self)
+  }
+}
+
+pub struct ProgramInterface<'a, Uni> {
+  raw_program: &'a RawProgram,
+  uniform_interface: &'a Uni,
+}
+
+impl<'a, Uni> Deref for ProgramInterface<'a, Uni> {
+  type Target = Uni;
+
+  fn deref(&self) -> &Self::Target {
+    self.uniform_interface
+  }
+}
+
+impl<'a, Uni> ProgramInterface<'a, Uni> {
+  /// Get a [`UniformBuilder`] in order to perform dynamic uniform lookup.
+  pub fn query(&'a self) -> UniformBuilder<'a> {
+    UniformBuilder::new(self.raw_program)
+  }
+}
+
+//impl<'a, Uni> ProgramInterfaceBackend<'a, Uni> for ProgramInterface<'a, Uni> {
+//  type UniformBuilder = UniformBuilder<'a>;
+//
+//  fn query(&'a self) -> Self::UniformBuilder {
+//    ProgramInterface::query(self)
+//  }
+//}
 
 /// Warnings related to uniform issues.
 #[derive(Debug)]
@@ -141,11 +448,87 @@ fn check_types_match(name: &str, ty: Type, glty: GLuint) -> Result<(), UniformWa
   }
 }
 
+//// Generate a uniform interface and collect warnings.
+//fn create_uniform_interface<Uni, E>(
+//  raw: &RawProgram,
+//  env: E,
+//) -> Result<(Uni, Vec<UniformWarning>), ProgramError>
+//where
+//  Uni: UniformInterface<E>,
+//{
+//  let mut builder = UniformBuilder::new(raw);
+//  let iface = Uni::uniform_interface(&mut builder, env)?;
+//  Ok((iface, builder.warnings))
+//}
+
+fn bind_vertex_attribs_locations<S>(raw: &RawProgram) -> Vec<ProgramWarning>
+where
+  S: Semantics,
+{
+  let mut warnings = Vec::new();
+
+  for desc in S::semantics_set() {
+    match get_vertex_attrib_location(raw, &desc.name) {
+      Ok(_) => {
+        let index = desc.index as GLuint;
+
+        // we are not interested in the location as we’re about to change it to what we’ve
+        // decided in the semantics
+        let c_name = CString::new(desc.name.as_bytes()).unwrap();
+        unsafe { gl::BindAttribLocation(raw.handle, index, c_name.as_ptr() as *const GLchar) };
+      }
+
+      Err(warning) => warnings.push(ProgramWarning::VertexAttrib(warning)),
+    }
+  }
+
+  warnings
+}
+
+fn get_vertex_attrib_location(raw: &RawProgram, name: &str) -> Result<GLuint, VertexAttribWarning> {
+  let location = {
+    let c_name = CString::new(name.as_bytes()).unwrap();
+    unsafe { gl::GetAttribLocation(raw.handle, c_name.as_ptr() as *const GLchar) }
+  };
+
+  if location < 0 {
+    Err(VertexAttribWarning::Inactive(name.to_owned()))
+  } else {
+    Ok(location as _)
+  }
+}
+
 #[derive(Debug)]
 pub struct Uniform<T> {
   program: GLuint,
   index: GLint,
   _t: PhantomData<*const T>,
+}
+
+impl<T> Uniform<T> {
+  fn new(program: GLuint, index: GLint) -> Self {
+    Uniform {
+      program,
+      index,
+      _t: PhantomData,
+    }
+  }
+
+  fn unbound(program: GLuint) -> Self {
+    Uniform {
+      program,
+      index: -1,
+      _t: PhantomData,
+    }
+  }
+
+  pub(crate) fn program(&self) -> GLuint {
+    self.program
+  }
+
+  pub(crate) fn index(&self) -> GLint {
+    self.index
+  }
 }
 
 macro_rules! impl_uniformable {
