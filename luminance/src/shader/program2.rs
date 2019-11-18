@@ -127,10 +127,8 @@ impl fmt::Display for Type {
   }
 }
 
-pub trait UniformBuild<T> {
+pub trait UniformBuild<T>: UniformBuilder {
   type Uniform: Uniformable<T>;
-
-  type UniformWarning;
 
   fn ask_specific<S>(&mut self, name: S) -> Result<Self::Uniform, Self::UniformWarning>
   where
@@ -144,6 +142,8 @@ pub trait UniformBuild<T> {
 }
 
 pub trait UniformBuilder {
+  type UniformWarning;
+
   fn ask<T, S>(&mut self, name: S) -> Result<Self::Uniform, Self::UniformWarning>
   where
     Self: UniformBuild<T>,
@@ -168,17 +168,20 @@ pub trait UniformBuilder {
   }
 }
 
-impl<T> UniformBuilder for T {}
+pub trait UniformInterface<E = ()>: Sized {
+  fn uniform_interface<'a, B>(builder: B, env: E) -> Result<Self, B::UniformWarning>
+  where
+    B: UniformBuilder;
+}
 
-//pub trait UniformInterface<E = ()>: Sized {
-//  fn uniform_interface<'a>(builder: &mut UniformBuilder<'a>, env: E) -> Result<Self, ProgramError>;
-//}
-//
-//impl UniformInterface for () {
-//  fn uniform_interface<'a>(_: &mut UniformBuilder<'a>, _: ()) -> Result<Self, ProgramError> {
-//    Ok(())
-//  }
-//}
+impl<E> UniformInterface<E> for () {
+  fn uniform_interface<'a, B>(_: B, _: E) -> Result<Self, B::UniformWarning>
+  where
+    B: UniformBuilder,
+  {
+    Ok(())
+  }
+}
 
 pub struct TessellationStages<'a, Stage> {
   pub control: &'a Stage,

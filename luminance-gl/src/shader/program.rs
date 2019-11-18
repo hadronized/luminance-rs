@@ -258,13 +258,15 @@ impl<'a> UniformBuilder<'a> {
   }
 }
 
+impl<'a> UniformBuilderBackend for UniformBuilder<'a> {
+  type UniformWarning = UniformWarning;
+}
+
 impl<'a, T> UniformBuild<T> for UniformBuilder<'a>
 where
   Uniform<T>: Uniformable<T>,
 {
   type Uniform = Uniform<T>;
-
-  type UniformWarning = UniformWarning;
 
   fn ask_specific<S>(&mut self, name: S) -> Result<Self::Uniform, Self::UniformWarning>
   where
