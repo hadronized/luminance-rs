@@ -183,9 +183,12 @@ impl<E> UniformInterface<E> for () {
   }
 }
 
-pub struct TessellationStages<'a, Stage> {
-  pub control: &'a Stage,
-  pub evaluation: &'a Stage,
+pub struct TessellationStages<'a, T>
+where
+  T: ?Sized,
+{
+  pub control: &'a T,
+  pub evaluation: &'a T,
 }
 
 pub trait Program<'a>: Sized {

@@ -2,7 +2,7 @@ use gl;
 use gl::types::*;
 use luminance::shader::program2::{
   ProgramInterface as ProgramInterfaceBackend, TessellationStages, Type, UniformBuild,
-  UniformBuilder as UniformBuilderBackend, Uniformable,
+  UniformBuilder as UniformBuilderBackend, UniformInterface, Uniformable,
 };
 use luminance::vertex::Semantics;
 use std::ffi::CString;
@@ -162,6 +162,253 @@ impl RawProgram {
 impl Drop for RawProgram {
   fn drop(&mut self) {
     unsafe { gl::DeleteProgram(self.handle) }
+  }
+}
+
+pub struct Program<S, Out, Uni> {
+  raw: RawProgram,
+  uni_iface: Uni,
+  _in: PhantomData<*const S>,
+  _out: PhantomData<*const Out>,
+}
+
+impl<S, Out, Uni> Program<S, Out, Uni>
+where
+  S: Semantics,
+{
+  /// Create a new program by consuming `Stage`s.
+  pub fn from_stages<'a, T, G>(
+    tess: T,
+    vertex: &Stage,
+    geometry: G,
+    fragment: &Stage,
+  ) -> Result<BuiltProgram<S, Out, Uni>, ProgramError>
+  where
+    Uni: UniformInterface,
+    T: Into<Option<(&'a Stage, &'a Stage)>>,
+    G: Into<Option<&'a Stage>>,
+  {
+    Self::from_stages_env(tess, vertex, geometry, fragment, ())
+  }
+
+  /// Create a new program by consuming strings.
+  pub fn from_strings<'a, T, G>(
+    tess: T,
+    vertex: &str,
+    geometry: G,
+    fragment: &str,
+  ) -> Result<BuiltProgram<S, Out, Uni>, ProgramError>
+  where
+    Uni: UniformInterface,
+    T: Into<Option<(&'a str, &'a str)>>,
+    G: Into<Option<&'a str>>,
+  {
+    Self::from_strings_env(tess, vertex, geometry, fragment, ())
+  }
+
+  /// Create a new program by consuming `Stage`s and by looking up an environment.
+  pub fn from_stages_env<'a, E, T, G>(
+    vertex: &Stage,
+    tess: T,
+    geometry: G,
+    fragment: &Stage,
+    env: E,
+  ) -> Result<BuiltProgram<S, Out, Uni>, ProgramError>
+  where
+    Uni: UniformInterface<E>,
+    T: Into<Option<TessellationStages<'a, Stage>>>,
+    G: Into<Option<&'a Stage>>,
+  {
+    let raw = RawProgram::new(vertex, tess, geometry, fragment)?;
+
+    let mut warnings = bind_vertex_attribs_locations::<S>(&raw);
+
+    raw.link()?;
+
+    let (uni_iface, uniform_warnings) = create_uniform_interface(&raw, env)?;
+    warnings.extend(uniform_warnings.into_iter().map(ProgramWarning::Uniform));
+
+    let program = Program {
+      raw,
+      uni_iface,
+      _in: PhantomData,
+      _out: PhantomData,
+    };
+
+    Ok(BuiltProgram { program, warnings })
+  }
+
+  /// Create a new program by consuming strings.
+  pub fn from_strings_env<'a, E, T, G>(
+    vertex: &str,
+    tess: T,
+    geometry: G,
+    fragment: &str,
+    env: E,
+  ) -> Result<BuiltProgram<S, Out, Uni>, ProgramError>
+  where
+    Uni: UniformInterface<E>,
+    T: Into<Option<TessellationStages<'a, str>>>,
+    G: Into<Option<&'a str>>,
+  {
+    let vs = Stage::new(Type::VertexShader, vertex).map_err(ProgramError::StageError)?;
+
+    let tess = match tess.into() {
+      Some(TessellationStages {
+        control,
+        evaluation,
+      }) => {
+        let tcs =
+          Stage::new(Type::TessellationControlShader, control).map_err(ProgramError::StageError)?;
+        let tes = Stage::new(Type::TessellationControlShader, evaluation)
+          .map_err(ProgramError::StageError)?;
+
+        (tcs, tes)
+      }
+      None => None,
+    };
+
+    let gs = match geometry.into() {
+      Some(gs_str) => {
+        Some(Stage::new(Type::GeometryShader, gs_str).map_err(ProgramError::StageError)?)
+      }
+      None => None,
+    };
+
+    let fs = Stage::new(Type::FragmentShader, fragment).map_err(ProgramError::StageError)?;
+
+    Self::from_stages_env(
+      &vs,
+      tess
+        .as_ref()
+        .map(|(control, evaluation)| TessellationStages {
+          control: &control,
+          evaluation: &evaluation,
+        }),
+      gs.as_ref(),
+      &fs,
+      env,
+    )
+  }
+
+  /// Get the program interface associated with this program.
+  pub(crate) fn interface(&self) -> ProgramInterface<Uni> {
+    let raw_program = &self.raw;
+    let uniform_interface = &self.uni_iface;
+
+    ProgramInterface {
+      raw_program,
+      uniform_interface,
+    }
+  }
+
+  /// Transform the program to adapt the uniform interface.
+  ///
+  /// This function will not re-allocate nor recreate the GPU data. It will try to change the
+  /// uniform interface and if the new uniform interface is correctly generated, return the same
+  /// shader program updated with the new uniform interface. If the generation of the new uniform
+  /// interface fails, this function will return the program with the former uniform interface.
+  pub fn adapt<Q>(self) -> Result<BuiltProgram<S, Out, Q>, AdaptationFailure<S, Out, Uni>>
+  where
+    Q: UniformInterface,
+  {
+    self.adapt_env(())
+  }
+
+  /// Transform the program to adapt the uniform interface by looking up an environment.
+  ///
+  /// This function will not re-allocate nor recreate the GPU data. It will try to change the
+  /// uniform interface and if the new uniform interface is correctly generated, return the same
+  /// shader program updated with the new uniform interface. If the generation of the new uniform
+  /// interface fails, this function will return the program with the former uniform interface.
+  pub fn adapt_env<Q, E>(
+    self,
+    env: E,
+  ) -> Result<BuiltProgram<S, Out, Q>, AdaptationFailure<S, Out, Uni>>
+  where
+    Q: UniformInterface<E>,
+  {
+    // first, try to create the new uniform interface
+    let new_uni_iface = create_uniform_interface(&self.raw, env);
+
+    match new_uni_iface {
+      Ok((uni_iface, warnings)) => {
+        // if we have succeeded, return self with the new uniform interface
+        let program = Program {
+          raw: self.raw,
+          uni_iface,
+          _in: PhantomData,
+          _out: PhantomData,
+        };
+        let warnings = warnings.into_iter().map(ProgramWarning::Uniform).collect();
+
+        Ok(BuiltProgram { program, warnings })
+      }
+
+      Err(iface_err) => {
+        // we couldn’t generate the new uniform interface; return the error(s) that occurred and the
+        // the untouched former program
+        let failure = AdaptationFailure {
+          program: self,
+          error: iface_err,
+        };
+        Err(failure)
+      }
+    }
+  }
+
+  /// A version of [`Program::adapt_env`] that doesn’t change the uniform interface type.
+  ///
+  /// This function might be needed for when you want to update the uniform interface but still
+  /// enforce that the type must remain the same.
+  pub fn readapt_env<E>(
+    self,
+    env: E,
+  ) -> Result<BuiltProgram<S, Out, Uni>, AdaptationFailure<S, Out, Uni>>
+  where
+    Uni: UniformInterface<E>,
+  {
+    self.adapt_env(env)
+  }
+}
+
+impl<S, Out, Uni> Deref for Program<S, Out, Uni> {
+  type Target = RawProgram;
+
+  fn deref(&self) -> &Self::Target {
+    &self.raw
+  }
+}
+
+/// A built program with potential warnings.
+///
+/// The sole purpose of this type is to be destructured when a program is built.
+pub struct BuiltProgram<S, Out, Uni> {
+  /// Built program.
+  pub program: Program<S, Out, Uni>,
+  /// Potential warnings.
+  pub warnings: Vec<ProgramWarning>,
+}
+
+impl<S, Out, Uni> BuiltProgram<S, Out, Uni> {
+  /// Get the program and ignore the warnings.
+  pub fn ignore_warnings(self) -> Program<S, Out, Uni> {
+    self.program
+  }
+}
+
+/// A [`Program`] uniform adaptation that has failed.
+pub struct AdaptationFailure<S, Out, Uni> {
+  /// Program used before trying to adapt.
+  pub program: Program<S, Out, Uni>,
+  /// Program error that prevented to adapt.
+  pub error: ProgramError,
+}
+
+impl<S, Out, Uni> AdaptationFailure<S, Out, Uni> {
+  /// Get the program and ignore the error.
+  pub fn ignore_error(self) -> Program<S, Out, Uni> {
+    self.program
   }
 }
 
@@ -450,18 +697,18 @@ fn check_types_match(name: &str, ty: Type, glty: GLuint) -> Result<(), UniformWa
   }
 }
 
-//// Generate a uniform interface and collect warnings.
-//fn create_uniform_interface<Uni, E>(
-//  raw: &RawProgram,
-//  env: E,
-//) -> Result<(Uni, Vec<UniformWarning>), ProgramError>
-//where
-//  Uni: UniformInterface<E>,
-//{
-//  let mut builder = UniformBuilder::new(raw);
-//  let iface = Uni::uniform_interface(&mut builder, env)?;
-//  Ok((iface, builder.warnings))
-//}
+// Generate a uniform interface and collect warnings.
+fn create_uniform_interface<Uni, E>(
+  raw: &RawProgram,
+  env: E,
+) -> Result<(Uni, Vec<UniformWarning>), ProgramError>
+where
+  Uni: UniformInterface<E>,
+{
+  let mut builder = UniformBuilder::new(raw);
+  let iface = Uni::uniform_interface(builder, env)?;
+  Ok((iface, builder.warnings))
+}
 
 fn bind_vertex_attribs_locations<S>(raw: &RawProgram) -> Vec<ProgramWarning>
 where
