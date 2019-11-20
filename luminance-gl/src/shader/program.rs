@@ -1,9 +1,10 @@
 use gl;
 use gl::types::*;
 use luminance::shader::program2::{
-  ProgramInterface as ProgramInterfaceBackend, TessellationStages, Type, UniformBuild,
-  UniformBuilder as UniformBuilderBackend, UniformInterface, Uniformable,
+  ProgramInterface as ProgramInterfaceBackend, TessellationStages, Type as UniformType,
+  UniformBuild, UniformBuilder as UniformBuilderBackend, UniformInterface, Uniformable,
 };
+use luminance::shader::stage::Type as StageType;
 use luminance::vertex::Semantics;
 use std::ffi::CString;
 use std::fmt;
@@ -179,39 +180,39 @@ where
   /// Create a new program by consuming `Stage`s.
   pub fn from_stages<'a, T, G>(
     tess: T,
-    vertex: &Stage,
+    vertex: &'a Stage,
     geometry: G,
-    fragment: &Stage,
+    fragment: &'a Stage,
   ) -> Result<BuiltProgram<S, Out, Uni>, ProgramError>
   where
     Uni: UniformInterface,
-    T: Into<Option<(&'a Stage, &'a Stage)>>,
+    T: Into<Option<TessellationStages<'a, Stage>>>,
     G: Into<Option<&'a Stage>>,
   {
-    Self::from_stages_env(tess, vertex, geometry, fragment, ())
+    Self::from_stages_env(vertex, tess, geometry, fragment, ())
   }
 
   /// Create a new program by consuming strings.
   pub fn from_strings<'a, T, G>(
     tess: T,
-    vertex: &str,
+    vertex: &'a str,
     geometry: G,
-    fragment: &str,
+    fragment: &'a str,
   ) -> Result<BuiltProgram<S, Out, Uni>, ProgramError>
   where
     Uni: UniformInterface,
-    T: Into<Option<(&'a str, &'a str)>>,
+    T: Into<Option<TessellationStages<'a, str>>>,
     G: Into<Option<&'a str>>,
   {
-    Self::from_strings_env(tess, vertex, geometry, fragment, ())
+    Self::from_strings_env(vertex, tess, geometry, fragment, ())
   }
 
   /// Create a new program by consuming `Stage`s and by looking up an environment.
   pub fn from_stages_env<'a, E, T, G>(
-    vertex: &Stage,
+    vertex: &'a Stage,
     tess: T,
     geometry: G,
-    fragment: &Stage,
+    fragment: &'a Stage,
     env: E,
   ) -> Result<BuiltProgram<S, Out, Uni>, ProgramError>
   where
@@ -240,10 +241,10 @@ where
 
   /// Create a new program by consuming strings.
   pub fn from_strings_env<'a, E, T, G>(
-    vertex: &str,
+    vertex: &'a str,
     tess: T,
     geometry: G,
-    fragment: &str,
+    fragment: &'a str,
     env: E,
   ) -> Result<BuiltProgram<S, Out, Uni>, ProgramError>
   where
@@ -251,39 +252,39 @@ where
     T: Into<Option<TessellationStages<'a, str>>>,
     G: Into<Option<&'a str>>,
   {
-    let vs = Stage::new(Type::VertexShader, vertex).map_err(ProgramError::StageError)?;
+    let vs = Stage::new(StageType::VertexShader, vertex).map_err(ProgramError::StageError)?;
 
     let tess = match tess.into() {
       Some(TessellationStages {
         control,
         evaluation,
       }) => {
-        let tcs =
-          Stage::new(Type::TessellationControlShader, control).map_err(ProgramError::StageError)?;
-        let tes = Stage::new(Type::TessellationControlShader, evaluation)
+        let tcs = Stage::new(StageType::TessellationControlShader, control)
+          .map_err(ProgramError::StageError)?;
+        let tes = Stage::new(StageType::TessellationControlShader, evaluation)
           .map_err(ProgramError::StageError)?;
 
-        (tcs, tes)
+        Some((tcs, tes))
       }
       None => None,
     };
 
     let gs = match geometry.into() {
       Some(gs_str) => {
-        Some(Stage::new(Type::GeometryShader, gs_str).map_err(ProgramError::StageError)?)
+        Some(Stage::new(StageType::GeometryShader, gs_str).map_err(ProgramError::StageError)?)
       }
       None => None,
     };
 
-    let fs = Stage::new(Type::FragmentShader, fragment).map_err(ProgramError::StageError)?;
+    let fs = Stage::new(StageType::FragmentShader, fragment).map_err(ProgramError::StageError)?;
 
     Self::from_stages_env(
       &vs,
       tess
         .as_ref()
-        .map(|(control, evaluation)| TessellationStages {
-          control: &control,
-          evaluation: &evaluation,
+        .map(|(ref control, ref evaluation)| TessellationStages {
+          control,
+          evaluation,
         }),
       gs.as_ref(),
       &fs,
@@ -430,7 +431,7 @@ impl<'a> UniformBuilder<'a> {
     Uniform<T>: Uniformable<T>,
   {
     let uniform = match Uniform::<T>::TY {
-      Type::BufferBinding => self.ask_uniform_block(name)?,
+      UniformType::BufferBinding => self.ask_uniform_block(name)?,
       _ => self.ask_uniform(name)?,
     };
 
@@ -506,7 +507,7 @@ impl<'a> UniformBuilder<'a> {
 }
 
 impl<'a> UniformBuilderBackend for UniformBuilder<'a> {
-  type UniformWarning = UniformWarning;
+  type Err = UniformWarning;
 }
 
 impl<'a, T> UniformBuild<T> for UniformBuilder<'a>
@@ -515,7 +516,7 @@ where
 {
   type Uniform = Uniform<T>;
 
-  fn ask_specific<S>(&mut self, name: S) -> Result<Self::Uniform, Self::UniformWarning>
+  fn ask_specific<S>(&mut self, name: S) -> Result<Self::Uniform, Self::Err>
   where
     S: AsRef<str>,
   {
@@ -571,7 +572,7 @@ pub enum UniformWarning {
   /// and the type that got reflected from the backend in the shaders.
   ///
   /// The first `String` is the name of the uniform; the second one gives the type mismatch.
-  TypeMismatch(String, Type),
+  TypeMismatch(String, UniformType),
 }
 
 impl UniformWarning {
@@ -584,7 +585,7 @@ impl UniformWarning {
   }
 
   /// Create a type mismatch.
-  pub fn type_mismatch<N>(name: N, ty: Type) -> Self
+  pub fn type_mismatch<N>(name: N, ty: UniformType) -> Self
   where
     N: Into<String>,
   {
@@ -605,7 +606,7 @@ impl fmt::Display for UniformWarning {
 }
 
 // Check whether a shader program’s uniform type matches the type we have chosen.
-fn uniform_type_match(program: GLuint, name: &str, ty: Type) -> Result<(), UniformWarning> {
+fn uniform_type_match(program: GLuint, name: &str, ty: UniformType) -> Result<(), UniformWarning> {
   let mut size: GLint = 0;
   let mut glty: GLuint = 0;
 
@@ -646,53 +647,75 @@ fn uniform_type_match(program: GLuint, name: &str, ty: Type) -> Result<(), Unifo
   check_types_match(name, ty, glty)
 }
 
-// Check if a [`Type`] matches the OpenGL counterpart.
+// Check if a type matches the OpenGL counterpart.
 #[allow(clippy::cognitive_complexity)]
-fn check_types_match(name: &str, ty: Type, glty: GLuint) -> Result<(), UniformWarning> {
+fn check_types_match(name: &str, ty: UniformType, glty: GLuint) -> Result<(), UniformWarning> {
   match ty {
     // scalars
-    Type::Int if glty != gl::INT => Err(UniformWarning::type_mismatch(name, ty)),
-    Type::UInt if glty != gl::UNSIGNED_INT => Err(UniformWarning::type_mismatch(name, ty)),
-    Type::Float if glty != gl::FLOAT => Err(UniformWarning::type_mismatch(name, ty)),
-    Type::Bool if glty != gl::BOOL => Err(UniformWarning::type_mismatch(name, ty)),
+    UniformType::Int if glty != gl::INT => Err(UniformWarning::type_mismatch(name, ty)),
+    UniformType::UInt if glty != gl::UNSIGNED_INT => Err(UniformWarning::type_mismatch(name, ty)),
+    UniformType::Float if glty != gl::FLOAT => Err(UniformWarning::type_mismatch(name, ty)),
+    UniformType::Bool if glty != gl::BOOL => Err(UniformWarning::type_mismatch(name, ty)),
     // vectors
-    Type::IVec2 if glty != gl::INT_VEC2 => Err(UniformWarning::type_mismatch(name, ty)),
-    Type::IVec3 if glty != gl::INT_VEC3 => Err(UniformWarning::type_mismatch(name, ty)),
-    Type::IVec4 if glty != gl::INT_VEC4 => Err(UniformWarning::type_mismatch(name, ty)),
-    Type::UIVec2 if glty != gl::UNSIGNED_INT_VEC2 => Err(UniformWarning::type_mismatch(name, ty)),
-    Type::UIVec3 if glty != gl::UNSIGNED_INT_VEC3 => Err(UniformWarning::type_mismatch(name, ty)),
-    Type::UIVec4 if glty != gl::UNSIGNED_INT_VEC4 => Err(UniformWarning::type_mismatch(name, ty)),
-    Type::Vec2 if glty != gl::FLOAT_VEC2 => Err(UniformWarning::type_mismatch(name, ty)),
-    Type::Vec3 if glty != gl::FLOAT_VEC3 => Err(UniformWarning::type_mismatch(name, ty)),
-    Type::Vec4 if glty != gl::FLOAT_VEC4 => Err(UniformWarning::type_mismatch(name, ty)),
-    Type::BVec2 if glty != gl::BOOL_VEC2 => Err(UniformWarning::type_mismatch(name, ty)),
-    Type::BVec3 if glty != gl::BOOL_VEC3 => Err(UniformWarning::type_mismatch(name, ty)),
-    Type::BVec4 if glty != gl::BOOL_VEC4 => Err(UniformWarning::type_mismatch(name, ty)),
+    UniformType::IVec2 if glty != gl::INT_VEC2 => Err(UniformWarning::type_mismatch(name, ty)),
+    UniformType::IVec3 if glty != gl::INT_VEC3 => Err(UniformWarning::type_mismatch(name, ty)),
+    UniformType::IVec4 if glty != gl::INT_VEC4 => Err(UniformWarning::type_mismatch(name, ty)),
+    UniformType::UIVec2 if glty != gl::UNSIGNED_INT_VEC2 => {
+      Err(UniformWarning::type_mismatch(name, ty))
+    }
+    UniformType::UIVec3 if glty != gl::UNSIGNED_INT_VEC3 => {
+      Err(UniformWarning::type_mismatch(name, ty))
+    }
+    UniformType::UIVec4 if glty != gl::UNSIGNED_INT_VEC4 => {
+      Err(UniformWarning::type_mismatch(name, ty))
+    }
+    UniformType::Vec2 if glty != gl::FLOAT_VEC2 => Err(UniformWarning::type_mismatch(name, ty)),
+    UniformType::Vec3 if glty != gl::FLOAT_VEC3 => Err(UniformWarning::type_mismatch(name, ty)),
+    UniformType::Vec4 if glty != gl::FLOAT_VEC4 => Err(UniformWarning::type_mismatch(name, ty)),
+    UniformType::BVec2 if glty != gl::BOOL_VEC2 => Err(UniformWarning::type_mismatch(name, ty)),
+    UniformType::BVec3 if glty != gl::BOOL_VEC3 => Err(UniformWarning::type_mismatch(name, ty)),
+    UniformType::BVec4 if glty != gl::BOOL_VEC4 => Err(UniformWarning::type_mismatch(name, ty)),
     // matrices
-    Type::M22 if glty != gl::FLOAT_MAT2 => Err(UniformWarning::type_mismatch(name, ty)),
-    Type::M33 if glty != gl::FLOAT_MAT3 => Err(UniformWarning::type_mismatch(name, ty)),
-    Type::M44 if glty != gl::FLOAT_MAT4 => Err(UniformWarning::type_mismatch(name, ty)),
+    UniformType::M22 if glty != gl::FLOAT_MAT2 => Err(UniformWarning::type_mismatch(name, ty)),
+    UniformType::M33 if glty != gl::FLOAT_MAT3 => Err(UniformWarning::type_mismatch(name, ty)),
+    UniformType::M44 if glty != gl::FLOAT_MAT4 => Err(UniformWarning::type_mismatch(name, ty)),
     // textures
-    Type::ISampler1D if glty != gl::INT_SAMPLER_1D => Err(UniformWarning::type_mismatch(name, ty)),
-    Type::ISampler2D if glty != gl::INT_SAMPLER_2D => Err(UniformWarning::type_mismatch(name, ty)),
-    Type::ISampler3D if glty != gl::INT_SAMPLER_3D => Err(UniformWarning::type_mismatch(name, ty)),
-    Type::UISampler1D if glty != gl::UNSIGNED_INT_SAMPLER_1D => {
+    UniformType::ISampler1D if glty != gl::INT_SAMPLER_1D => {
       Err(UniformWarning::type_mismatch(name, ty))
     }
-    Type::UISampler2D if glty != gl::UNSIGNED_INT_SAMPLER_2D => {
+    UniformType::ISampler2D if glty != gl::INT_SAMPLER_2D => {
       Err(UniformWarning::type_mismatch(name, ty))
     }
-    Type::UISampler3D if glty != gl::UNSIGNED_INT_SAMPLER_3D => {
+    UniformType::ISampler3D if glty != gl::INT_SAMPLER_3D => {
       Err(UniformWarning::type_mismatch(name, ty))
     }
-    Type::Sampler1D if glty != gl::SAMPLER_1D => Err(UniformWarning::type_mismatch(name, ty)),
-    Type::Sampler2D if glty != gl::SAMPLER_2D => Err(UniformWarning::type_mismatch(name, ty)),
-    Type::Sampler3D if glty != gl::SAMPLER_3D => Err(UniformWarning::type_mismatch(name, ty)),
-    Type::ICubemap if glty != gl::INT_SAMPLER_CUBE => Err(UniformWarning::type_mismatch(name, ty)),
-    Type::UICubemap if glty != gl::UNSIGNED_INT_SAMPLER_CUBE => {
+    UniformType::UISampler1D if glty != gl::UNSIGNED_INT_SAMPLER_1D => {
       Err(UniformWarning::type_mismatch(name, ty))
     }
-    Type::Cubemap if glty != gl::SAMPLER_CUBE => Err(UniformWarning::type_mismatch(name, ty)),
+    UniformType::UISampler2D if glty != gl::UNSIGNED_INT_SAMPLER_2D => {
+      Err(UniformWarning::type_mismatch(name, ty))
+    }
+    UniformType::UISampler3D if glty != gl::UNSIGNED_INT_SAMPLER_3D => {
+      Err(UniformWarning::type_mismatch(name, ty))
+    }
+    UniformType::Sampler1D if glty != gl::SAMPLER_1D => {
+      Err(UniformWarning::type_mismatch(name, ty))
+    }
+    UniformType::Sampler2D if glty != gl::SAMPLER_2D => {
+      Err(UniformWarning::type_mismatch(name, ty))
+    }
+    UniformType::Sampler3D if glty != gl::SAMPLER_3D => {
+      Err(UniformWarning::type_mismatch(name, ty))
+    }
+    UniformType::ICubemap if glty != gl::INT_SAMPLER_CUBE => {
+      Err(UniformWarning::type_mismatch(name, ty))
+    }
+    UniformType::UICubemap if glty != gl::UNSIGNED_INT_SAMPLER_CUBE => {
+      Err(UniformWarning::type_mismatch(name, ty))
+    }
+    UniformType::Cubemap if glty != gl::SAMPLER_CUBE => {
+      Err(UniformWarning::type_mismatch(name, ty))
+    }
     _ => Ok(()),
   }
 }
@@ -706,7 +729,8 @@ where
   Uni: UniformInterface<E>,
 {
   let mut builder = UniformBuilder::new(raw);
-  let iface = Uni::uniform_interface(builder, env)?;
+  let iface = Uni::uniform_interface(&mut builder, env).map_err(ProgramError::UniformWarning)?;
+
   Ok((iface, builder.warnings))
 }
 
@@ -784,7 +808,7 @@ macro_rules! impl_uniformable {
   // slices
   (& [[$t:ty; $n:expr]], $ut:tt, $f:tt) => {
     unsafe impl<'a> Uniformable<&'a [[$t; $n]]> for Uniform<&'a [[$t; $n]]> {
-      const TY: Type = Type::$ut;
+      const TY: UniformType = UniformType::$ut;
 
       fn update(self, value: &[[$t; $n]]) {
         unsafe {
@@ -801,7 +825,7 @@ macro_rules! impl_uniformable {
   // matrix slices
   (& [[$t:ty; $n:expr]; $m:expr], $ut:tt, $f:tt) => {
     unsafe impl<'a> Uniformable<&'a [[$t; $n]; $m]> for Uniform<&'a [[$t; $n]; $m]> {
-      const TY: Type = Type::$ut;
+      const TY: UniformType = UniformType::$ut;
 
       fn update(self, value: &[[$t; $n]; $m]) {
         unsafe {
@@ -818,7 +842,7 @@ macro_rules! impl_uniformable {
 
   (& [$t:ty], $ut:tt, $f:tt) => {
     unsafe impl<'a> Uniformable<&'a [$t]> for Uniform<&'a [$t]> {
-      const TY: Type = Type::$ut;
+      const TY: UniformType = UniformType::$ut;
 
       fn update(self, value: &[$t]) {
         unsafe { gl::$f(self.index, value.len() as GLsizei, value.as_ptr()) };
@@ -829,7 +853,7 @@ macro_rules! impl_uniformable {
   // matrices
   ([[$t:ty; $n:expr]; $m:expr], $ut:tt, $f:tt) => {
     unsafe impl Uniformable<[[$t; $n]; $m]> for Uniform<[[$t; $n]; $m]> {
-      const TY: Type = Type::$ut;
+      const TY: UniformType = UniformType::$ut;
 
       fn update(self, value: [[$t; $n]; $m]) {
         let v = [value];
@@ -841,7 +865,7 @@ macro_rules! impl_uniformable {
   // arrays
   ([$t:ty; $n:expr], $ut:tt, $f:tt) => {
     unsafe impl Uniformable<[$t; $n]> for Uniform<[$t; $n]> {
-      const TY: Type = Type::$ut;
+      const TY: UniformType = UniformType::$ut;
 
       fn update(self, value: [$t; $n]) {
         unsafe { gl::$f(self.index, 1, &value as *const $t) };
@@ -852,7 +876,7 @@ macro_rules! impl_uniformable {
   // scalars
   ($t:ty, $ut:tt, $f:tt) => {
     unsafe impl Uniformable<$t> for Uniform<$t> {
-      const TY: Type = Type::$ut;
+      const TY: UniformType = UniformType::$ut;
 
       fn update(self, value: $t) {
         unsafe { gl::$f(self.index, value) };
@@ -899,7 +923,7 @@ impl_uniformable!(&[[f32; 4]; 4], M44, UniformMatrix4fv);
 
 // bool
 unsafe impl Uniformable<bool> for Uniform<bool> {
-  const TY: Type = Type::Bool;
+  const TY: UniformType = UniformType::Bool;
 
   fn update(self, value: bool) {
     unsafe { gl::Uniform1ui(self.index, value as GLuint) }
@@ -907,7 +931,7 @@ unsafe impl Uniformable<bool> for Uniform<bool> {
 }
 
 unsafe impl Uniformable<[bool; 2]> for Uniform<[bool; 2]> {
-  const TY: Type = Type::BVec2;
+  const TY: UniformType = UniformType::BVec2;
 
   fn update(self, value: [bool; 2]) {
     let v = [value[0] as u32, value[1] as u32];
@@ -916,7 +940,7 @@ unsafe impl Uniformable<[bool; 2]> for Uniform<[bool; 2]> {
 }
 
 unsafe impl Uniformable<[bool; 3]> for Uniform<[bool; 3]> {
-  const TY: Type = Type::BVec3;
+  const TY: UniformType = UniformType::BVec3;
 
   fn update(self, value: [bool; 3]) {
     let v = [value[0] as u32, value[1] as u32, value[2] as u32];
@@ -925,7 +949,7 @@ unsafe impl Uniformable<[bool; 3]> for Uniform<[bool; 3]> {
 }
 
 unsafe impl Uniformable<[bool; 4]> for Uniform<[bool; 4]> {
-  const TY: Type = Type::BVec4;
+  const TY: UniformType = UniformType::BVec4;
 
   fn update(self, value: [bool; 4]) {
     let v = [
@@ -939,7 +963,7 @@ unsafe impl Uniformable<[bool; 4]> for Uniform<[bool; 4]> {
 }
 
 unsafe impl<'a> Uniformable<&'a [bool]> for Uniform<&'a [bool]> {
-  const TY: Type = Type::Bool;
+  const TY: UniformType = UniformType::Bool;
 
   fn update(self, value: &[bool]) {
     let v: Vec<_> = value.iter().map(|x| *x as u32).collect();
@@ -948,7 +972,7 @@ unsafe impl<'a> Uniformable<&'a [bool]> for Uniform<&'a [bool]> {
 }
 
 unsafe impl<'a> Uniformable<&'a [[bool; 2]]> for Uniform<&'a [[bool; 2]]> {
-  const TY: Type = Type::BVec2;
+  const TY: UniformType = UniformType::BVec2;
 
   fn update(self, value: &[[bool; 2]]) {
     let v: Vec<_> = value.iter().map(|x| [x[0] as u32, x[1] as u32]).collect();
@@ -957,7 +981,7 @@ unsafe impl<'a> Uniformable<&'a [[bool; 2]]> for Uniform<&'a [[bool; 2]]> {
 }
 
 unsafe impl<'a> Uniformable<&'a [[bool; 3]]> for Uniform<&'a [[bool; 3]]> {
-  const TY: Type = Type::BVec3;
+  const TY: UniformType = UniformType::BVec3;
 
   fn update(self, value: &[[bool; 3]]) {
     let v: Vec<_> = value
@@ -969,7 +993,7 @@ unsafe impl<'a> Uniformable<&'a [[bool; 3]]> for Uniform<&'a [[bool; 3]]> {
 }
 
 unsafe impl<'a> Uniformable<&'a [[bool; 4]]> for Uniform<&'a [[bool; 4]]> {
-  const TY: Type = Type::BVec4;
+  const TY: UniformType = UniformType::BVec4;
 
   fn update(self, value: &[[bool; 4]]) {
     let v: Vec<_> = value

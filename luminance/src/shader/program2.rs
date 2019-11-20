@@ -130,7 +130,7 @@ impl fmt::Display for Type {
 pub trait UniformBuild<T>: UniformBuilder {
   type Uniform: Uniformable<T>;
 
-  fn ask_specific<S>(&mut self, name: S) -> Result<Self::Uniform, Self::UniformWarning>
+  fn ask_specific<S>(&mut self, name: S) -> Result<Self::Uniform, Self::Err>
   where
     S: AsRef<str>;
 
@@ -142,9 +142,9 @@ pub trait UniformBuild<T>: UniformBuilder {
 }
 
 pub trait UniformBuilder {
-  type UniformWarning;
+  type Err;
 
-  fn ask<T, S>(&mut self, name: S) -> Result<Self::Uniform, Self::UniformWarning>
+  fn ask<T, S>(&mut self, name: S) -> Result<Self::Uniform, Self::Err>
   where
     Self: UniformBuild<T>,
     S: AsRef<str>,
@@ -169,13 +169,13 @@ pub trait UniformBuilder {
 }
 
 pub trait UniformInterface<E = ()>: Sized {
-  fn uniform_interface<'a, B>(builder: B, env: E) -> Result<Self, B::UniformWarning>
+  fn uniform_interface<'a, B>(builder: &mut B, env: E) -> Result<Self, B::Err>
   where
     B: UniformBuilder;
 }
 
 impl<E> UniformInterface<E> for () {
-  fn uniform_interface<'a, B>(_: B, _: E) -> Result<Self, B::UniformWarning>
+  fn uniform_interface<'a, B>(_: &mut B, _: E) -> Result<Self, B::Err>
   where
     B: UniformBuilder,
   {
