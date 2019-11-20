@@ -191,22 +191,64 @@ where
   pub evaluation: &'a T,
 }
 
-pub trait Program<'a>: Sized {
-  type Err;
+pub struct BuiltProgram<P, W> {
+  pub program: P,
+  pub warnings: Vec<W>,
+}
 
+pub trait Program<'a, S, Out, Uni>: Sized {
   type Stage;
+
+  type Err;
 
   type UniformBuilder: UniformBuilder;
 
-  fn new<'b, T, G>(
+  fn from_stages_env<'b, T, G, E>(
     vertex: &'b Self::Stage,
     tess: T,
     geometry: G,
     fragment: &'b Self::Stage,
-  ) -> Result<Self, Self::Err>
+    env: E,
+  ) -> Result<BuiltProgram<Self, Self::Err>, Self::Err>
   where
+    Self::Stage: 'b,
     T: Into<Option<TessellationStages<'b, Self::Stage>>>,
     G: Into<Option<&'b Self::Stage>>;
+
+  fn from_stages<'b, T, G>(
+    vertex: &'b Self::Stage,
+    tess: T,
+    geometry: G,
+    fragment: &'b Self::Stage,
+  ) -> Result<BuiltProgram<Self, Self::Err>, Self::Err>
+  where
+    Self::Stage: 'b,
+    T: Into<Option<TessellationStages<'b, Self::Stage>>>,
+    G: Into<Option<&'b Self::Stage>>,
+  {
+    Self::from_stages_env(vertex, tess, geometry, fragment, ())
+  }
+
+  fn from_strings_env<'b, T, G, E>(
+    vertex: &'b str,
+    tess: T,
+    geometry: G,
+    fragment: &'b str,
+    env: E,
+  ) -> Result<BuiltProgram<Self, Self::Err>, Self::Err>;
+
+  fn from_strings<'b, T, G>(
+    vertex: &'b str,
+    tess: T,
+    geometry: G,
+    fragment: &'b str,
+  ) -> Result<BuiltProgram<Self, Self::Err>, Self::Err>
+  where
+    T: Into<Option<TessellationStages<'b, str>>>,
+    G: Into<Option<&'b str>>,
+  {
+    Self::from_strings_env(vertex, tess, geometry, fragment, ())
+  }
 
   fn link(&'a self) -> Result<(), Self::Err>;
 
