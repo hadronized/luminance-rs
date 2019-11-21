@@ -196,63 +196,61 @@ pub struct BuiltProgram<P, W> {
   pub warnings: Vec<W>,
 }
 
-pub trait Program<'a, S, Out, Uni>: Sized {
-  type Stage;
+pub trait Program<'stage, 'program, S, Out, Uni>: Sized {
+  type Stage: 'stage;
 
   type Err;
 
   type UniformBuilder: UniformBuilder;
 
-  fn from_stages_env<'b, T, G, E>(
-    vertex: &'b Self::Stage,
+  fn from_stages_env<T, G, E>(
+    vertex: &'stage Self::Stage,
     tess: T,
     geometry: G,
-    fragment: &'b Self::Stage,
+    fragment: &'stage Self::Stage,
     env: E,
   ) -> Result<BuiltProgram<Self, Self::Err>, Self::Err>
   where
-    Self::Stage: 'b,
-    T: Into<Option<TessellationStages<'b, Self::Stage>>>,
-    G: Into<Option<&'b Self::Stage>>;
+    T: Into<Option<TessellationStages<'stage, Self::Stage>>>,
+    G: Into<Option<&'stage Self::Stage>>;
 
-  fn from_stages<'b, T, G>(
-    vertex: &'b Self::Stage,
+  fn from_stages<T, G>(
+    vertex: &'stage Self::Stage,
     tess: T,
     geometry: G,
-    fragment: &'b Self::Stage,
+    fragment: &'stage Self::Stage,
   ) -> Result<BuiltProgram<Self, Self::Err>, Self::Err>
   where
-    Self::Stage: 'b,
-    T: Into<Option<TessellationStages<'b, Self::Stage>>>,
-    G: Into<Option<&'b Self::Stage>>,
+    T: Into<Option<TessellationStages<'stage, Self::Stage>>>,
+    G: Into<Option<&'stage Self::Stage>>,
   {
     Self::from_stages_env(vertex, tess, geometry, fragment, ())
   }
 
-  fn from_strings_env<'b, T, G, E>(
-    vertex: &'b str,
+  fn from_strings_env<T, G, E>(
+    vertex: &'stage str,
     tess: T,
     geometry: G,
-    fragment: &'b str,
+    fragment: &'stage str,
     env: E,
   ) -> Result<BuiltProgram<Self, Self::Err>, Self::Err>;
 
-  fn from_strings<'b, T, G>(
-    vertex: &'b str,
+  fn from_strings<T, G>(
+    vertex: &'stage str,
     tess: T,
     geometry: G,
-    fragment: &'b str,
+    fragment: &'stage str,
   ) -> Result<BuiltProgram<Self, Self::Err>, Self::Err>
   where
-    T: Into<Option<TessellationStages<'b, str>>>,
-    G: Into<Option<&'b str>>,
+    T: Into<Option<TessellationStages<'stage, str>>>,
+    G: Into<Option<&'stage str>>,
   {
     Self::from_strings_env(vertex, tess, geometry, fragment, ())
   }
 
-  fn link(&'a self) -> Result<(), Self::Err>;
+  fn link(&'program self) -> Result<(), Self::Err>;
 
-  fn uniform_builder(&'a self) -> Self::UniformBuilder;
+  fn uniform_builder(&'program self) -> Self::UniformBuilder;
 }
 
 pub trait ProgramInterface<'a, Uni>: Deref<Target = Uni> {
