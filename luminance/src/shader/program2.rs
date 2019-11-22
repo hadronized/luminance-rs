@@ -1,4 +1,5 @@
 use std::fmt;
+use std::marker::PhantomData;
 use std::ops::Deref;
 
 /// Types that can behave as `Uniform`.
@@ -196,54 +197,54 @@ pub struct BuiltProgram<P, W> {
   pub warnings: Vec<W>,
 }
 
-pub trait Program<'stage, 'program, S, Out, Uni>: Sized {
-  type Stage: 'stage;
+pub trait Program<'program, S, Out, Uni>: Sized {
+  type Stage;
 
   type Err;
 
   type UniformBuilder: UniformBuilder;
 
   fn from_stages_env<T, G, E>(
-    vertex: &'stage Self::Stage,
+    vertex: &Self::Stage,
     tess: T,
     geometry: G,
-    fragment: &'stage Self::Stage,
+    fragment: &Self::Stage,
     env: E,
   ) -> Result<BuiltProgram<Self, Self::Err>, Self::Err>
   where
-    T: Into<Option<TessellationStages<'stage, Self::Stage>>>,
-    G: Into<Option<&'stage Self::Stage>>;
+    T: for<'a> Into<Option<TessellationStages<'a, Self::Stage>>>,
+    G: for<'a> Into<Option<&'a Self::Stage>>;
 
   fn from_stages<T, G>(
-    vertex: &'stage Self::Stage,
+    vertex: &Self::Stage,
     tess: T,
     geometry: G,
-    fragment: &'stage Self::Stage,
+    fragment: &Self::Stage,
   ) -> Result<BuiltProgram<Self, Self::Err>, Self::Err>
   where
-    T: Into<Option<TessellationStages<'stage, Self::Stage>>>,
-    G: Into<Option<&'stage Self::Stage>>,
+    T: for<'a> Into<Option<TessellationStages<'a, Self::Stage>>>,
+    G: for<'a> Into<Option<&'a Self::Stage>>,
   {
     Self::from_stages_env(vertex, tess, geometry, fragment, ())
   }
 
   fn from_strings_env<T, G, E>(
-    vertex: &'stage str,
+    vertex: &str,
     tess: T,
     geometry: G,
-    fragment: &'stage str,
+    fragment: &str,
     env: E,
   ) -> Result<BuiltProgram<Self, Self::Err>, Self::Err>;
 
   fn from_strings<T, G>(
-    vertex: &'stage str,
+    vertex: &str,
     tess: T,
     geometry: G,
-    fragment: &'stage str,
+    fragment: &str,
   ) -> Result<BuiltProgram<Self, Self::Err>, Self::Err>
   where
-    T: Into<Option<TessellationStages<'stage, str>>>,
-    G: Into<Option<&'stage str>>,
+    T: for<'a> Into<Option<TessellationStages<'a, str>>>,
+    G: for<'a> Into<Option<&'a str>>,
   {
     Self::from_strings_env(vertex, tess, geometry, fragment, ())
   }
@@ -251,10 +252,36 @@ pub trait Program<'stage, 'program, S, Out, Uni>: Sized {
   fn link(&'program self) -> Result<(), Self::Err>;
 
   fn uniform_builder(&'program self) -> Self::UniformBuilder;
+
+  fn interface(&'program self) -> ProgramInterface<'program, Self, S, Out, Uni>;
 }
 
-pub trait ProgramInterface<'a, Uni>: Deref<Target = Uni> {
-  type UniformBuilder: UniformBuilder;
+pub struct ProgramInterface<'program, P, S, Out, Uni>
+where
+  P: Program<'program, S, Out, Uni>,
+{
+  program: &'program P,
+  interface: &'program Uni,
+  _s: PhantomData<&'program S>,
+  _out: PhantomData<&'program Out>,
+}
 
-  fn query(&'a self) -> Self::UniformBuilder;
+impl<'program, P, S, Out, Uni> ProgramInterface<'program, P, S, Out, Uni>
+where
+  P: Program<'program, S, Out, Uni>,
+{
+  pub fn query(&'program self) -> P::UniformBuilder {
+    self.program.uniform_builder()
+  }
+}
+
+impl<'program, P, S, Out, Uni> Deref for ProgramInterface<'program, P, S, Out, Uni>
+where
+  P: Program<'program, S, Out, Uni>,
+{
+  type Target = Uni;
+
+  fn deref(&self) -> &Self::Target {
+    &self.interface
+  }
 }
