@@ -5,7 +5,7 @@ use std::ops::Deref;
 /// Types that can behave as `Uniform`.
 pub unsafe trait Uniformable<T>: Sized {
   ///`Type` of the uniform.
-  const TY: Type;
+  fn ty() -> Type;
 
   /// Update the uniform with a new value.
   fn update(self, value: T);

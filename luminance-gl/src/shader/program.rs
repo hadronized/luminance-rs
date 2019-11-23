@@ -430,12 +430,12 @@ impl<'a> UniformBuilder<'a> {
   where
     Uniform<T>: Uniformable<T>,
   {
-    let uniform = match Uniform::<T>::TY {
+    let uniform = match Uniform::<T>::ty() {
       UniformType::BufferBinding => self.ask_uniform_block(name)?,
       _ => self.ask_uniform(name)?,
     };
 
-    uniform_type_match(self.raw.handle, name, Uniform::<T>::TY)?;
+    uniform_type_match(self.raw.handle, name, Uniform::<T>::ty())?;
 
     Ok(uniform)
   }
@@ -808,7 +808,9 @@ macro_rules! impl_uniformable {
   // slices
   (& [[$t:ty; $n:expr]], $ut:tt, $f:tt) => {
     unsafe impl<'a> Uniformable<&'a [[$t; $n]]> for Uniform<&'a [[$t; $n]]> {
-      const TY: UniformType = UniformType::$ut;
+      fn ty() -> UniformType {
+        UniformType::$ut
+      }
 
       fn update(self, value: &[[$t; $n]]) {
         unsafe {
@@ -825,7 +827,9 @@ macro_rules! impl_uniformable {
   // matrix slices
   (& [[$t:ty; $n:expr]; $m:expr], $ut:tt, $f:tt) => {
     unsafe impl<'a> Uniformable<&'a [[$t; $n]; $m]> for Uniform<&'a [[$t; $n]; $m]> {
-      const TY: UniformType = UniformType::$ut;
+      fn ty() -> UniformType {
+        UniformType::$ut
+      }
 
       fn update(self, value: &[[$t; $n]; $m]) {
         unsafe {
@@ -842,7 +846,9 @@ macro_rules! impl_uniformable {
 
   (& [$t:ty], $ut:tt, $f:tt) => {
     unsafe impl<'a> Uniformable<&'a [$t]> for Uniform<&'a [$t]> {
-      const TY: UniformType = UniformType::$ut;
+      fn ty() -> UniformType {
+        UniformType::$ut
+      }
 
       fn update(self, value: &[$t]) {
         unsafe { gl::$f(self.index, value.len() as GLsizei, value.as_ptr()) };
@@ -853,7 +859,9 @@ macro_rules! impl_uniformable {
   // matrices
   ([[$t:ty; $n:expr]; $m:expr], $ut:tt, $f:tt) => {
     unsafe impl Uniformable<[[$t; $n]; $m]> for Uniform<[[$t; $n]; $m]> {
-      const TY: UniformType = UniformType::$ut;
+      fn ty() -> UniformType {
+        UniformType::$ut
+      }
 
       fn update(self, value: [[$t; $n]; $m]) {
         let v = [value];
@@ -865,7 +873,9 @@ macro_rules! impl_uniformable {
   // arrays
   ([$t:ty; $n:expr], $ut:tt, $f:tt) => {
     unsafe impl Uniformable<[$t; $n]> for Uniform<[$t; $n]> {
-      const TY: UniformType = UniformType::$ut;
+      fn ty() -> UniformType {
+        UniformType::$ut
+      }
 
       fn update(self, value: [$t; $n]) {
         unsafe { gl::$f(self.index, 1, &value as *const $t) };
@@ -876,7 +886,9 @@ macro_rules! impl_uniformable {
   // scalars
   ($t:ty, $ut:tt, $f:tt) => {
     unsafe impl Uniformable<$t> for Uniform<$t> {
-      const TY: UniformType = UniformType::$ut;
+      fn ty() -> UniformType {
+        UniformType::$ut
+      }
 
       fn update(self, value: $t) {
         unsafe { gl::$f(self.index, value) };
@@ -923,7 +935,9 @@ impl_uniformable!(&[[f32; 4]; 4], M44, UniformMatrix4fv);
 
 // bool
 unsafe impl Uniformable<bool> for Uniform<bool> {
-  const TY: UniformType = UniformType::Bool;
+  fn ty() -> UniformType {
+    UniformType::Bool
+  }
 
   fn update(self, value: bool) {
     unsafe { gl::Uniform1ui(self.index, value as GLuint) }
@@ -931,7 +945,9 @@ unsafe impl Uniformable<bool> for Uniform<bool> {
 }
 
 unsafe impl Uniformable<[bool; 2]> for Uniform<[bool; 2]> {
-  const TY: UniformType = UniformType::BVec2;
+  fn ty() -> UniformType {
+    UniformType::BVec2
+  }
 
   fn update(self, value: [bool; 2]) {
     let v = [value[0] as u32, value[1] as u32];
@@ -940,7 +956,9 @@ unsafe impl Uniformable<[bool; 2]> for Uniform<[bool; 2]> {
 }
 
 unsafe impl Uniformable<[bool; 3]> for Uniform<[bool; 3]> {
-  const TY: UniformType = UniformType::BVec3;
+  fn ty() -> UniformType {
+    UniformType::BVec3
+  }
 
   fn update(self, value: [bool; 3]) {
     let v = [value[0] as u32, value[1] as u32, value[2] as u32];
@@ -949,7 +967,9 @@ unsafe impl Uniformable<[bool; 3]> for Uniform<[bool; 3]> {
 }
 
 unsafe impl Uniformable<[bool; 4]> for Uniform<[bool; 4]> {
-  const TY: UniformType = UniformType::BVec4;
+  fn ty() -> UniformType {
+    UniformType::BVec4
+  }
 
   fn update(self, value: [bool; 4]) {
     let v = [
@@ -963,7 +983,9 @@ unsafe impl Uniformable<[bool; 4]> for Uniform<[bool; 4]> {
 }
 
 unsafe impl<'a> Uniformable<&'a [bool]> for Uniform<&'a [bool]> {
-  const TY: UniformType = UniformType::Bool;
+  fn ty() -> UniformType {
+    UniformType::Bool
+  }
 
   fn update(self, value: &[bool]) {
     let v: Vec<_> = value.iter().map(|x| *x as u32).collect();
@@ -972,7 +994,9 @@ unsafe impl<'a> Uniformable<&'a [bool]> for Uniform<&'a [bool]> {
 }
 
 unsafe impl<'a> Uniformable<&'a [[bool; 2]]> for Uniform<&'a [[bool; 2]]> {
-  const TY: UniformType = UniformType::BVec2;
+  fn ty() -> UniformType {
+    UniformType::BVec2
+  }
 
   fn update(self, value: &[[bool; 2]]) {
     let v: Vec<_> = value.iter().map(|x| [x[0] as u32, x[1] as u32]).collect();
@@ -981,7 +1005,9 @@ unsafe impl<'a> Uniformable<&'a [[bool; 2]]> for Uniform<&'a [[bool; 2]]> {
 }
 
 unsafe impl<'a> Uniformable<&'a [[bool; 3]]> for Uniform<&'a [[bool; 3]]> {
-  const TY: UniformType = UniformType::BVec3;
+  fn ty() -> UniformType {
+    UniformType::BVec3
+  }
 
   fn update(self, value: &[[bool; 3]]) {
     let v: Vec<_> = value
@@ -993,7 +1019,9 @@ unsafe impl<'a> Uniformable<&'a [[bool; 3]]> for Uniform<&'a [[bool; 3]]> {
 }
 
 unsafe impl<'a> Uniformable<&'a [[bool; 4]]> for Uniform<&'a [[bool; 4]]> {
-  const TY: UniformType = UniformType::BVec4;
+  fn ty() -> UniformType {
+    UniformType::BVec4
+  }
 
   fn update(self, value: &[[bool; 4]]) {
     let v: Vec<_> = value

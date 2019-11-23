@@ -37,6 +37,7 @@ use core::cell::RefCell;
 /// threads in any way (move / borrow).
 pub unsafe trait GraphicsContext {
   type State;
+
   type Builder;
 
   /// Get access to the graphics state of this context.
