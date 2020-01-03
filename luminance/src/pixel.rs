@@ -70,6 +70,7 @@ impl PixelFormat {
       Format::RG(_, _) => 2,
       Format::RGB(_, _, _) => 3,
       Format::RGBA(_, _, _, _) => 4,
+      Format::BGRA(_, _, _, _) => 4,
       Format::Depth(_) => 1,
     }
   }
@@ -104,6 +105,8 @@ pub enum Format {
   RGB(Size, Size, Size),
   /// Holds red, green, blue and alpha channels.
   RGBA(Size, Size, Size, Size),
+  /// Holds blue, green, red and alpha channels.
+  BGRA(Size, Size, Size, Size),
   /// Holds a depth channel.
   Depth(Size),
 }
@@ -116,6 +119,7 @@ impl Format {
       Format::RG(r, g) => r.bits() + g.bits(),
       Format::RGB(r, g, b) => r.bits() + g.bits() + b.bits(),
       Format::RGBA(r, g, b, a) => r.bits() + g.bits() + b.bits() + a.bits(),
+      Format::BGRA(b, g, r, a) => b.bits() + g.bits() + r.bits() + a.bits(),
       Format::Depth(d) => d.bits(),
     };
 
@@ -880,6 +884,20 @@ impl_Pixel!(
 impl_ColorPixel!(R11G11B10F);
 impl_RenderablePixel!(R11G11B10F);
 
+/// A blue, green, red and alpha 8-bit unsigned integral pixel format.
+#[derive(Clone, Copy, Debug)]
+pub struct NormBGRA8UI;
+
+impl_Pixel!(
+  NormBGRA8UI,
+  (u8, u8, u8, u8),
+  u8,
+  NormUnsigned,
+  Format::BGRA(Size::Eight, Size::Eight, Size::Eight, Size::Eight)
+);
+impl_ColorPixel!(NormBGRA8UI);
+impl_RenderablePixel!(NormBGRA8UI);
+
 /// A depth 32-bit floating pixel format.
 #[derive(Clone, Copy, Debug)]
 pub struct Depth32F;
@@ -959,6 +977,9 @@ pub(crate) fn opengl_pixel_format(pf: PixelFormat) -> Option<(GLenum, GLenum, GL
     (Format::RGBA(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo), Type::Integral) => Some((gl::RGBA_INTEGER, gl::RGBA32I, gl::INT)),
     (Format::RGBA(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo), Type::Unsigned) => Some((gl::RGBA_INTEGER, gl::RGBA32UI, gl::UNSIGNED_INT)),
     (Format::RGBA(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo), Type::Floating) => Some((gl::RGBA, gl::RGBA32F, gl::FLOAT)),
+
+    // blue, green, red, alpha channels
+    (Format::BGRA(Size::Eight, Size::Eight, Size::Eight, Size::Eight), Type::NormUnsigned) => Some((gl::BGRA, gl::BGRA, gl::UNSIGNED_BYTE)),
 
     (Format::Depth(Size::ThirtyTwo), Type::Floating) => Some((gl::DEPTH_COMPONENT, gl::DEPTH_COMPONENT32F, gl::FLOAT)),
 
