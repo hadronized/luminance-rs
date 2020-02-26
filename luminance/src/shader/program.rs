@@ -29,6 +29,8 @@
 //! You can create a `Program` with its `new` associated function.
 
 #[cfg(feature = "std")]
+use std::error::Error;
+#[cfg(feature = "std")]
 use std::ffi::CString;
 #[cfg(feature = "std")]
 use std::fmt;
@@ -588,6 +590,18 @@ impl fmt::Display for ProgramError {
   }
 }
 
+#[cfg(feature = "std")]
+impl Error for ProgramError {
+  fn source(&self) -> Option<&(dyn Error + 'static)> {
+    match *self {
+      ProgramError::StageError(ref e) => Some(e),
+      ProgramError::UniformWarning(ref e) => Some(e),
+      ProgramError::VertexAttribWarning(ref e) => Some(e),
+      _ => None,
+    }
+  }
+}
+
 /// Program warnings, not necessarily considered blocking errors.
 #[derive(Debug)]
 pub enum ProgramWarning {
@@ -649,6 +663,9 @@ impl fmt::Display for UniformWarning {
   }
 }
 
+#[cfg(feature = "std")]
+impl Error for UniformWarning {}
+
 /// Warnings related to vertex attributes issues.
 #[derive(Debug)]
 pub enum VertexAttribWarning {
@@ -663,6 +680,9 @@ impl fmt::Display for VertexAttribWarning {
     }
   }
 }
+
+#[cfg(feature = "std")]
+impl Error for VertexAttribWarning {}
 
 /// A contravariant shader uniform. `Uniform<T>` doesn’t hold any value. It’s more like a mapping
 /// between the host code and the shader the uniform was retrieved from.

@@ -91,6 +91,8 @@ use std::cell::RefCell;
 #[cfg(feature = "std")]
 use std::cmp::Ordering;
 #[cfg(feature = "std")]
+use std::error::Error;
+#[cfg(feature = "std")]
 use std::fmt;
 #[cfg(feature = "std")]
 use std::marker::PhantomData;
@@ -175,6 +177,9 @@ impl fmt::Display for BufferError {
     }
   }
 }
+
+#[cfg(feature = "std")]
+impl Error for BufferError {}
 
 /// A [`Buffer`] is a GPU region you can picture as an array.
 ///

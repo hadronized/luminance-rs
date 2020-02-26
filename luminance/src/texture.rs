@@ -74,6 +74,8 @@
 #[cfg(feature = "std")]
 use std::cell::RefCell;
 #[cfg(feature = "std")]
+use std::error::Error;
+#[cfg(feature = "std")]
 use std::fmt;
 #[cfg(feature = "std")]
 use std::marker::PhantomData;
@@ -1342,3 +1344,6 @@ impl fmt::Display for TextureError {
     }
   }
 }
+
+#[cfg(feature = "std")]
+impl Error for TextureError {}

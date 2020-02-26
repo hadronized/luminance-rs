@@ -3,6 +3,8 @@
 #[cfg(feature = "std")]
 use std::cell::RefCell;
 #[cfg(feature = "std")]
+use std::error::Error;
+#[cfg(feature = "std")]
 use std::fmt;
 #[cfg(feature = "std")]
 use std::marker::PhantomData;
@@ -496,6 +498,9 @@ impl fmt::Display for StateQueryError {
     }
   }
 }
+
+#[cfg(feature = "std")]
+impl Error for StateQueryError {}
 
 unsafe fn get_ctx_viewport() -> Result<[GLint; 4], StateQueryError> {
   let mut data = [0; 4];

@@ -52,6 +52,8 @@
 //! [pipeline]: crate::pipeline
 
 #[cfg(feature = "std")]
+use std::error::Error;
+#[cfg(feature = "std")]
 use std::fmt;
 #[cfg(feature = "std")]
 use std::ops::{Range, RangeFrom, RangeFull, RangeInclusive, RangeTo, RangeToInclusive};
@@ -191,6 +193,17 @@ impl fmt::Display for TessMapError {
       TessMapError::ForbiddenDeinterleavedMapping => {
         f.write_str("cannot map a deinterleaved buffer as interleaved")
       }
+    }
+  }
+}
+
+#[cfg(feature = "std")]
+impl Error for TessMapError {
+  fn source(&self) -> Option<&(dyn Error + 'static)> {
+    match *self {
+      TessMapError::VertexBufferMapFailed(ref e) => Some(e),
+      TessMapError::IndexBufferMapFailed(ref e) => Some(e),
+      _ => None,
     }
   }
 }

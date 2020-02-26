@@ -4,6 +4,8 @@
 //! _several_ shader stages. The minimal configuration implies at least a _vertex shader_ and a
 //! _fragment shader_.
 #[cfg(feature = "std")]
+use std::error::Error;
+#[cfg(feature = "std")]
 use std::ffi::CString;
 #[cfg(feature = "std")]
 use std::fmt;
@@ -147,6 +149,9 @@ impl fmt::Display for StageError {
     }
   }
 }
+
+#[cfg(feature = "std")]
+impl Error for StageError {}
 
 fn glsl_pragma_src(src: &str) -> String {
   let mut pragma = String::from(GLSL_PRAGMA);

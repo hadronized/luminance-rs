@@ -30,6 +30,8 @@
 
 #[cfg(feature = "std")]
 use std::cell::RefCell;
+#[cfg(feature = "std")]
+use std::error::Error;
 use std::fmt;
 #[cfg(feature = "std")]
 use std::marker::PhantomData;
@@ -74,6 +76,16 @@ impl fmt::Display for FramebufferError {
   }
 }
 
+#[cfg(feature = "std")]
+impl Error for FramebufferError {
+  fn source(&self) -> Option<&(dyn Error + 'static)> {
+    match *self {
+      FramebufferError::TextureError(ref e) => Some(e),
+      FramebufferError::Incomplete(ref e) => Some(e),
+    }
+  }
+}
+
 /// Reason a framebuffer is incomplete.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum IncompleteReason {
@@ -109,6 +121,9 @@ impl fmt::Display for IncompleteReason {
     }
   }
 }
+
+#[cfg(feature = "std")]
+impl Error for IncompleteReason {}
 
 /// Framebuffer with static layering, dimension, access and slots formats.
 ///
