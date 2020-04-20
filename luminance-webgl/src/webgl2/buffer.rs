@@ -39,7 +39,7 @@ impl<T> Buffer<T> {
     let mut state = webgl2.state.borrow_mut();
 
     let mut buf = Vec::new();
-    buf.resize_with(len, move || clear_value);
+    buf.resize_with(len, || clear_value);
 
     // generate a buffer and force binding the handle; this prevent side-effects from previous bound
     // resources to prevent binding the buffer
@@ -183,7 +183,7 @@ where
       }
 
       _ => (),
-    };
+    }
 
     // update the internal representation of the vector; we clear it first then we extend with
     // the input slice to re-use the allocated region
