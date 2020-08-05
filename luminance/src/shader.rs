@@ -1089,10 +1089,8 @@ where
   _out: PhantomData<*const Out>,
 }
 
-type ProgramResult<B, Sem, Out, Uni, Q = Uni> = Result<
-  BuiltProgram<B, Sem, Out, Q>,
-  AdaptationFailure<B, Sem, Out, Uni>
->;
+type ProgramResult<B, Sem, Out, Uni, Q = Uni> =
+  Result<BuiltProgram<B, Sem, Out, Q>, AdaptationFailure<B, Sem, Out, Uni>>;
 
 impl<B, Sem, Out, Uni> Program<B, Sem, Out, Uni>
 where
@@ -1118,10 +1116,7 @@ where
   ///
   /// - `Q` is the new [`UniformInterface`].
   /// - `E` is the mutable environment variable.
-  pub fn adapt_env<Q, E>(
-    mut self,
-    env: &mut E,
-  ) -> ProgramResult<B, Sem, Out, Uni, Q>
+  pub fn adapt_env<Q, E>(mut self, env: &mut E) -> ProgramResult<B, Sem, Out, Uni, Q>
   where
     Q: UniformInterface<B, E>,
   {
@@ -1168,10 +1163,7 @@ where
   /// # Parametricity
   ///
   /// - `E` is the mutable environment variable.
-  pub fn readapt_env<E>(
-    self,
-    env: &mut E,
-  ) -> ProgramResult<B, Sem, Out, Uni>
+  pub fn readapt_env<E>(self, env: &mut E) -> ProgramResult<B, Sem, Out, Uni>
   where
     Uni: UniformInterface<B, E>,
   {

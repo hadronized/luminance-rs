@@ -3,7 +3,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 use std::error;
 use std::fmt;
-use syn::{DataStruct, Fields, Field, Ident, Path, PathArguments, Type, TypePath};
+use syn::{DataStruct, Field, Fields, Ident, Path, PathArguments, Type, TypePath};
 
 // accepted sub keys for the "vertex" key
 const KNOWN_SUBKEYS: &[&str] = &["name", "unbound"];
@@ -80,25 +80,22 @@ pub(crate) fn generate_uniform_interface_impl(
       // collect field types so that we can implement UniformInterface<S> where $t: Uniform<S>
       let mut field_where_clause = Vec::new();
 
-      for Field { ident, ty, attrs, .. } in named_fields.named {
+      for Field {
+        ident, ty, attrs, ..
+      } in named_fields.named
+      {
         let ident = ident.unwrap();
-        let unbound = get_field_flag_once(
-          &ident,
-          attrs.iter(),
-          "uniform",
-          "unbound",
-          KNOWN_SUBKEYS,
-        )
-        .map_err(DeriveUniformInterfaceError::unbound_error)?;
-        let name =
-          get_field_attr_once(&ident, attrs.iter(), "uniform", "name", KNOWN_SUBKEYS)
-            .map(|ident: Ident| ident.to_string())
-            .or_else(|e| match e {
-              AttrError::CannotFindAttribute(..) => Ok(ident.to_string()),
+        let unbound =
+          get_field_flag_once(&ident, attrs.iter(), "uniform", "unbound", KNOWN_SUBKEYS)
+            .map_err(DeriveUniformInterfaceError::unbound_error)?;
+        let name = get_field_attr_once(&ident, attrs.iter(), "uniform", "name", KNOWN_SUBKEYS)
+          .map(|ident: Ident| ident.to_string())
+          .or_else(|e| match e {
+            AttrError::CannotFindAttribute(..) => Ok(ident.to_string()),
 
-              _ => Err(e),
-            })
-            .map_err(DeriveUniformInterfaceError::name_error)?;
+            _ => Err(e),
+          })
+          .map_err(DeriveUniformInterfaceError::name_error)?;
 
         // the build call is the code that gets a uniform and possibly fails if bound; also handles
         // renaming
@@ -112,9 +109,8 @@ pub(crate) fn generate_uniform_interface_impl(
           }
         };
 
-        let field_ty = extract_uniform_type(&ty).ok_or_else(|| {
-          DeriveUniformInterfaceError::incorrectly_wrapped_type(&ty)
-        })?;
+        let field_ty = extract_uniform_type(&ty)
+          .ok_or_else(|| DeriveUniformInterfaceError::incorrectly_wrapped_type(&ty))?;
         field_names.push(ident.clone());
         field_decls.push(quote! {
           let #ident = #build_call;
