@@ -482,6 +482,8 @@ pub enum UniformType {
   UInt,
   /// 32-bit floating-point number.
   Float,
+  /// 64-bit floating-point number.
+  Double,
   /// Boolean.
   Bool,
 
@@ -504,6 +506,12 @@ pub enum UniformType {
   Vec3,
   /// 4D floating-point vector.
   Vec4,
+  /// 2D floating-point (double) vector.
+  DVec2,
+  /// 3D floating-point (double) vector.
+  DVec3,
+  /// 4D floating-point (double) vector.
+  DVec4,
   /// 2D boolean vector.
   BVec2,
   /// 3D boolean vector.
@@ -518,6 +526,12 @@ pub enum UniformType {
   M33,
   /// 4×4 floating-point matrix.
   M44,
+  /// 2×2 floating-point (double) matrix.
+  DM22,
+  /// 3×3 floating-point (double) matrix.
+  DM33,
+  /// 4×4 floating-point (double) matrix.
+  DM44,
 
   // textures
   /// Signed integral 1D texture sampler.
@@ -568,6 +582,7 @@ impl fmt::Display for UniformType {
       UniformType::Int => f.write_str("int"),
       UniformType::UInt => f.write_str("uint"),
       UniformType::Float => f.write_str("float"),
+      UniformType::Double => f.write_str("double"),
       UniformType::Bool => f.write_str("bool"),
       UniformType::IVec2 => f.write_str("ivec2"),
       UniformType::IVec3 => f.write_str("ivec3"),
@@ -578,12 +593,18 @@ impl fmt::Display for UniformType {
       UniformType::Vec2 => f.write_str("vec2"),
       UniformType::Vec3 => f.write_str("vec3"),
       UniformType::Vec4 => f.write_str("vec4"),
+      UniformType::DVec2 => f.write_str("dvec2"),
+      UniformType::DVec3 => f.write_str("dvec3"),
+      UniformType::DVec4 => f.write_str("dvec4"),
       UniformType::BVec2 => f.write_str("bvec2"),
       UniformType::BVec3 => f.write_str("bvec3"),
       UniformType::BVec4 => f.write_str("bvec4"),
       UniformType::M22 => f.write_str("mat2"),
       UniformType::M33 => f.write_str("mat3"),
       UniformType::M44 => f.write_str("mat4"),
+      UniformType::DM22 => f.write_str("dmat2"),
+      UniformType::DM33 => f.write_str("dmat3"),
+      UniformType::DM44 => f.write_str("dmat4"),
       UniformType::ISampler1D => f.write_str("isampler1D"),
       UniformType::ISampler2D => f.write_str("isampler2D"),
       UniformType::ISampler3D => f.write_str("isampler3D"),

@@ -14,7 +14,7 @@ we have, the better! Also, keep in mind that this example repository is _not the
 learn [luminance] as a whole!_ If you would like to learn from scratch, it is highly recommended to
 have a look at [the book] first.
 
-> Have fun!
+**Have fun!**
 
 <!-- vim-markdown-toc GFM -->
 

@@ -11,6 +11,7 @@ compatible with as many crates as possible. In that case, you want `cargo update
 
 <!-- vim-markdown-toc GFM -->
 
+* [0.41+1](#0411)
 * [0.41](#041)
   * [Migration guide from 0.40](#migration-guide-from-040)
 * [0.40](#040)
@@ -118,6 +119,13 @@ compatible with as many crates as possible. In that case, you want `cargo update
 * [0.1](#01)
 
 <!-- vim-markdown-toc -->
+
+# 0.41+1
+
+> ?
+
+- Add support for `f64`-like shader uniforms. Those include `f64`, `[f64; 2]`, `[f64; 3]`, etc.
+  Textures are not supported yet though.
 
 # 0.41
 

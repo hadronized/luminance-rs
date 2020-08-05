@@ -18,6 +18,8 @@ maintenance = { status = "actively-developed" }
 [features]
 default = ["gl33"]
 gl33 = []
+# OpenGL extensions
+GL_ARB_gpu_shader_fp64 = []
 
 [dependencies]
 gl = "0.14"

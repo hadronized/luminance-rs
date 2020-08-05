@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+  "integration-tests/desktop/gl33-f64-uniform",
   "luminance",
   "luminance-derive",
   "luminance-examples",
