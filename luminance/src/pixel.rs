@@ -140,8 +140,6 @@ impl Format {
 
     bits / 8
   }
-
-  pub fn is_depth() -> bool {}
 }
 
 /// Size in bits a pixel channel can be.
