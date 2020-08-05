@@ -58,12 +58,12 @@ pub struct PixelFormat {
 impl PixelFormat {
   /// Does a [`PixelFormat`] represent a color?
   pub fn is_color_pixel(self) -> bool {
-    !matches!(self.format, Format::Depth(_))
+    !self.is_depth_pixel()
   }
 
   /// Does a [`PixelFormat`] represent depth information?
   pub fn is_depth_pixel(self) -> bool {
-    !self.is_color_pixel()
+    matches!(self.format, Format::Depth(_))
   }
 
   /// Return the number of canals.
@@ -140,6 +140,8 @@ impl Format {
 
     bits / 8
   }
+
+  pub fn is_depth() -> bool {}
 }
 
 /// Size in bits a pixel channel can be.
