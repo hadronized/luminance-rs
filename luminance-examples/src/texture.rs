@@ -27,11 +27,11 @@ use luminance_windowing::{WindowDim, WindowOpt};
 use std::env; // used to get the CLI arguments
 use std::path::Path;
 
-const VS: &'static str = include_str!("texture-vs.glsl");
-const FS: &'static str = include_str!("texture-fs.glsl");
+const VS: &str = include_str!("texture-vs.glsl");
+const FS: &str = include_str!("texture-fs.glsl");
 
 fn main() {
-  if let Some(texture_path) = env::args().skip(1).next() {
+  if let Some(texture_path) = env::args().nth(1) {
     run(Path::new(&texture_path));
   } else {
     eprintln!("missing first argument (path to the texture to load)");

@@ -1,6 +1,5 @@
 //! OpenGL buffer implementation.
 
-use gl;
 use gl::types::*;
 use std::cell::RefCell;
 use std::cmp::Ordering;

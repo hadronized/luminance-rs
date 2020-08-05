@@ -1,4 +1,3 @@
-use gl;
 use gl::types::*;
 use std::cell::RefCell;
 use std::rc::Rc;

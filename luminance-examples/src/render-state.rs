@@ -21,8 +21,8 @@ use luminance::tess::Mode;
 use luminance_glfw::GlfwSurface;
 use luminance_windowing::{WindowDim, WindowOpt};
 
-const VS: &'static str = include_str!("simple-vs.glsl");
-const FS: &'static str = include_str!("simple-fs.glsl");
+const VS: &str = include_str!("simple-vs.glsl");
+const FS: &str = include_str!("simple-fs.glsl");
 
 pub const TRI_RED_BLUE_VERTICES: [Vertex; 6] = [
   // first triangle – a red one

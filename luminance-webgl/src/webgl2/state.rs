@@ -374,7 +374,13 @@ impl WebGL2State {
   }
 
   pub(crate) fn set_clear_color(&mut self, clear_color: [f32; 4]) {
-    if self.clear_color != clear_color {
+    let new_color_different = self
+      .clear_color
+      .iter()
+      .zip(&clear_color)
+      .any(|(&x, &y)| (x - y) > std::f32::EPSILON);
+
+    if new_color_different {
       self.ctx.clear_color(
         clear_color[0],
         clear_color[1],

@@ -45,8 +45,7 @@ struct ShaderInterface {
 
 fn main() {
   let texture_path = env::args()
-    .skip(1)
-    .next()
+    .nth(1)
     .expect("Please provide an image path for the core texture");
   let texture_image = image::open(&texture_path)
     .expect("Could not load image from path")

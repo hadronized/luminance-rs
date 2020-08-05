@@ -62,7 +62,7 @@ where
   let sem_type: Type = get_field_attr_once(&ident, attrs.clone(), "vertex", "sem", KNOWN_SUBKEYS)
     .map_err(StructImplError::semantics_error)?;
 
-  let instancing = get_instancing(&ident, attrs.clone())?;
+  let instancing = get_instancing(&ident, attrs)?;
 
   match struct_.fields {
     Fields::Unnamed(unnamed_fields) => {

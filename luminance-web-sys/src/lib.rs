@@ -85,11 +85,11 @@ impl WebSysWebGL2Surface {
     canvas_name: impl AsRef<str>,
     win_opt: WindowOpt,
   ) -> Result<Self, WebSysWebGL2SurfaceError> {
-    let window = web_sys::window().ok_or_else(|| WebSysWebGL2SurfaceError::cannot_grab_window())?;
+    let window = web_sys::window().ok_or_else(WebSysWebGL2SurfaceError::cannot_grab_window)?;
 
     let document = window
       .document()
-      .ok_or_else(|| WebSysWebGL2SurfaceError::cannot_grab_document())?;
+      .ok_or_else(WebSysWebGL2SurfaceError::cannot_grab_document)?;
 
     let canvas_name = canvas_name.as_ref();
     let canvas = document
@@ -111,7 +111,7 @@ impl WebSysWebGL2Surface {
     let webgl2 = canvas
       .get_context("webgl2")
       .map_err(|_| WebSysWebGL2SurfaceError::cannot_grab_webgl2_context())?
-      .ok_or_else(|| WebSysWebGL2SurfaceError::no_available_webgl2_context())?;
+      .ok_or_else(WebSysWebGL2SurfaceError::no_available_webgl2_context)?;
     let ctx = webgl2
       .dyn_into()
       .map_err(|_| WebSysWebGL2SurfaceError::no_available_webgl2_context())?;

@@ -394,7 +394,7 @@ unsafe impl TessIndex for u32 {
   const INDEX_TYPE: Option<TessIndexType> = Some(TessIndexType::U32);
 
   fn try_into_u32(self) -> Option<u32> {
-    Some(self.into())
+    Some(self)
   }
 }
 
@@ -798,13 +798,11 @@ where
       self
         .backend
         .build(
-          self.vertex_data,
+          (self.vertex_data, vert_nb),
+          (self.instance_data, inst_nb),
           self.index_data,
-          self.instance_data,
-          self.mode,
-          vert_nb,
-          inst_nb,
           self.restart_index,
+          self.mode,
         )
         .map(|repr| Tess {
           repr,
@@ -843,12 +841,10 @@ where
 
           None => Ok(self.vert_nb),
         }
+      } else if self.vert_nb <= self.index_data.len() {
+        Ok(self.vert_nb)
       } else {
-        if self.vert_nb <= self.index_data.len() {
-          Ok(self.vert_nb)
-        } else {
-          Err(TessError::length_incoherency(self.vert_nb))
-        }
+        Err(TessError::length_incoherency(self.vert_nb))
       }
     }
   }

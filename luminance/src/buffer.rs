@@ -228,7 +228,7 @@ where
   /// That function might fail and return a [`BufferError::MapFailed`].
   pub fn slice(&mut self) -> Result<BufferSlice<B, T>, BufferError> {
     unsafe {
-      B::slice_buffer(&mut self.repr).map(|slice| BufferSlice {
+      B::slice_buffer(&self.repr).map(|slice| BufferSlice {
         slice,
         _a: PhantomData,
       })

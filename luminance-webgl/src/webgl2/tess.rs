@@ -125,13 +125,11 @@ where
 
   unsafe fn build(
     &mut self,
-    vertex_data: Option<V::Data>,
+    (vertex_data, vert_nb): (Option<V::Data>, usize),
+    (instance_data, inst_nb): (Option<W::Data>, usize),
     index_data: Vec<I>,
-    instance_data: Option<W::Data>,
-    mode: Mode,
-    vert_nb: usize,
-    inst_nb: usize,
     _: Option<I>,
+    mode: Mode,
   ) -> Result<Self::TessRepr, TessError> {
     let vao = self
       .state
@@ -286,13 +284,11 @@ where
 
   unsafe fn build(
     &mut self,
-    vertex_data: Option<V::Data>,
+    (vertex_data, vert_nb): (Option<V::Data>, usize),
+    (instance_data, inst_nb): (Option<W::Data>, usize),
     index_data: Vec<I>,
-    instance_data: Option<W::Data>,
-    mode: Mode,
-    vert_nb: usize,
-    inst_nb: usize,
     _: Option<I>,
+    mode: Mode,
   ) -> Result<Self::TessRepr, TessError> {
     let vao = self
       .state

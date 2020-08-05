@@ -59,7 +59,7 @@ impl<T> Buffer<T> {
     // resources to prevent binding the buffer
     let handle = state
       .create_buffer()
-      .ok_or_else(|| BufferError::cannot_create())?;
+      .ok_or_else(BufferError::cannot_create)?;
 
     Self::bind(&mut state, &handle, target)?;
 
@@ -86,7 +86,7 @@ impl<T> Buffer<T> {
 
     let handle = state
       .create_buffer()
-      .ok_or_else(|| BufferError::cannot_create())?;
+      .ok_or_else(BufferError::cannot_create)?;
 
     Self::bind(&mut state, &handle, target)?;
 

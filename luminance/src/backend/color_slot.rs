@@ -84,7 +84,7 @@ where
   where
     C: GraphicsContext<Backend = B>,
   {
-    let texture = Texture::new(ctx, size, mipmaps, sampler.clone())?;
+    let texture = Texture::new(ctx, size, mipmaps, *sampler)?;
     unsafe { B::attach_color_texture(framebuffer, &texture.repr, attachment_index)? };
 
     Ok(texture)
@@ -120,6 +120,7 @@ macro_rules! impl_color_slot_tuple {
 // arithmetic at runtime or have dead code.
 macro_rules! impl_reify_color_textures {
   ($pf:ident , $($pfr:ident),*) => {
+    #[allow(clippy::eval_order_dependence)]
     fn reify_color_textures<C>(
       ctx: &mut C,
       size: D::Size,

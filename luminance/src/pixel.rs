@@ -58,10 +58,7 @@ pub struct PixelFormat {
 impl PixelFormat {
   /// Does a [`PixelFormat`] represent a color?
   pub fn is_color_pixel(self) -> bool {
-    match self.format {
-      Format::Depth(_) => false,
-      _ => true,
-    }
+    !matches!(self.format, Format::Depth(_))
   }
 
   /// Does a [`PixelFormat`] represent depth information?

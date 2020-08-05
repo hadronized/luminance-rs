@@ -84,7 +84,7 @@ where
   where
     C: GraphicsContext<Backend = B>,
   {
-    let texture = Texture::new(ctx, size, mipmaps, sampler.clone())?;
+    let texture = Texture::new(ctx, size, mipmaps, *sampler)?;
     unsafe { B::attach_depth_texture(framebuffer, &texture.repr)? };
 
     Ok(texture)

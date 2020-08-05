@@ -11,7 +11,7 @@
 pub trait IntoArrayBuffer: Sized {
   /// Convert the input slice into a JavaScript object.
   ///
-  /// # Unsafety
+  /// # Safety
   ///
   /// The returned `Object` must not outlive the input slice, which memory must not be moved either.
   unsafe fn into_array_buffer(texels: &[Self]) -> js_sys::Object;

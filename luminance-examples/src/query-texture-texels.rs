@@ -21,8 +21,8 @@ use luminance_glfw::GlfwSurface;
 use luminance_windowing::{WindowDim, WindowOpt};
 
 // We get the shader at compile time from local files
-const VS: &'static str = include_str!("simple-vs.glsl");
-const FS: &'static str = include_str!("simple-fs.glsl");
+const VS: &str = include_str!("simple-vs.glsl");
+const FS: &str = include_str!("simple-fs.glsl");
 
 // The vertices. We define two triangles.
 const TRI_VERTICES: [Vertex; 6] = [

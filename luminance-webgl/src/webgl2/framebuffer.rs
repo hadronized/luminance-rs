@@ -60,7 +60,7 @@ where
 
     let handle = state
       .create_framebuffer()
-      .ok_or_else(|| FramebufferError::cannot_create())?;
+      .ok_or_else(FramebufferError::cannot_create)?;
     state.bind_draw_framebuffer(Some(&handle));
 
     // reserve textures to speed up slots creation
@@ -89,7 +89,7 @@ where
       let renderbuffer = state
         .ctx
         .create_renderbuffer()
-        .ok_or_else(|| FramebufferError::cannot_create())?;
+        .ok_or_else(FramebufferError::cannot_create)?;
 
       state
         .ctx

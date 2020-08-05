@@ -17,13 +17,11 @@ where
 
   unsafe fn build(
     &mut self,
-    vertex_data: Option<V::Data>,
+    vert: (Option<V::Data>, usize),
+    inst: (Option<W::Data>, usize),
     index_data: Vec<I>,
-    instance_data: Option<W::Data>,
-    mode: Mode,
-    vert_nb: usize,
-    inst_nb: usize,
     restart_index: Option<I>,
+    mode: Mode,
   ) -> Result<Self::TessRepr, TessError>;
 
   unsafe fn tess_vertices_nb(tess: &Self::TessRepr) -> usize;

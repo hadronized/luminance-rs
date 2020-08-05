@@ -22,12 +22,12 @@ use luminance_glfw::GlfwSurface;
 use luminance_windowing::{WindowDim, WindowOpt};
 
 // we get the shader at compile time from local files
-const VS: &'static str = include_str!("simple-vs.glsl");
-const FS: &'static str = include_str!("simple-fs.glsl");
+const VS: &str = include_str!("simple-vs.glsl");
+const FS: &str = include_str!("simple-fs.glsl");
 
 // copy shader, at compile time as well
-const COPY_VS: &'static str = include_str!("copy-vs.glsl");
-const COPY_FS: &'static str = include_str!("copy-fs.glsl");
+const COPY_VS: &str = include_str!("copy-vs.glsl");
+const COPY_FS: &str = include_str!("copy-fs.glsl");
 
 // a single triangle is enough here
 const TRI_VERTICES: [Vertex; 3] = [

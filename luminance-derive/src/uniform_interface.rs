@@ -3,7 +3,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 use std::error;
 use std::fmt;
-use syn::{DataStruct, Fields, Ident, Path, PathArguments, Type, TypePath};
+use syn::{DataStruct, Fields, Field, Ident, Path, PathArguments, Type, TypePath};
 
 // accepted sub keys for the "vertex" key
 const KNOWN_SUBKEYS: &[&str] = &["name", "unbound"];
@@ -15,7 +15,7 @@ pub(crate) enum DeriveUniformInterfaceError {
   UnsupportedUnit,
   UnboundError(AttrError),
   NameError(AttrError),
-  IncorrectlyWrappedType(Type),
+  IncorrectlyWrappedType(Box<Type>),
 }
 
 impl DeriveUniformInterfaceError {
@@ -35,8 +35,8 @@ impl DeriveUniformInterfaceError {
     DeriveUniformInterfaceError::NameError(e)
   }
 
-  pub(crate) fn incorrectly_wrapped_type(ty: Type) -> Self {
-    DeriveUniformInterfaceError::IncorrectlyWrappedType(ty)
+  pub(crate) fn incorrectly_wrapped_type(ty: &Type) -> Self {
+    DeriveUniformInterfaceError::IncorrectlyWrappedType(Box::new(ty.clone()))
   }
 }
 
@@ -80,21 +80,21 @@ pub(crate) fn generate_uniform_interface_impl(
       // collect field types so that we can implement UniformInterface<S> where $t: Uniform<S>
       let mut field_where_clause = Vec::new();
 
-      for field in named_fields.named {
-        let field_ident = field.ident.unwrap();
+      for Field { ident, ty, attrs, .. } in named_fields.named {
+        let ident = ident.unwrap();
         let unbound = get_field_flag_once(
           &ident,
-          field.attrs.iter(),
+          attrs.iter(),
           "uniform",
           "unbound",
           KNOWN_SUBKEYS,
         )
         .map_err(DeriveUniformInterfaceError::unbound_error)?;
         let name =
-          get_field_attr_once(&ident, field.attrs.iter(), "uniform", "name", KNOWN_SUBKEYS)
+          get_field_attr_once(&ident, attrs.iter(), "uniform", "name", KNOWN_SUBKEYS)
             .map(|ident: Ident| ident.to_string())
             .or_else(|e| match e {
-              AttrError::CannotFindAttribute(..) => Ok(field_ident.to_string()),
+              AttrError::CannotFindAttribute(..) => Ok(ident.to_string()),
 
               _ => Err(e),
             })
@@ -112,12 +112,12 @@ pub(crate) fn generate_uniform_interface_impl(
           }
         };
 
-        let field_ty = extract_uniform_type(&field.ty).ok_or(
-          DeriveUniformInterfaceError::incorrectly_wrapped_type(field.ty),
-        )?;
-        field_names.push(field_ident.clone());
+        let field_ty = extract_uniform_type(&ty).ok_or_else(|| {
+          DeriveUniformInterfaceError::incorrectly_wrapped_type(&ty)
+        })?;
+        field_names.push(ident.clone());
         field_decls.push(quote! {
-          let #field_ident = #build_call;
+          let #ident = #build_call;
         });
         field_where_clause.push(quote! {
           #field_ty: luminance::backend::shader::Uniformable<S>

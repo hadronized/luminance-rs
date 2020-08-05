@@ -5,7 +5,6 @@
 
 #![deny(missing_docs)]
 
-use gl;
 use glutin::{
   event_loop::EventLoop, window::WindowBuilder, Api, ContextBuilder, ContextError, CreationError,
   GlProfile, GlRequest, NotCurrent, PossiblyCurrent, WindowedContext,

@@ -1,4 +1,3 @@
-use gl;
 use gl::types::*;
 use luminance::backend::texture::{Texture as TextureBackend, TextureBase};
 use luminance::pixel::{Pixel, PixelFormat};
@@ -337,8 +336,7 @@ where
             format,
             iformat,
             encoding,
-            D::width(size),
-            D::height(size),
+            (D::width(size), D::height(size)),
             mipmaps,
           );
           Ok(())
@@ -351,9 +349,7 @@ where
             format,
             iformat,
             encoding,
-            D::width(size),
-            D::height(size),
-            D::depth(size),
+            (D::width(size), D::height(size), D::depth(size)),
             mipmaps,
           );
           Ok(())
@@ -372,8 +368,7 @@ where
             format,
             iformat,
             encoding,
-            D::width(size),
-            D::height(size),
+            (D::width(size), D::height(size)),
             mipmaps,
           );
           Ok(())
@@ -386,9 +381,7 @@ where
             format,
             iformat,
             encoding,
-            D::width(size),
-            D::height(size),
-            D::depth(size),
+            (D::width(size), D::height(size), D::depth(size)),
             mipmaps,
           );
           Ok(())
@@ -433,8 +426,7 @@ fn create_texture_2d_storage(
   format: GLenum,
   iformat: GLenum,
   encoding: GLenum,
-  w: u32,
-  h: u32,
+  (w, h): (u32, u32),
   mipmaps: usize,
 ) {
   for level in 0..mipmaps {
@@ -463,9 +455,7 @@ fn create_texture_3d_storage(
   format: GLenum,
   iformat: GLenum,
   encoding: GLenum,
-  w: u32,
-  h: u32,
-  d: u32,
+  (w, h, d): (u32, u32, u32),
   mipmaps: usize,
 ) {
   for level in 0..mipmaps {

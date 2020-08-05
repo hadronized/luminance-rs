@@ -47,7 +47,7 @@ where
     F: for<'b> FnOnce(ProgramInterface<'b, B>, &'b Uni, RenderGate<'b, B>) -> Result<(), E>,
   {
     unsafe {
-      self.backend.apply_shader_program(&mut program.repr);
+      self.backend.apply_shader_program(&program.repr);
     }
 
     let render_gate = RenderGate {

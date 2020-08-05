@@ -3,7 +3,6 @@
 
 #![deny(missing_docs)]
 
-use gl;
 use glfw::{self, Context, CursorMode as GlfwCursorMode, SwapInterval, Window, WindowMode};
 use glfw::{InitError, WindowEvent};
 use luminance::context::GraphicsContext;

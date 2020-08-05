@@ -1,4 +1,3 @@
-use gl;
 use gl::types::*;
 use std::ffi::CString;
 use std::ptr::{null, null_mut};

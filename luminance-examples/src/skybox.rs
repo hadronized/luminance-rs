@@ -392,7 +392,7 @@ fn run() -> Result<(), AppError> {
 
     let mut pipeline_gate = surface.new_pipeline_gate();
     let projection = projection.into();
-    let view = Matrix4::from(cam_view).into();
+    let view = cam_view.into();
 
     // We use two shaders in a single pipeline here: first, we render the skybox. Then, we render
     // the cube. A note here: it should be possible to change the way the skybox is rendered to

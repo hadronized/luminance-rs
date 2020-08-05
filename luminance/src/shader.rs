@@ -1089,6 +1089,11 @@ where
   _out: PhantomData<*const Out>,
 }
 
+type ProgramResult<B, Sem, Out, Uni, Q = Uni> = Result<
+  BuiltProgram<B, Sem, Out, Q>,
+  AdaptationFailure<B, Sem, Out, Uni>
+>;
+
 impl<B, Sem, Out, Uni> Program<B, Sem, Out, Uni>
 where
   B: ?Sized + Shader,
@@ -1099,7 +1104,7 @@ where
   /// # Parametricity
   ///
   /// - `Q` is the new [`UniformInterface`].
-  pub fn adapt<Q>(self) -> Result<BuiltProgram<B, Sem, Out, Q>, AdaptationFailure<B, Sem, Out, Uni>>
+  pub fn adapt<Q>(self) -> ProgramResult<B, Sem, Out, Uni, Q>
   where
     Q: UniformInterface<B>,
   {
@@ -1116,7 +1121,7 @@ where
   pub fn adapt_env<Q, E>(
     mut self,
     env: &mut E,
-  ) -> Result<BuiltProgram<B, Sem, Out, Q>, AdaptationFailure<B, Sem, Out, Uni>>
+  ) -> ProgramResult<B, Sem, Out, Uni, Q>
   where
     Q: UniformInterface<B, E>,
   {
@@ -1166,7 +1171,7 @@ where
   pub fn readapt_env<E>(
     self,
     env: &mut E,
-  ) -> Result<BuiltProgram<B, Sem, Out, Uni>, AdaptationFailure<B, Sem, Out, Uni>>
+  ) -> ProgramResult<B, Sem, Out, Uni>
   where
     Uni: UniformInterface<B, E>,
   {

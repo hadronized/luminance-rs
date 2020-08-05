@@ -16,8 +16,8 @@ use luminance::tess::Mode;
 use luminance_glfw::GlfwSurface;
 use luminance_windowing::{WindowDim, WindowOpt};
 
-const VS: &'static str = include_str!("attributeless-vs.glsl");
-const FS: &'static str = include_str!("simple-fs.glsl");
+const VS: &str = include_str!("attributeless-vs.glsl");
+const FS: &str = include_str!("simple-fs.glsl");
 
 fn main() {
   let dim = WindowDim::Windowed {

@@ -154,7 +154,7 @@ impl Program {
       let log = state
         .ctx
         .get_program_info_log(handle)
-        .unwrap_or("unknown link error".to_owned());
+        .unwrap_or_else(|| "unknown link error".to_owned());
       Err(ProgramError::link_failed(log))
     }
   }

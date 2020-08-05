@@ -25,8 +25,8 @@ use luminance_glfw::GlfwSurface;
 use luminance_windowing::{WindowDim, WindowOpt};
 use std::time::Instant;
 
-const VS: &'static str = include_str!("displacement-vs.glsl");
-const FS: &'static str = include_str!("displacement-fs.glsl");
+const VS: &str = include_str!("displacement-vs.glsl");
+const FS: &str = include_str!("displacement-fs.glsl");
 
 // Only one triangle this time.
 const TRI_VERTICES: [Vertex; 3] = [
