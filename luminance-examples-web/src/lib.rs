@@ -18,8 +18,8 @@ use luminance_web_sys::WebSysWebGL2Surface;
 use wasm_bindgen::prelude::*;
 
 // We get the shader at compile time from local files
-const VS: &'static str = include_str!("../../luminance-examples/src/simple-vs.glsl");
-const FS: &'static str = include_str!("../../luminance-examples/src/simple-fs.glsl");
+const VS: &'static str = include_str!("../shaders/simple-vs.glsl");
+const FS: &'static str = include_str!("../shaders/simple-fs.glsl");
 
 // Vertex semantics. Those are needed to instruct the GPU how to select vertex’s attributes from
 // the memory we fill at render time, in shaders. You don’t have to worry about them; just keep in
