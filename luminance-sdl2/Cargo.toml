@@ -26,4 +26,4 @@ bundled = ["sdl2/bundled"]
 gl = "0.14"
 luminance = { version = "0.44", path = "../luminance" }
 luminance-gl = { version = "0.17", path = "../luminance-gl" }
-sdl2 = "0.34.3"
+sdl2 = "0.35.0"
