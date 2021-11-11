@@ -138,7 +138,17 @@ impl GlutinSurface {
     samples: u16,
   ) -> Result<(Self, EventLoop<()>), GlutinError> {
     let event_loop = EventLoop::new();
+    let surface = Self::new_gl33_with_event_loop(&event_loop, window_builder, samples)?;
 
+    Ok((surface, event_loop))
+  }
+
+  /// Create a new [`GlutinSurface`] from scratch, using a provided event loop.
+  pub fn new_gl33_with_event_loop<T>(
+    event_loop: &EventLoop<T>,
+    window_builder: WindowBuilder,
+    samples: u16,
+  ) -> Result<Self, GlutinError> {
     let windowed_ctx = ContextBuilder::new()
       .with_gl(GlRequest::Specific(Api::OpenGl, (3, 3)))
       .with_gl_profile(GlProfile::Core)
@@ -155,8 +165,7 @@ impl GlutinSurface {
 
     let gl = GL33::new().map_err(GlutinError::GraphicsStateError)?;
     let surface = GlutinSurface { ctx, gl };
-
-    Ok((surface, event_loop))
+    Ok(surface)
   }
 
   /// Get the underlying size (in physical pixels) of the surface.
