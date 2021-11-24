@@ -11,7 +11,7 @@ compatible with as many crates as possible. In that case, you want `cargo update
 
 # 0.4
 
-> Nov 24, 2021
+> Nov 26, 2021
 
 - Add support for `luminance-0.45`.
 - Bump support of `sdl2-0.35.1`.

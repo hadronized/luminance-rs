@@ -11,7 +11,7 @@ compatible with as many crates as possible. In that case, you want `cargo update
 
 # 0.5
 
-> Nov 24, 2021
+> Nov 26, 2021
 
 - Fix buffer kind not correctly being used (i.e. mixing vertex and index buffers is not possible, for instance). This
   fix was the premise of the full fix, as a redesign of luminance’s buffer interface was needed to fully fix the problem.

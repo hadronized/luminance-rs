@@ -11,7 +11,7 @@ compatible with as many crates as possible. In that case, you want `cargo update
 
 # 0.17
 
-> Nov 24, 2021
+> Nov 26, 2021
 
 - Add support for `glfw-0.42`.
 - Remove support for `luminance-windowing`. The interface now requires you to pass a function to build the `Window` and

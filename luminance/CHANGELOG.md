@@ -9,10 +9,9 @@ how `cargo` resolves dependencies. `cargo update` is not enough, because all lum
 [SemVer ranges](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html) to stay
 compatible with as many crates as possible. In that case, you want `cargo update --aggressive`.
 
-
 # 0.45
 
-> Nov 24, 2021
+> Nov 26, 2021
 
 - Remove `Buffer` from the public API. Buffers are not really used by people, besides for _uniform buffers_, which are
   known to be problematic regarding memory alignment / safety. A complete redesign of this feature is planned and should

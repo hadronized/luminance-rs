@@ -11,7 +11,7 @@ compatible with as many crates as possible. In that case, you want `cargo update
 
 # 0.18
 
-> Nov 24, 2021
+> Nov 26, 2021
 
 - Fix lifetime issue with slicing tessellation.
 - Add support for `ShaderData` via `Std140` (`luminance-std140`).

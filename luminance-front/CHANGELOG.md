@@ -11,7 +11,7 @@ compatible with as many crates as possible. In that case, you want `cargo update
 
 # 0.5
 
-> Nov 24, 2021
+> Nov 26, 2021
 
 - Update `Vertices`, `VerticesMut`, `Indices`, `IndicesMut`, `Instances` and `InstancesMut` to reflect the lifetime
   change that happened in `luminance`.

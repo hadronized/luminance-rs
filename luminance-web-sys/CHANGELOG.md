@@ -11,7 +11,7 @@ compatible with as many crates as possible. In that case, you want `cargo update
 
 # 0.4
 
-> Nov 24, 2021
+> Nov 26, 2021
 
 - Support of `luminance-0.45`.
 - Remove useless dependency (`luminance-windowing`).

@@ -11,6 +11,6 @@ compatible with as many crates as possible. In that case, you want `cargo update
 
 # 0.1
 
-> Nov 24, 2021
+> Nov 26, 2021
 
 - Initial revision.
