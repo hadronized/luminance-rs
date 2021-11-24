@@ -9,6 +9,19 @@ how `cargo` resolves dependencies. `cargo update` is not enough, because all lum
 [SemVer ranges](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html) to stay
 compatible with as many crates as possible. In that case, you want `cargo update --aggressive`.
 
+# 0.5
+
+> Nov 26, 2021
+
+- Fix buffer kind not correctly being used (i.e. mixing vertex and index buffers is not possible, for instance). This
+  fix was the premise of the full fix, as a redesign of luminance’s buffer interface was needed to fully fix the problem.
+- Fix lifetime issue with slicing tessellation.
+- Add support for `ShaderData` via `Std140` (`luminance-std140`).
+- Implement the new `Uniformable` interface.
+- Support for uniform array and runtime-check them.
+- Support the new color clearing.
+- Implement the new `TexelUpload` interface.
+
 # 0.4
 
 > Apr 25, 2021

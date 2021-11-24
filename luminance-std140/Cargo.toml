@@ -17,4 +17,4 @@ rust-version = "1.56.0"
 maintenance = { status = "actively-developed" }
 
 [dependencies]
-luminance = { version = "0.44", path = "../luminance" }
+luminance = { version = "0.45", path = "../luminance" }

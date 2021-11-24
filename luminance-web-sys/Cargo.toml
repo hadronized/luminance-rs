@@ -1,6 +1,6 @@
 [package]
 name = "luminance-web-sys"
-version = "0.3.0"
+version = "0.4.0"
 license = "BSD-3-Clause"
 authors = ["Dimitri Sabadie <dimitri.sabadie@gmail.com>"]
 description = "web-sys luminance platform"
@@ -14,8 +14,8 @@ edition = "2021"
 rust-version = "1.56.0"
 
 [dependencies]
-luminance = { version = "0.44", path = "../luminance" }
-luminance-webgl = { version = "0.4", path = "../luminance-webgl" }
+luminance = { version = "0.45", path = "../luminance" }
+luminance-webgl = { version = "0.5", path = "../luminance-webgl" }
 wasm-bindgen = "0.2.63"
 
 [dependencies.web-sys]

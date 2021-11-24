@@ -9,9 +9,20 @@ how `cargo` resolves dependencies. `cargo update` is not enough, because all lum
 [SemVer ranges](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html) to stay
 compatible with as many crates as possible. In that case, you want `cargo update --aggressive`.
 
+# 0.17
+
+> Nov 26, 2021
+
+- Add support for `glfw-0.42`.
+- Remove support for `luminance-windowing`. The interface now requires you to pass a function to build the `Window` and
+  the `Receiver` for the events. This might seem like a regression but it actually allows for a more flexible way to use
+  `luminance`. Instead of hiding the window construction to the user and trying to do things for them, `luminance-glfw`
+  now just passes the strict minimum to the `Glfw` object (basically, the OpenGL context), and the user can create the
+  window the way they want.
+
 # 0.16
 
-> `HEAD`
+> Jun 29, 2021
 
 - Support of `luminance-0.44`.
 - Lose support for `CursorMode`, which is now deprecated. If you were using it, you already have access to the
