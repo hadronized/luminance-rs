@@ -9,6 +9,13 @@ how `cargo` resolves dependencies. `cargo update` is not enough, because all lum
 [SemVer ranges](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html) to stay
 compatible with as many crates as possible. In that case, you want `cargo update --aggressive`.
 
+# 0.4
+
+> Nov 24, 2021
+
+- Add support for `luminance-0.45`.
+- Bump support of `sdl2-0.35.1`.
+
 # 0.3
 
 > Jun 28, 2021
