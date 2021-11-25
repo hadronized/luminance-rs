@@ -9,6 +9,17 @@ how `cargo` resolves dependencies. `cargo update` is not enough, because all lum
 [SemVer ranges](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html) to stay
 compatible with as many crates as possible. In that case, you want `cargo update --aggressive`.
 
+# 0.5
+
+> Nov 24, 2021
+
+- Update `Vertices`, `VerticesMut`, `Indices`, `IndicesMut`, `Instances` and `InstancesMut` to reflect the lifetime
+  change that happened in `luminance`.
+- Export the `tess::View` trait, which was missing from the public interface.
+- Export the new `luminance::shader::types::*`.
+- Fix architecture-based detection. The current process is that if the target architecture is not
+  `wasm32-unknown-unknown`, we use `luminance-gl`. So we don’t depend on the CPU architecture anymore.
+
 # 0.4
 
 > Apr 25, 2021

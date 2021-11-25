@@ -9,6 +9,18 @@ how `cargo` resolves dependencies. `cargo update` is not enough, because all lum
 [SemVer ranges](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html) to stay
 compatible with as many crates as possible. In that case, you want `cargo update --aggressive`.
 
+# 0.18
+
+> Nov 24, 2021
+
+- Fix lifetime issue with slicing tessellation.
+- Add support for `ShaderData` via `Std140` (`luminance-std140`).
+- Implement the new `Uniformable` interface.
+- Support for uniform array and runtime-check them.
+- Document public symbols.
+- Support the new color clearing.
+- Implement the new `TexelUpload` interface.
+
 # 0.17
 
 > Jun 28, 2021
