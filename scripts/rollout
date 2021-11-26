@@ -11,8 +11,8 @@
 # List of crates to roll out. Order matters.
 crates=(
   luminance-derive
-  luminance-std140
   luminance
+  luminance-std140
   luminance-gl
   luminance-glfw
   luminance-glutin
