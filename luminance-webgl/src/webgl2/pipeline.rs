@@ -124,6 +124,7 @@ where
 
     if let Some(clear_depth) = pipeline_state.clear_depth {
       state.set_clear_depth(clear_depth);
+      state.set_depth_write(luminance::depth_stencil::Write::On);
       clear_buffer_bits |= WebGl2RenderingContext::DEPTH_BUFFER_BIT;
     }
 
