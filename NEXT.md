@@ -11,9 +11,16 @@
 
 # `luminance-gl`
 
+- Enable depth writing if we clear depth. It’s important to prevent getting invalidated state from a previous
+  `RenderState`.
+
 # `luminance-glfw`
 
+- Dependency bump: `glfw-0.43`.
+
 # `luminance-glutin`
+
+- Dependency bump: `glutin-0.28`.
 
 # `luminance-sdl2`
 
@@ -22,3 +29,6 @@
 # `luminance-web-sys`
 
 # `luminance-webgl`
+
+- Enable depth writing if we clear depth. It’s important to prevent getting invalidated state from a previous
+  `RenderState`.
