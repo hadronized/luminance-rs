@@ -1,6 +1,6 @@
 [package]
 name = "luminance-gl"
-version = "0.18.0"
+version = "0.19.0"
 license = "BSD-3-Clause"
 authors = ["Dimitri Sabadie <dimitri.sabadie@gmail.com>"]
 description = "OpenGL backends for luminance"
@@ -24,5 +24,5 @@ GL_ARB_gpu_shader_fp64 = []
 
 [dependencies]
 gl = "0.14"
-luminance = { version = "0.45", path = "../luminance" }
-luminance-std140 = { version = "0.1", path = "../luminance-std140" }
+luminance = { version = "0.46", path = "../luminance" }
+luminance-std140 = { version = "0.2", path = "../luminance-std140" }

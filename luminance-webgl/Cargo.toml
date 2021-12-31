@@ -1,6 +1,6 @@
 [package]
 name = "luminance-webgl"
-version = "0.5.0"
+version = "0.6.0"
 license = "BSD-3-Clause"
 authors = ["Dimitri Sabadie <dimitri.sabadie@gmail.com>"]
 description = "WebGL backend for luminance"
@@ -17,8 +17,8 @@ rust-version = "1.56.0"
 maintenance = { status = "actively-developed" }
 
 [dependencies]
-luminance = { version = "0.45", path = "../luminance" }
-luminance-std140 = { version = "0.1", path = "../luminance-std140" }
+luminance = { version = "0.46", path = "../luminance" }
+luminance-std140 = { version = "0.2", path = "../luminance-std140" }
 serde = "1"
 serde_derive = "1"
 wasm-bindgen = "0.2.60"
