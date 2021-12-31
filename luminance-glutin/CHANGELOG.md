@@ -9,6 +9,12 @@ how `cargo` resolves dependencies. `cargo update` is not enough, because all lum
 [SemVer ranges](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html) to stay
 compatible with as many crates as possible. In that case, you want `cargo update --aggressive`.
 
+# 0.14
+
+> Dec 31, 2021
+
+- Dependency bump: `glutin-0.28`.
+
 # 0.13
 
 > Nov 26, 2021

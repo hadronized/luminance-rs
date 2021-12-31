@@ -22,10 +22,10 @@ funtest = ["luminance-examples/funtest"]
 console_error_panic_hook = "0.1.6"
 env_logger = "0.9.0"
 log = "0.4.11"
-luminance = { version = "0.45", path = "../../luminance" }
+luminance = { version = "0.46", path = "../../luminance" }
 luminance-examples = { version = "0.1", path = "../common" }
-luminance-front = { version = "0.5", path = "../../luminance-front" }
-luminance-web-sys = { version = "0.4", path = "../../luminance-web-sys" }
+luminance-front = { version = "0.6", path = "../../luminance-front" }
+luminance-web-sys = { version = "0.5", path = "../../luminance-web-sys" }
 wasm-bindgen = "0.2.63"
 wasm-logger = "0.2"
 

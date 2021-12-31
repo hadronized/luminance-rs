@@ -9,6 +9,18 @@ how `cargo` resolves dependencies. `cargo update` is not enough, because all lum
 [SemVer ranges](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html) to stay
 compatible with as many crates as possible. In that case, you want `cargo update --aggressive`.
 
+# 0.46
+
+> Dec 31, 2021
+
+- Add `TexelUpload::Reserve` to be able to reserve texels. The previous way of doing (by passing an empty slice `&[]`)
+  was unsound and clashing with internal size checks.
+- Remove the concept of optional mimaps (`Option<usize>`). Indeed, that encoding was error-prone and not a normal form
+  (e.g. `None` vs. `Some(0)`).
+- Methods `base_texels_with_mipmaps` and `base_texels_without_mipmaps` got merged into `base_texels`, using a `usize`
+  that must be set to `0` for “no mipmap.”
+- Rename the `base_texels` method into `get_base_texels` (for backends).
+
 # 0.45
 
 > Nov 26, 2021

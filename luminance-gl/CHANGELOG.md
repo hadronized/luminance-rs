@@ -9,6 +9,14 @@ how `cargo` resolves dependencies. `cargo update` is not enough, because all lum
 [SemVer ranges](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html) to stay
 compatible with as many crates as possible. In that case, you want `cargo update --aggressive`.
 
+# 0.19
+
+> Dec 31, 2021
+
+- Enable depth writing if we clear depth. It’s important to prevent getting invalidated state from a previous
+  `RenderState`.
+- Support `luminance-0.46`.
+
 # 0.18
 
 > Nov 26, 2021
