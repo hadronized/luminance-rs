@@ -135,7 +135,7 @@ pub fn load_texture(
     .new_texture_raw(
       [width, height],
       Sampler::default(),
-      TexelUpload::base_level_without_mipmaps(texels),
+      TexelUpload::base_level(texels, 0),
     )
     .map_err(|e| log::error!("error while creating texture: {}", e))
     .ok()

@@ -476,7 +476,9 @@ where
     texels: &'a T,
 
     /// Whether mipmap levels should be automatically created.
-    mipmaps: Option<usize>,
+    ///
+    /// Use `0` if you don’t want any mipmap.
+    mipmaps: usize,
   },
 
   /// Provide all the levels at once.
@@ -484,6 +486,18 @@ where
   /// The number of elements in the outer slice represents the number of mipmaps; each inner slice represents the texels
   /// to be uploaded to the mipmap level.
   Levels(&'a [&'a T]),
+
+  /// Reserve only the base level and optional mipmap levels.
+  ///
+  /// This variant allows you not to pass any texel data and ask the backend to just reserve the memory for the texture.
+  /// This will allow to pass data later, and let the backend fill the data for you. The texture texels will be set in a
+  /// vendor-specific way, so you should assume that the texture will be filled with garbage.
+  Reserve {
+    /// Number of mipmap levels to allocate.
+    ///
+    /// Use `0` if you don’t want any.
+    mipmaps: usize,
+  },
 }
 
 impl<'a, T> TexelUpload<'a, T>
@@ -491,19 +505,13 @@ where
   T: ?Sized,
 {
   /// Create a texel upload for the base level of a texture and let mipmap levels be automatically created.
-  pub fn base_level_with_mipmaps(texels: &'a T, mipmaps: usize) -> Self {
-    Self::BaseLevel {
-      texels,
-      mipmaps: Some(mipmaps),
-    }
+  pub fn base_level(texels: &'a T, mipmaps: usize) -> Self {
+    Self::BaseLevel { texels, mipmaps }
   }
 
-  /// Create a texel upload for the base level of a texture without mipmap levels.
-  pub fn base_level_without_mipmaps(texels: &'a T) -> Self {
-    Self::BaseLevel {
-      texels,
-      mipmaps: None,
-    }
+  /// Create a texel upload by reserving memory and let mipmap levels be reserved as well.
+  pub fn reserve(mipmaps: usize) -> Self {
+    Self::Reserve { mipmaps }
   }
 
   /// Create a texel upload by manually providing all base + mipmap levels.
@@ -514,16 +522,18 @@ where
   /// Number of mipmaps.
   pub fn mipmaps(&self) -> usize {
     match self {
-      TexelUpload::BaseLevel { mipmaps, .. } => mipmaps.unwrap_or(0),
+      TexelUpload::BaseLevel { mipmaps, .. } => *mipmaps,
       TexelUpload::Levels(levels) => levels.len(),
+      TexelUpload::Reserve { mipmaps } => *mipmaps,
     }
   }
 
   /// Get the base level texels.
-  pub fn base_level(&self) -> Option<&'a T> {
+  pub fn get_base_level(&self) -> Option<&'a T> {
     match self {
       TexelUpload::BaseLevel { texels, .. } => Some(*texels),
       TexelUpload::Levels(levels) => levels.get(0).map(|base_level| *base_level),
+      TexelUpload::Reserve { .. } => None,
     }
   }
 }

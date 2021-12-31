@@ -465,11 +465,7 @@ fn upload_cubemap(
 
   // Create the cubemap on the GPU; we ask for two mipmaps… because why not.
   let mut texture = context
-    .new_texture(
-      size,
-      Sampler::default(),
-      TexelUpload::base_level_with_mipmaps(&[], 2),
-    )
+    .new_texture(size, Sampler::default(), TexelUpload::reserve(2))
     .map_err(|e| AppError::CannotCreateTexture(Box::new(e)))?;
 
   // Upload each face, starting from U, then L, F, R, B and finally D. This part of the code is
@@ -584,7 +580,7 @@ fn upload_face(
     .upload_part_raw(
       ([0, 0], face),
       size as u32,
-      TexelUpload::base_level_with_mipmaps(face_buffer, 2),
+      TexelUpload::base_level(face_buffer, 2),
     )
     .map_err(|e| AppError::CannotUploadToFace(Box::new(e)))
 }

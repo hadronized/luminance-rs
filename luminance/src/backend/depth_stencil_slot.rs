@@ -105,12 +105,7 @@ where
   where
     C: GraphicsContext<Backend = B>,
   {
-    let texture = Texture::new(
-      ctx,
-      size,
-      sampler.clone(),
-      TexelUpload::base_level_with_mipmaps(&[], mipmaps),
-    )?;
+    let texture = Texture::new(ctx, size, sampler.clone(), TexelUpload::reserve(mipmaps))?;
     unsafe { B::attach_depth_texture(framebuffer, &texture.repr)? };
 
     Ok(texture)
@@ -139,12 +134,7 @@ where
   where
     C: GraphicsContext<Backend = B>,
   {
-    let texture = Texture::new(
-      ctx,
-      size,
-      sampler.clone(),
-      TexelUpload::base_level_with_mipmaps(&[], mipmaps),
-    )?;
+    let texture = Texture::new(ctx, size, sampler.clone(), TexelUpload::reserve(mipmaps))?;
     unsafe { B::attach_depth_texture(framebuffer, &texture.repr)? };
 
     Ok(texture)
