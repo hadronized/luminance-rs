@@ -118,12 +118,7 @@ where
   where
     C: GraphicsContext<Backend = B>,
   {
-    let texture = Texture::new(
-      ctx,
-      size,
-      sampler.clone(),
-      TexelUpload::base_level_with_mipmaps(&[], mipmaps),
-    )?;
+    let texture = Texture::new(ctx, size, sampler.clone(), TexelUpload::reserve(mipmaps))?;
 
     unsafe { B::attach_color_texture(framebuffer, &texture.repr, attachment_index)? };
 

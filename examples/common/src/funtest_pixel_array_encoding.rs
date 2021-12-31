@@ -15,11 +15,7 @@ impl Example for LocalExample {
     context: &mut impl GraphicsContext<Backend = Backend>,
   ) -> Self {
     let _texture: Texture<Dim2, RGB8UI> = context
-      .new_texture(
-        [100, 100],
-        Sampler::default(),
-        TexelUpload::base_level_without_mipmaps(&[]),
-      )
+      .new_texture([100, 100], Sampler::default(), TexelUpload::reserve(0))
       .unwrap();
 
     LocalExample

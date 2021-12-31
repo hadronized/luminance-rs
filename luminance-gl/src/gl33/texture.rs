@@ -556,20 +556,14 @@ where
   let pf_size = pf.format.bytes_len();
   let expected_bytes = D::count(size) * pf_size;
 
-  // get base level texels
-  let base_level_texels = texels
-    .base_level()
-    .ok_or_else(|| TextureError::NotEnoughPixels {
-      expected_bytes,
-      provided_bytes: 0,
-    })?;
+  if let Some(base_level_texels) = texels.get_base_level() {
+    // number of bytes in the input texels argument
+    let input_bytes = base_level_texels.len() * mem::size_of::<T>();
 
-  // number of bytes in the input texels argument
-  let input_bytes = base_level_texels.len() * mem::size_of::<T>();
-
-  if input_bytes < expected_bytes {
-    // potential segfault / overflow; abort
-    return Err(TextureError::not_enough_pixels(expected_bytes, input_bytes));
+    if input_bytes < expected_bytes {
+      // potential segfault / overflow; abort
+      return Err(TextureError::not_enough_pixels(expected_bytes, input_bytes));
+    }
   }
 
   // set the pixel row alignment to the required value for uploading data according to the width
@@ -583,7 +577,7 @@ where
     TexelUpload::BaseLevel { texels, mipmaps } => {
       set_texels::<D, _>(target, pf, 0, size, off, texels)?;
 
-      if mipmaps.is_some() {
+      if mipmaps > 0 {
         unsafe { gl::GenerateMipmap(target) };
       }
     }
@@ -591,6 +585,12 @@ where
     TexelUpload::Levels(levels) => {
       for (i, &texels) in levels.into_iter().enumerate() {
         set_texels::<D, _>(target, pf, i as _, size, off, texels)?;
+      }
+    }
+
+    TexelUpload::Reserve { mipmaps } => {
+      if mipmaps > 0 {
+        unsafe { gl::GenerateMipmap(target) };
       }
     }
   }
