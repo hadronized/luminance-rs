@@ -24,6 +24,6 @@ luminance = { version = "0.46", path = "../../luminance" }
 luminance-front = { version = "0.6", path = "../../luminance-front" }
 
 [dependencies.image]
-version = "0.23"
+version = "0.23.12"
 default-features = false
 features = ["gif", "jpeg", "ico", "png", "pnm", "tga", "tiff", "webp", "bmp", "hdr", "dxt", "dds", "farbfeld"]
