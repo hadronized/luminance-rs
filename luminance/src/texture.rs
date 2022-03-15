@@ -651,9 +651,9 @@ impl error::Error for TextureError {}
 /// - [`Texture::upload_part_raw`]
 /// - [`Texture::upload_raw`]
 ///
-/// In the second case, a [`Texture`] can be used as part of a [`ColorSlot`] or [`DepthSlot`] of a [`Framebuffer`]. This
-/// allows to create graphics pipeline that will output into the [`Texture`], that you can use in another graphics
-/// pipeline later.
+/// In the second case, a [`Texture`] can be used as part of a [`ColorSlot`] or [`DepthStencilSlot`]
+/// of a [`Framebuffer`]. This allows to create graphics pipeline that will output into the
+/// [`Texture`], that you can use in another graphics pipeline later.
 ///
 /// # Parametricity
 ///
@@ -679,7 +679,7 @@ impl error::Error for TextureError {}
 ///
 /// [`Framebuffer`]: crate::framebuffer::Framebuffer
 /// [`ColorSlot`]: crate::backend::color_slot::ColorSlot
-/// [`DepthSlot`]: crate::backend::depth_slot::DepthSlot
+/// [`DepthStencilSlot`]: crate::backend::depth_stencil_slot::DepthStencilSlot
 /// [`RenderablePixel`]: crate::pixel::RenderablePixel
 /// [`DepthPixel`]: crate::pixel::DepthPixel
 /// [`TextureBackend`]: crate::backend::texture::Texture

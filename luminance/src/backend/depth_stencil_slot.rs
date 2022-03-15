@@ -27,12 +27,14 @@ use crate::{
 ///
 /// - None, represented by the `()` implementor. This means that no depth and no stencil information will be available
 ///   for the framebuffer.
-/// - A single depth [`Texture`]. This type of depth/stenccil slot is often suitable for renderable framebuffer. The
+/// - A single depth [`Texture`]. This type of depth/stencil slot is often suitable for renderable framebuffer. The
 ///   pixel format must implement [`DepthPixel`].
 /// - A combined depth/stencil [`Texture`], allowing to use a depth buffer along with a stencil buffer.
 ///
 /// Feel free to have a look at the list of implementors of this trait to know which types you can use as depth and
 /// stencil slots.
+///
+/// [`DepthPixel`]: crate::pixel::DepthPixel
 pub trait DepthStencilSlot<B, D>
 where
   B: ?Sized + Framebuffer<D>,
