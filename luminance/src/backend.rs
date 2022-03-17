@@ -77,6 +77,41 @@
 //! Some backends provide more features to tweak the backend. That is useful when a user knows they
 //! will use that backend, but it also makes it harder for them to write code that is backend-agnostic.
 //!
+//! ### Mapping between features and traits
+//!
+//! The following traits must be implemented for the given features:
+//!
+//! - **Framebuffers**:
+//!   - `luminance::backend::framebuffer::FramebufferBackBuffer`
+//!   - `luminance::backend::framebuffer::Framebuffer`
+//!   - `luminance::backend::texture::TextureBase`
+//! - **Shaders**:
+//!   - `luminance::backend::shader::Shader`
+//!   - `luminance::backend::shader::ShaderData`
+//!   - `luminance::backend::shader::Uniformable`
+//! - **Tessellation**:
+//!   - `luminance::backend::tess::IndexSlice`
+//!   - `luminance::backend::tess::InstanceSlice`
+//!   - `luminance::backend::tess::Tess`
+//!   - `luminance::backend::tess::VertexSlice`
+//! - **Texture**:
+//!   - `luminance::backend::texture::Texture`
+//!   - `luminance::backend::texture::TextureBase`
+//! - **Pipelines and gates**:
+//!   - `luminance::backend::framebuffer::Framebuffer`
+//!   - `luminance::backend::pipeline::Pipeline`
+//!   - `luminance::backend::pipeline::PipelineBase`
+//!   - `luminance::backend::pipeline::PipelineShaderData`
+//!   - `luminance::backend::pipeline::PipelineTexture`
+//!   - `luminance::backend::render_gate::RenderGate`
+//!   - `luminance::backend::shader::ShaderData`
+//!   - `luminance::backend::shading_gate::ShadingGate`
+//!   - `luminance::backend::tess_gate::TessGate`
+//!   - `luminance::backend::texture::TextureBase`
+//!   - `luminance::backend::texture::Texture`
+//! - **Query**:
+//!   - `luminance::backend::query::Query`
+//!
 //! [`ShaderData`]: crate::shader::ShaderData
 //! [`ShaderDataBackend`]: crate::backend::shader::ShaderData
 //! [`ShaderDataBackend::ShaderDataRepr`]: crate::backend::shader::ShaderData::ShaderDataRepr
