@@ -15,10 +15,11 @@
 //! - `D`, a type representing a dimension and that must implement [`Dimensionable`]. That types
 //!   gives information on what kind of sizes and offsets a framebuffer will operate on/with.
 //! - `CS`, a _color slot_. Color slots are described in the [backend::color_slot] module.
-//! - `DS`, a _depth slot_. Depth slots are described in the [backend::depth_slot] module.
+//! - `DS`, a _depth/stencil slot_. Depth/stencil slots are described in the
+//!   [backend::depth_stencil_slot] module.
 //!
 //! You are limited in which types you can choose — the list is visible as implementors of traits
-//! in [backend::color_slot] and [backend::depth_slot].
+//! in [backend::color_slot] and [backend::depth_stencil_slot].
 //!
 //! Once a [`Framebuffer`] is created, you can do basically two main operations on it:
 //!
@@ -36,14 +37,14 @@
 //! Slots’ types depend entirely on the types you choose in [`Framebuffer`]. The rule is that any
 //! type that implements [`ColorSlot`] will be associated another type: that other type (in this
 //! case, [`ColorSlot::ColorTextures`]) will be the type you can use to manipulate textures. The
-//! same applies to [`DepthSlot`] with [`DepthSlot::DepthTexture`].
+//! same applies to [`DepthStencilSlot`] with [`DepthStencilSlot::DepthStencilTexture`].
 //!
 //! In the case you don’t want a given slot, you can mute it with the unit type: [`()`], which will
 //! effectively completely disable generating textures for that slot.
 //!
-//! You can access to the color slot via [`Framebuffer::color_slot`]. You can access to the depth
-//! slot via [`Framebuffer::depth_slot`]. Once you get textures from the color slots, you can use
-//! them as regular textures as input of next renders, for instance.
+//! You can access the color slot via [`Framebuffer::color_slot`]. You can access the depth/stencil
+//! slot via [`Framebuffer::depth_stencil_slot`]. Once you get textures from the color slots, you
+//! can use them as regular textures as input of next renders, for instance.
 //!
 //! ## Note on type generation
 //!
@@ -60,7 +61,7 @@
 //! might think.
 //!
 //! [backend::color_slot]: crate::backend::color_slot
-//! [backend::depth_slot]: crate::backend::depth_slot
+//! [backend::depth_stencil_slot]: crate::backend::depth_stencil_slot
 //! [`PipelineGate`]: crate::pipeline::PipelineGate
 
 use std::{error, fmt};
@@ -82,7 +83,7 @@ use crate::{
 /// - `B` is the backend type. It must implement [backend::framebuffer::Framebuffer].
 /// - `D` is the dimension type. It must implement [`Dimensionable`].
 /// - `CS` is the color slot type. It must implement [`ColorSlot`].
-/// - `DS` is the depth slot type. It must implement [`DepthSlot`].
+/// - `DS` is the depth slot type. It must implement [`DepthStencilSlot`].
 ///
 /// [backend::framebuffer::Framebuffer]: crate::backend::framebuffer::Framebuffer
 pub struct Framebuffer<B, D, CS, DS>
@@ -135,14 +136,14 @@ where
         .backend()
         .new_framebuffer::<CS, DS>(size, mipmaps, &sampler)?;
       let color_slot = CS::reify_color_textures(ctx, size, mipmaps, &sampler, &mut repr, 0)?;
-      let depth_slot = DS::reify_depth_texture(ctx, size, mipmaps, &sampler, &mut repr)?;
+      let depth_stencil_slot = DS::reify_depth_texture(ctx, size, mipmaps, &sampler, &mut repr)?;
 
       let repr = B::validate_framebuffer(repr)?;
 
       Ok(Framebuffer {
         repr,
         color_slot,
-        depth_stencil_slot: depth_slot,
+        depth_stencil_slot,
       })
     }
   }
@@ -152,27 +153,27 @@ where
     unsafe { B::framebuffer_size(&self.repr) }
   }
 
-  /// Access the carried color slot.
+  /// Access the carried color slot's texture(s).
   pub fn color_slot(&mut self) -> &mut CS::ColorTextures {
     &mut self.color_slot
   }
 
-  /// Access the carried depth/stencil slot.
+  /// Access the carried depth/stencil slot's texture.
   pub fn depth_stencil_slot(&mut self) -> &mut DS::DepthStencilTexture {
     &mut self.depth_stencil_slot
   }
 
-  /// Consume this framebuffer and return the carried slots.
+  /// Consume this framebuffer and return the carried slots' texture(s).
   pub fn into_slots(self) -> (CS::ColorTextures, DS::DepthStencilTexture) {
     (self.color_slot, self.depth_stencil_slot)
   }
 
-  /// Consume this framebuffer and return the carried [`ColorSlot`].
+  /// Consume this framebuffer and return the carried [`ColorSlot::ColorTextures`].
   pub fn into_color_slot(self) -> CS::ColorTextures {
     self.color_slot
   }
 
-  /// Consume this framebuffer and return the carried [`DepthSlot`].
+  /// Consume this framebuffer and return the carried [`DepthStencilSlot::DepthStencilTexture`].
   pub fn into_depth_stencil_slot(self) -> DS::DepthStencilTexture {
     self.depth_stencil_slot
   }

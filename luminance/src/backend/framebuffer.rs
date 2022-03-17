@@ -13,10 +13,12 @@ use crate::{
 /// A type implementing [`Framebuffer`] must implement [`TextureBase`] in the first place, because framebuffers and
 /// textures have a strong relationship.
 ///
-/// Framebuffers implement a strong type contract with the safe interface and are associated with [`ColorSlot`] and
-/// [`DepthSlot`]. Those types provide associated types to adapt the kind of data that will be allocated and provided to
-/// the user. For instance, if you want to have a framebuffer that will not have any depth information, you can use `()`
-/// as a [`DepthSlot`]. The backends will then not allocate anything and no depth data will be present at runtime.
+/// Framebuffers implement a strong type contract with the safe interface and are associated with
+/// [`ColorSlot`] and [`DepthStencilSlot`]. Those types provide associated types to adapt the kind
+/// of data that will be allocated and provided to the user. For instance, if you want to have a
+/// framebuffer that will not have any depth information, you can use `()` as a
+/// [`DepthStencilSlot`]. The backends will then not allocate anything and no depth data will be
+/// present at runtime.
 ///
 /// The whole process of implementing this trait revolves around three main aspects:
 ///
@@ -36,7 +38,7 @@ where
 
   /// Create a new framebuffer on the backend.
   ///
-  /// `CS` is the [`ColorSlot`] and `DS` is the [`DepthSlot`]. This function must create the part that is _only_
+  /// `CS` is the [`ColorSlot`] and `DS` is the [`DepthStencilSlot`]. This function must create the part that is _only_
   /// relevant to the framebuffer, not to the color slots directly. It can still allocate enough storage for the slots
   /// but it doesn’t have the handles / representations of the slots yet.
   unsafe fn new_framebuffer<CS, DS>(
