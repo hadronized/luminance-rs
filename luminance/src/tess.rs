@@ -756,7 +756,8 @@ where
       }
 
       None => {
-        let mut deinterleaved = vec![DeinterleavedData::new(); V::ATTR_COUNT];
+        let attrs = V::vertex_desc();
+        let mut deinterleaved = vec![DeinterleavedData::new(); attrs.len()];
         build_raw(&mut deinterleaved);
 
         self.vertex_data = Some(deinterleaved);
@@ -788,7 +789,8 @@ where
 
     match self.instance_data {
       None => {
-        let mut deinterleaved = vec![DeinterleavedData::new(); W::ATTR_COUNT];
+        let attrs = W::vertex_desc();
+        let mut deinterleaved = vec![DeinterleavedData::new(); attrs.len()];
         build_raw(&mut deinterleaved);
 
         self.instance_data = Some(deinterleaved);
