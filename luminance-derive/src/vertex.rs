@@ -237,13 +237,9 @@ fn process_struct(
     )*
   };
 
-  let attr_count = fields_types.len();
-
   quote! {
     // Vertex impl
     unsafe impl luminance::vertex::Vertex for #struct_name {
-      const ATTR_COUNT: usize = #attr_count;
-
       fn vertex_desc() -> luminance::vertex::VertexDesc {
         vec![#(#indexed_vertex_attrib_descs),*]
       }
