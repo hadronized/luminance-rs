@@ -23,7 +23,6 @@ use std::{
 #[derive(Debug)]
 pub struct Stage {
   handle: GLuint,
-  ty: StageType,
 }
 
 impl Drop for Stage {
@@ -153,7 +152,7 @@ unsafe impl Shader for GL33 {
     gl::GetShaderiv(handle, gl::COMPILE_STATUS, &mut compiled);
 
     if compiled == gl::TRUE.into() {
-      Ok(Stage { handle, ty })
+      Ok(Stage { handle })
     } else {
       let mut log_len: GLint = 0;
       gl::GetShaderiv(handle, gl::INFO_LOG_LENGTH, &mut log_len);
