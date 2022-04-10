@@ -318,7 +318,7 @@
 //! [`UniformInterface`]: https://docs.rs/luminance/latest/luminance/shader/program/trait.UniformInterface.html
 
 #![doc(
-  html_logo_url = "https://github.com/phaazon/luminance-rs/blob/master/docs/imgs/luminance_alt.svg"
+  html_logo_url = "https://raw.githubusercontent.com/phaazon/luminance-rs/master/docs/imgs/luminance_alt.svg"
 )]
 #![deny(missing_docs)]
 
