@@ -9,6 +9,12 @@ how `cargo` resolves dependencies. `cargo update` is not enough, because all lum
 [SemVer ranges](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html) to stay
 compatible with as many crates as possible. In that case, you want `cargo update --aggressive`.
 
+# 0.10
+
+> Apr 12, 2022
+
+- Remove `Vertex::ATTR_COUNT` — it’s now computed based on the attributes directly.
+
 # 0.9
 
 > Dec 31, 2021

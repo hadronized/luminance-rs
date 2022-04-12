@@ -13,7 +13,7 @@ compatible with as many crates as possible. In that case, you want `cargo update
 
 > ???
 
--
+- Redeploy of the previous version (0.46.1) that was yanked.
 
 # 0.46.1 (yanked)
 
