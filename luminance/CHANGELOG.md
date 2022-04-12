@@ -9,11 +9,20 @@ how `cargo` resolves dependencies. `cargo update` is not enough, because all lum
 [SemVer ranges](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html) to stay
 compatible with as many crates as possible. In that case, you want `cargo update --aggressive`.
 
-# 0.46.1
+# 0.47
+
+> ???
+
+-
+
+# 0.46.1 (yanked)
 
 > Apr 11, 2022
 
 - Fix documentation’s logo.
+- Fix doc links to follow renaming `DepthSlot` to `DepthStencilSlot`.
+- **Remove `Vertex::ATTR_COUNT` — it’s now computed based on the attributes directly. This change wasn’t intented to be
+  part of this released and then makes the release instable and a yank candidate.**
 
 # 0.46
 
