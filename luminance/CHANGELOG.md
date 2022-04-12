@@ -11,9 +11,10 @@ compatible with as many crates as possible. In that case, you want `cargo update
 
 # 0.47
 
-> ???
+> Apr 12, 2022
 
--
+- Redeploy of the previous version (0.46.1) that was yanked.
+- Support for `luminance-derive-0.10`.
 
 # 0.46.1 (yanked)
 
