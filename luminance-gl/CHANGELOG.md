@@ -11,6 +11,12 @@ compatible with as many crates as possible. In that case, you want `cargo update
 
 # 0.19
 
+> Apr 12, 2022
+
+- Support of `luminance-0.47`.
+
+# 0.19
+
 > Dec 31, 2021
 
 - Enable depth writing if we clear depth. It’s important to prevent getting invalidated state from a previous

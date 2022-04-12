@@ -1,6 +1,6 @@
 [package]
 name = "luminance-std140"
-version = "0.2.0"
+version = "0.2.1"
 license = "BSD-3-Clause"
 authors = ["Dimitri Sabadie <dimitri.sabadie@gmail.com>"]
 description = "Std140 types and trait for OpenGL-based luminance backends"
@@ -17,4 +17,4 @@ rust-version = "1.56.0"
 maintenance = { status = "actively-developed" }
 
 [dependencies]
-luminance = { version = "0.46", path = "../luminance" }
+luminance = { version = ">=0.46, <0.48", path = "../luminance" }
