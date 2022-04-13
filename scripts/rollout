@@ -22,46 +22,61 @@ crates=(
   luminance-front
 )
 
-function publish_crate() {
-  read "go?Publish $1 to crates.io? (Y/n) "
-  go=${go:-"Y"}
-  (test $go = "Y" && cd $1 && cargo package && cargo publish)
+function auto_publish_crate() {
+  echo "Publishing $1 to creates.io…"
+
+  ret=1
+  try=1
+  while [ $ret != 0 ]
+  do
+    echo "  try $try"
+    (cd $1 && cargo publish)
+    ret=$?
+
+    if [ $ret != 0 ]
+    then
+      try=$(($try + 1))
+      sleep 5
+    else
+      break
+    fi
+  done
 }
 
 function get_crate_version() {
   cargo read-manifest --manifest-path $1/Cargo.toml | jq -r ".version" | sed s/\.0$//
 }
 
-function create_git_tag() {
+function auto_create_git_tag() {
   echo "Current tags for $1:"
   git tag | rg ^$1-\\d
-  read "go?Create tag $1-$2? (Y/n) "
-  go=${go:-"Y"}
-  (test $go = "Y" && git tag $1-$2 && echo -e "  created git tag $1-\e[034;3m$2\e[0;0m")
+  echo "Creating tag $1-$2?"
+  (git tag $1-$2 && echo -e "  created git tag $1-\e[034;3m$2\e[0;0m")
 }
 
-function push_git_tags() {
-  read "go?Push tags? (Y/n) "
-  go=${go:-"Y"}
-  (test $go = "Y" && git push origin --tags)
+function auto_push_git_tags() {
+  echo "Pushing tags"
+  git push origin --tags
+}
+
+function rollout() {
+  for crate in $*; do
+    version=$(get_crate_version $crate)
+    echo -e "\e[032;1mRolling out \e[039;0m$crate-\e[034;3m$version\e[0;0m"
+
+    auto_publish_crate $crate
+    auto_create_git_tag $crate $version
+  done
+
+  auto_push_git_tags
 }
 
 case "$*" in
-  "all")
-    # Perform a full roll out of all the crates, respecting the order in which they should be published.
-    for crate in ${crates[@]}; do
-      version=$(get_crate_version $crate)
-      echo -e "\e[032;1mRolling out \e[039;0m$crate-\e[034;3m$version\e[0;0m"
-
-      publish_crate $crate
-      create_git_tag $crate $version
-    done
-
-    push_git_tags
+  "auto")
+    rollout ${crates[@]}
     ;;
 
   *)
-    echo "unknown argument"
-    exit 1
+    rollout $*
     ;;
 esac
