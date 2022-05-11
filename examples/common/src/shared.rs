@@ -13,15 +13,19 @@ pub enum Semantics {
   // reference vertex positions with the co variable in vertex shaders
   #[sem(name = "co", repr = "[f32; 2]", wrapper = "VertexPosition")]
   Position,
+
   // reference vertex positions with the co3 variable in vertex shaders
   #[sem(name = "co3", repr = "[f32; 3]", wrapper = "VertexPosition3")]
   Position3,
+
   // reference vertex colors with the color variable in vertex shaders
   #[sem(name = "color", repr = "[f32; 3]", wrapper = "VertexColor")]
   Color,
+
   // reference vertex normals with the nor variable in vertex shaders
   #[sem(name = "nor", repr = "[f32; 3]", wrapper = "VertexNormal")]
   Normal,
+
   // reference vertex instance’s position on screen
   #[sem(
     name = "position",
@@ -29,6 +33,7 @@ pub enum Semantics {
     wrapper = "VertexInstancePosition"
   )]
   InstancePosition,
+
   // reference vertex size in vertex shaders (used for vertex instancing)
   #[sem(name = "weight", repr = "f32", wrapper = "VertexWeight")]
   Weight,

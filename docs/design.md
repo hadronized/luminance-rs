@@ -15,6 +15,9 @@ This document describes the overall design of [luminance] starting from its curr
 * [Code generation and procedural macro](#code-generation-and-procedural-macro)
 * [Detailed feature set](#detailed-feature-set)
   * [Framebuffers](#framebuffers)
+    * [Dimensionality](#dimensionality)
+    * [Color slot](#color-slot)
+    * [Depth/stencil slot](#depthstencil-slot)
   * [Shaders](#shaders)
   * [Tessellation](#tessellation)
   * [Textures](#textures)
@@ -245,6 +248,74 @@ pretty narrow and simple:
 - Queries.
 
 ## Framebuffers
+
+Framebuffers are objects acting as receptacle of renders. Anything that gets rendered has to be sent to a framebuffer at
+some point. For this reason, framebuffers are the outermost scarce resource you will find in a graphics pipeline, since
+you might want to render several objects with different techniques in the same framebuffer.
+
+A framebuffer has a couple of properties. [luminance] differs from regular graphics API as it strongly types
+framebuffers with concepts that don’t really exist outside of [luminance]:
+
+- Its dimension. Dimensionality is an important concept for framebuffers that will greatly impact the storage and nature
+  of the other properties.
+- Color slots.
+- Depth/stencil slots.
+
+### Dimensionality
+
+Framebuffers have a _dimension_, encoded via the `Dim` type and constrained via `Dimensionable`. Dimensionality is a
+wide topic that is explained in the [Textures](#textures) section.
+
+### Color slot
+
+Color slots are an abstraction solving the problem of accessing color data in a framebuffer. Framebuffer color data can
+be accessed in two different ways:
+
+- In a write-way; i.e. a fragment shader will output _fragments_, that must end up in framebuffer color data. In this
+  case case, shader outputs = color data.
+- In a read-way; i.e. framebuffer color data can be accessed by different parts of the pipelines (fixed functions,
+  shader code, etc.).
+
+How the data is represented depends on the type of the color slot. In that way, [luminance] way of encoding framebuffers
+is by letting the user _declares what the color data should be_ and generate the actual color slot for the user,
+automatically. The following is subject to change but has been the case for years (both in the Haskell and Rust
+versions of [luminance], so it might continue being that way for a while):
+
+- If you don’t want color data in your framebuffer (e.g. a framebuffer only capturing depth and/or stencil information
+  and discarding any color data), your color slot type can be set to `()`.
+- If you want a single color data, for instance an RGBA 32-bit color, you can set your color slot to a pixel type
+  encoding that color (here, it would be `luminance::pixel::RGBA32F`).
+- If you want more than one color data, you can use tuples of pixel types.
+
+The last point is the one that might change in the future (we would probably want to access data in a more nominal way,
+so that it’s possible to share names at compile times instead of tuple indices, for instance).
+
+For each type of color slot and framebuffer dimension, the way [luminance] works is by injecting a type family,
+mapping the color data type to the color slot type. The mapping is as such:
+
+| Framebuffer dimension      | Color data type                                                                 | Color slot type                  |
+| ========================== | =============================================================================== | ================================ |
+| any                        | `()`                                                                            | `()`                             |
+| `D where D: Dimensionable` | `P where P: ColorPixel + RenderablePixel`                                       | `Texture<D, P>`                  |
+| `D where D: Dimensionable` | `(A, B) where A: ColorPixel + RenderablePixel, B: ColorPixel + RenderablePixel` | `(Texture<D, A>, Texture<D, B>)` |
+| `D where D: Dimensionable` | etc. etc.                                                                       | etc. etc.                        |
+
+So basically, if you use `()`, you will get `()` as color slot. If you use a pixel type `P`, you will get
+`Texture<D, P>` where `D` is the dimension of the framebuffer. If you use a tuple of pixel types, like `(A, B, C)`, you
+will get `(Texture<D, A>, Texture<D, B>, Texture<D, C>)`, etc.
+
+> This tuple design works but is a bit uneasy to work with, especially in shader code, when it is required that the
+> order of which the shader outputs declared in a _fragment shader_ matches the framebuffer the fragments should be
+> rendered into.
+
+### Depth/stencil slot
+
+Framebuffers have a second slot: the depth/stencil slot. It works exactly the same way as color slots, but with a few
+differences:
+
+- You can use `()` to mute the slot but you cannot have tuples.
+- Instead of being constrained with `ColorSlot + RenderablePixel`, if you use a depth/stencil slot, it is constrained by
+  `DepthPixel` only.
 
 ## Shaders
 

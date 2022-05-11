@@ -1,8 +1,7 @@
 use crate::attrib::{get_field_attr_once, AttrError};
 use proc_macro::TokenStream;
 use quote::quote;
-use std::error;
-use std::fmt;
+use std::{error, fmt};
 use syn::{Attribute, DataEnum, Ident, Type};
 
 const KNOWN_SUBKEYS: &[&str] = &["name", "repr", "wrapper"];
