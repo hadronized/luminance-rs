@@ -14,7 +14,6 @@
   * [Semantics are just strings to integers maps](#semantics-are-just-strings-to-integers-maps)
   * [Compile-time tracking and indexed attributes](#compile-time-tracking-and-indexed-attributes)
   * [Back to semantics](#back-to-semantics)
-  * [`ColorSlotData`](#colorslotdata)
 
 <!-- vim-markdown-toc -->
 
@@ -284,6 +283,8 @@ to do to enable that is to add another annotation keyword: `namespace`. We would
 - `namespace = color_slot`: the `Semantics` is a color slot semantics. The effect is that each variant of the
   `Semantics` would also implement `ColorSlotAttrib`.
 
-## `ColorSlotData`
-
-Color slots implement `ColorSlot`. That trait is used to reify textures.
+`Semantics` are about gluing together names (`&'static str`) with indices (`usize`). The way they work is by using a
+single `enum` and use `luminance-derive` to automatically do the mapping (the indices are hidden from the user point of
+view). Variants of the `enum` encode the various values of the semantics. They are the only thing that actually
+represents the semantics. When a type requires a field to implement a semantics, that field must have a type that is
+mapped with the semantics variants, using the `HasSemantics` trait.
