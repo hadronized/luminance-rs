@@ -63,11 +63,16 @@ to write that code, but that’s for another topic).
 
 # Summary
 
-We are going to change how `Semantics` works by augmenting `luminance-derive`’s `Semantics` procedural macro with a
-`namespace` keyword. That will allow to create semantics that will automatically implement `VertexAttrib` (for
-`namespace = vertex`) or `ColorSlotAttrib` (for `namespace = color_slot`). We are also going to add `ColorSlotData` to
-identify each attribute of a color slot. Finally, we will need to add a procedural macro to automatically implement
-`ColorSlot`.
+The `Semantics` procedural macro is going to change a bit. It will not generate `Vertex` code anymore: a new proc-macro
+will be created for that, probably `VertexSemantics`. Because we want an very similar situation for color slots, another
+proc-macro will also be created: `ColorSlotSemantics`.
+
+That will allow to share `Semantics` regardless of the actual types, and generate implementors for other traits. We do
+not use the `Vertex` trait nor `ColorSlot` trait because:
+
+- `Vertex` has a proc-macro that is already required.
+- `ColorSlot` is going to get a proc-macro **as well** so that users can type them with the type tagged with
+  `Semantics + ColorSlotSemantics`.
 
 # Analysis
 
@@ -288,3 +293,79 @@ single `enum` and use `luminance-derive` to automatically do the mapping (the in
 view). Variants of the `enum` encode the various values of the semantics. They are the only thing that actually
 represents the semantics. When a type requires a field to implement a semantics, that field must have a type that is
 mapped with the semantics variants, using the `HasSemantics` trait.
+
+So basically:
+
+```rust
+#[derive(Semantics)]
+pub enum MyVertexSemantics {
+  // "position" semantics. This also declares a type, Position3, which wraps a V3<f32>.
+  //
+  // Position3 automatically implements HasSemantics, setting Sem = MyVertexSemantics and
+  // SEMANTICS = MyVertexSemantics::Position3.
+  #[sem(name = "position", repr = "V3<f32>")]
+  Position3,
+
+  // "color" semantics. This also declares a type, Color3, which wraps a V3<f32>.
+  //
+  // Color3 automatically implements HasSemantics, setting Sem = MyVertexSemantics and
+  // SEMANTICS = MyVertexSemantics::Color3.
+  #[sem(name = "color", repr = "V3<f32>")]
+  Color3,
+}
+
+#[derive(Vertex)]
+#[vertex(sem = "MyVertexSemantics")]
+pub struct MyVertex {
+  // Position3::SEMANTICS has type MyVertexSemantics, which is okay
+  pos: Position3,
+
+  // Color3::SEMANTICS has type MyVertexSemantics, which is okay
+  col: Color3,
+}
+```
+
+Now, because we are going to make `Semantics` a more open trait, we need a way to implement the `VertexAttrib` trait.
+That trait is to be implemented by the generated types of the semantics. The big question is: should we add a new
+construct to `Semantics` to do that, or use another trait? That might be required because in the current implementation,
+`VertexAttrib` is implemented on the `wrapper` type (by forwarding the implementation to `repr`). We could probably
+separate that in a different proc-macro, like `VertexSemantics`. That proc macro would basically simply iterate on the
+variants and implement the right trait (here `VertexAttrib`) for the `wrapper` type with the `repr` type. The whole
+thing would become:
+
+```rust
+#[derive(Semantics, VertexSemantics)]
+pub enum MyVertexSemantics {
+  // "position" semantics. This also declares a type, Position3, which wraps a V3<f32>.
+  //
+  // Position3 automatically implements HasSemantics, setting Sem = MyVertexSemantics and
+  // SEMANTICS = MyVertexSemantics::Position3.
+  #[sem(name = "position", repr = "V3<f32>")]
+  Position3,
+
+  // "color" semantics. This also declares a type, Color3, which wraps a V3<f32>.
+  //
+  // Color3 automatically implements HasSemantics, setting Sem = MyVertexSemantics and
+  // SEMANTICS = MyVertexSemantics::Color3.
+  #[sem(name = "color", repr = "V3<f32>")]
+  Color3,
+}
+```
+
+For color slots:
+
+```rust
+#[derive(ColorSlotSemantics, Semantics)]
+pub enum MyColorSlotSemantics {
+  #[sem(name = "diffuse", repr = "V3<f32>")]
+  Diffuse,
+
+  #[sem(name = "normal", repr = "V3<f32>")]
+  Normal,
+
+  #[sem(name = "shininess", repr = "f32")]
+  Shininess,
+}
+```
+
+Another way to do it would be to change `Semantics` to add the `namespace` keyword, but it wouldn’t scale very well.
