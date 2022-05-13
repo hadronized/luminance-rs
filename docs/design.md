@@ -18,7 +18,10 @@ This document describes the overall design of [luminance] starting from its curr
     * [Dimensionality](#dimensionality)
     * [Color slot](#color-slot)
     * [Depth/stencil slot](#depthstencil-slot)
+    * [Usage](#usage)
   * [Shaders](#shaders)
+    * [Shader stages](#shader-stages)
+    * [Shader programs](#shader-programs)
   * [Tessellation](#tessellation)
   * [Textures](#textures)
   * [Pipelines and gates](#pipelines-and-gates)
@@ -288,7 +291,8 @@ versions of [luminance], so it might continue being that way for a while):
 - If you want more than one color data, you can use tuples of pixel types.
 
 The last point is the one that might change in the future (we would probably want to access data in a more nominal way,
-so that it’s possible to share names at compile times instead of tuple indices, for instance).
+so that it’s possible to share names at compile times instead of tuple indices, for instance). See
+[this design doc](./docs/strongly_typed_color_slots.md) for further details.
 
 For each type of color slot and framebuffer dimension, the way [luminance] works is by injecting a type family,
 mapping the color data type to the color slot type. The mapping is as such:
@@ -317,7 +321,41 @@ differences:
 - Instead of being constrained with `ColorSlot + RenderablePixel`, if you use a depth/stencil slot, it is constrained by
   `DepthPixel` only.
 
+### Usage
+
+Framebuffers are used by accessing directly the color slots or depth/stencil slots (via `.color_slot()` and
+`.depth_stencil_slot()` for instance) or as part of a [graphics pipeline](#pipelines-and-gates). Read on the graphics
+pipeline section for further information.
+
 ## Shaders
+
+Shaders are a group of resources gathering two big concepts:
+
+- Shader stages.
+- Shader programs.
+
+### Shader stages
+
+Shader stages represent various steps that occur in the graphics pipeline. When rendering something on the screen,
+lots of objects are going to be streamed, activated and consumed. Depending on the state of those objects, different
+_shader stages_ will be executed to move to the next steps. `luminance` current supports five shader stages:
+
+- Vertex shaders.
+- Tessellation evaluation and tessellation control shaders.
+- Geometry shaders.
+- Fragment shaders.
+
+> Optional compute shaders are planned but not yet implemented.
+
+Shaders stages are currently customized with GLSL represented as opaque `String`. This is subject to change with the
+shading EDSL work-in-progress.
+
+### Shader programs
+
+Shader programs are linked programs that run on the graphics unit (GPU most of the time). The gather shader stages and
+are inserted into a graphics pipeline (more accurately, they are shared at the `Pipeline` level, yielding a
+`ShadingGate` to create and nest more nodes in the graphics AST — more on that in the
+[appropriate section](#pipelines-and-gates)).
 
 ## Tessellation
 
