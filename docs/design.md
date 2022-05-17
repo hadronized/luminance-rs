@@ -28,6 +28,9 @@ This document describes the overall design of [luminance].
     * [Primitives](#primitives)
     * [Primitive restart](#primitive-restart)
     * [Vertex storage](#vertex-storage)
+      * [Interleaved memory](#interleaved-memory)
+      * [Deinterleaved memory](#deinterleaved-memory)
+      * [Type-driven interface](#type-driven-interface)
     * [Vertex instancing](#vertex-instancing)
     * [Tessellation slice mapping](#tessellation-slice-mapping)
   * [Textures](#textures)
@@ -484,7 +487,7 @@ core, tessellations are quite easy to understand. A couple of raw concepts must 
   a convention to know how to extract the _nth_ vertex attribute of a given type. This is managed by the
   [vertex storage](#vertex-storage) of the tessellation.
 - _Slice mapping_: tessellations’ data can be mapped back to be updated. More on that in the
-  [slice mapping](tessellation-slice-mapping) section.
+  [slice mapping](#tessellation-slice-mapping) section.
 
 ### Primitives
 
@@ -531,9 +534,132 @@ Assuming we use `Mode::TriangleStrip`, this will create four triangles: `[0, 1, 
 
 ### Vertex storage
 
+Vertex storage refers to how vertices (both vertex attributes and vertex instance data) are laid out to memory, and
+expected to be provided by users. If you think of a vertex with four attributes:
+
+- A 3D position `V3<f32>`.
+- A 3D normal `V3<f32>`.
+- A 4D color `V4<f32>`.
+- A random ID `i32`.
+
+When you think about a single vertex, you can for instance encode it using this type:
+
+```rust
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct MyVertex {
+  pos: V3<f32>,
+  nor: V3<f32>,
+  col: V4<f32>,
+  uid: i32,
+}
+```
+
+However, now try to think how you would represent 100 vertices of type `MyVertex`. Of the possible ways to represent
+this situation, `luminance` accepts two that will have a big impact on the API:
+
+- Interleaved memory.
+- Deinterleaved memory.
+
+#### Interleaved memory
+
+Interleaved memory will represent arrays of `MyVertex` by putting packing them all together in an array, as simple as
+that:
+
+```rust
+type ArrayOfMyVertex = Vec<MyVertex>;
+```
+
+We call this encoding _interleaved_ because data is interleaved in terms of attributes:
+
+```rust
+let memory = [pos0_x, pos0_y, pos0_z, nor0_x, nor0_y, nor0_z, uid0, pos1_x, pos1_y, pos1_z, nor1_x, nor1_y, nor1_z, uid1];
+```
+
+The advantage of using this memory model is that shaders requiring all data at once will have better cache locality when
+fetching vertex data. The drawbacks is when you have a piece of code that only works on positions, for instance. It will
+have to also read the rest of the attributes to get the next position, and will not use the data in between.
+
+#### Deinterleaved memory
+
+On the opposite side, _deinterleaved_ memory extracts each attributes into its own storage, like so:
+
+```rust
+type ArrayOfMyVertexPos = Vec<V3<f32>>;
+type ArrayOfMyVertexNor = Vec<V3<f32>>;
+type ArrayOfMyVertexCol = Vec<V4<f32>>;
+type ArrayOfMyVertexUID = Vec<f32>;
+```
+
+This is great when your shaders will only work on some attributes at the same time, which is often the case. The
+drawback is that it requires more runtime checks (all arrays must have the same size) and reconstructing a full vertex
+requires to tap in different buffers.
+
+#### Type-driven interface
+
+When building a `Tess` using a `TessBuilder`, you will see that the last type variable, `S` (which defaults to
+`Interleaved`), can be set to either `Interleaved` or `Deinterleaved`. If you look closer to how a `TessBuilder` is
+built, you will see that `V` (the vertex type) and `W` (the instance type) are constrained by `TessVertexData<S>`. This
+to ensure that no other storage types can be used.
+
+If you use `Interleaved`, you will get access to methods such as `set_vertices`, expecting a slice on the vertices to
+upload to the `Tess` GPU storage.
+
+If you use `Deinterleaved`, things get a bit more complicated. Not only you will need `Vertex` implemented for your
+type, but will need _a bit more_. You will need the `Deinterleave<T>` trait to be implemented for all of the attributes.
+If you use `luminance-derive`, this is automatically done for you. Otherwise, you need to implement it (`T` refers to
+the type of the attribute, which means that you cannot have twice the same type as attribute).
+
+When using `Deinterleaved`, you will not get access to `set_vertices`, but `set_attributes`. The power of typing here
+allows nothing else required on the interface to set the right attributes: just pass the attributes with the
+`set_attributes` and `luminance` will automatically know which GPU buffer to upload data to based on the type of the
+attributes. Something like this will work:
+
+```rust
+let builder = TessBuilder::new()
+  .set_attributes(&MY_POSITIONS)
+  .set_attributes(&MY_NORMALS)
+  .set_attributes(&MY_COLORS)
+  .set_attributes(&MY_UIDS);
+```
+
 ### Vertex instancing
 
+By default, when building a `Tess` out of vertices, you create a _model_. The vertices usually refer to data in _object
+space_: it’s like the object is centered at the origin. If you want to place your object somewhere in the world, you are
+not going to change the model data, but instead create an _instance_ of your model and virtually move the vertices of
+that instance (using a _vertex shader_).
+
+The concept of _instancing_ is very overloaded in computer graphics. Several ways of doing it exist. `luminance`
+supports mainly two:
+
+- Vertex instancing.
+- Geometry instancing.
+
+> This section is about vertex instancing. You can read about geometry instancing in the
+> [appropriate section](#geometry-instancing).
+
+Vertex instancing is basically a way to extract the instance data (for instance, the position of each instance in 3D
+world space) by looking up directly the data in the `Tess`. Setting it up is quite simple: the instance data is passed
+at the creation of the `Tess`, along with the rest of the vertices and indices. The instances can also be retrieved via
+[slice mapping](#tessellation-slice-mapping).
+
+The number of instances to render is set by the `TessBuilder`, or can be explicitly asked when rendering the
+tessellation in a graphics pipeline.
+
 ### Tessellation slice mapping
+
+Upon the `Tess` creation, it’s possible to retrieve in an immutable or mutable way the vertices, indices or instance
+data of a tessellation. That allows various kinds of drawing and update strategy, but the mechanism is the same for all
+kinds:
+
+1. Slice map the tessellation for a given set. You can use `Tess::vertices{,_mut}`, `Tess::indices{,_mut}` or
+   `Tess::instances{,_mut}` methods.
+2. You can use the returned slice object and `Deref / DerefMut` implementors to access and update the tessellations.
+   Dropping the slices will perform the update.
+
+It is highly recommended to prefer using slice mapping to reconstructing a full `Tess` at every frame. Indeed,
+tessellation construction goes through a lot of GPU settings (buffer allocation, etc.), while slice mapping is much
+faster. You also get access to function that works on slices, such as `copy_from_slice` for instance.
 
 ## Textures
 
