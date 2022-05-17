@@ -1,6 +1,6 @@
 # Luminance design
 
-This document describes the overall design of [luminance] starting from its current version, 0.46.
+This document describes the overall design of [luminance].
 
 <!-- vim-markdown-toc GFM -->
 
@@ -22,7 +22,14 @@ This document describes the overall design of [luminance] starting from its curr
   * [Shaders](#shaders)
     * [Shader stages](#shader-stages)
     * [Shader programs](#shader-programs)
+    * [Shader uniforms](#shader-uniforms)
+    * [Shader data](#shader-data)
   * [Tessellation](#tessellation)
+    * [Primitives](#primitives)
+    * [Primitive restart](#primitive-restart)
+    * [Vertex storage](#vertex-storage)
+    * [Vertex instancing](#vertex-instancing)
+    * [Tessellation slice mapping](#tessellation-slice-mapping)
   * [Textures](#textures)
   * [Pipelines and gates](#pipelines-and-gates)
   * [Queries](#queries)
@@ -41,7 +48,7 @@ several crates, classified in different themes:
 - “Windowing” / “platform” crates, in order to run [luminance] code on specific platforms.
 
 The goal of this document is to describe [luminance] and its core concept. For a description of the rest of the
-ecosystem, you can glance through the [/docs].
+ecosystem, you can glance through the [/docs](.).
 
 # Goals and main decisions
 
@@ -292,7 +299,7 @@ versions of [luminance], so it might continue being that way for a while):
 
 The last point is the one that might change in the future (we would probably want to access data in a more nominal way,
 so that it’s possible to share names at compile times instead of tuple indices, for instance). See
-[this design doc](./docs/strongly_typed_color_slots.md) for further details.
+[this design doc](./strongly_typed_color_slots.md) for further details.
 
 For each type of color slot and framebuffer dimension, the way [luminance] works is by injecting a type family,
 mapping the color data type to the color slot type. The mapping is as such:
@@ -329,10 +336,12 @@ pipeline section for further information.
 
 ## Shaders
 
-Shaders are a group of resources gathering two big concepts:
+Shaders are a group of resources gathering a couple of concepts:
 
 - Shader stages.
 - Shader programs.
+- Shader uniforms.
+- Shader data.
 
 ### Shader stages
 
@@ -352,12 +361,179 @@ shading EDSL work-in-progress.
 
 ### Shader programs
 
-Shader programs are linked programs that run on the graphics unit (GPU most of the time). The gather shader stages and
+Shader programs are linked programs that run on the graphics unit (GPU most of the time). They gather shader stages and
 are inserted into a graphics pipeline (more accurately, they are shared at the `Pipeline` level, yielding a
 `ShadingGate` to create and nest more nodes in the graphics AST — more on that in the
 [appropriate section](#pipelines-and-gates)).
 
+There is nothing much interesting you can do with a shader program besides using it in a graphics pipeline. However,
+there is one important aspect that you need to know about shader programs. Shader stages can reference _uniforms_,
+customization variables coming from your application to change the behavior of the stage code. Those variables must be
+set at the program level, not stage level, because their values are shared across all invocations of the stages
+contained in a shader program.
+
+Shader programs are typed with several type variables:
+
+- `Sem`: the `VertexSemantics` the shader program is compatible with.
+- `O`: the output variable. Currently, this is not used at all, and will probably go away to be replaced with color and
+  depth slots. See [strongly typed color slots](./strongly_typed_color_slots.md) for further details.
+- `Uni`: the _uniform interface_. Read on [shader uniforms](#shader-uniforms).
+
+### Shader uniforms
+
+Shader uniforms, as explained above, are customization variables users can reference in the source code of their shader
+stages, and provide values for in their application code, at the Rust level.
+
+Shader uniforms follow a very opinionated mechanism in `luminance`. In most graphics libraries / frameworks, uniforms
+can be imagined as entries in a string hash map. Something akin to:
+
+```rust
+HashMap<String, UniformValue>
+```
+
+Some other frameworks would do a lookup on the graphics backend whenever you want to change the value of a uniform,
+which can be typed too. For instance:
+
+```rust
+fn update_uniform(&mut self, name: &str, value: impl IntoUniform) -> Result<(), UniformError>
+```
+
+However, those situations have drawbacks:
+
+- The `HashMap<String, UniformValue>` has two main issues:
+  - We have to do a string lookup, which can be costly in a render loop, especially if we change the value of uniforms
+    quite often.
+  - `UniformValue` is likely to be an `enum`, which will require branching to get and update value, and also will
+    require some kind of error handling (if a user tries to set a value which type doesn’t match). So this moves typing
+    at the runtime, which is not ideal.
+- The `update_uniform` performs a string lookup _and_ an I/O on the graphics backend, which is unacceptable (the impact
+  is likely to be limited if the graphics driver implements caching, but we don’t want to be dependent on that).
+
+Instead, the `luminance` way builds on the concept of a _uniform interface_. The idea is to recognize, in the first
+place, that a shader program has a set of uniforms. That set could be structured as a type, for which the fields
+represent each and every uniforms in that shader program. In a second time, it’s easy to see that uniform values should
+be accessed indirectly, in a _contravariant_ way — i.e. users shouldn’t have the right to create uniforms by themselves.
+Instead, users should _explain_ how the uniforms should be obtained (by using their names, for instance), and let
+`luminance` retrieve the uniform variables when creating the shader programs. Finally, updating and setting uniform
+values should only be done whe the appropriate shader is in-bound, so users should not have an unlimited access to
+uniforms.
+
+What all that means is that, in `luminance`, shader uniforms are types and declared by the user via the type system
+only. The user can then ask `luminance` to provide the type at due time (i.e. in the graphics pipeline, when it’s needed
+to update their values). An example:
+
+```rust
+#[derive(UniformInterface)]
+pub struct MyUniformInterface {
+  #[uniform(name = "t")]
+  time: Uniform<f32>,
+
+  #[uniform(name = "res")]
+  resolution: Uniform<V2<f32>>,
+}
+```
+
+Here, the user explains what the types are (two uniform types, one is a `f32` representing the time, that can be
+accessed on the shader side with the `t` uniform variable, and the other is the `resolution`, a 2-component floating
+point vector).
+
+Because the shader program will be typed with `MyUniformInterface`, it will provide the user with a
+`&MyUniformInterface`, allowing them to set and update the appropriate uniforms in due time.
+
+> Note: the syntax `#[derive(UniformInterface)]` uses the procedural macro from `luminance-derive`. It is possible to
+> implement `UniformInterface` without the proc-macro, but keep in mind the trait is `unsafe` to implement.
+
+### Shader data
+
+Shader data are a special form of shader uniforms. That abstraction doesn’t exist in any other graphics libraries /
+frameworks, but is a form of generalization of graphics techniques (such as UBO, SSBO, etc.). The idea of shader data is
+quite simple: instead of passing uniform values manually by setting them using a struct field, shader data represent
+their own data store, backed up by GPU buffers. They allow for much bigger data storage and allow to _map_ the memory
+region for fast updates. They are to be used for mass updates or quickly changing data.
+
+They work behind `Uniform<_>`, too, but requires to be _bound_ to a graphics pipeline first, yielding a
+`BoundShaderData` typed the same way as the `ShaderData`. That object can then be used to get a `ShaderDataBinding`,
+which is the type of the `Uniform` to set to handle shader data of that type.
+
+For instance, if you have a `ShaderDataBinding<ModelMatrix>`, you can bind it to a graphics pipeline to get a
+`BoundShaderData<ModelMatrix>`, which in turn will provide the binding value to set your `Uniform<ShaderDataBinding<ModelMatrix>>`
+
 ## Tessellation
+
+Tessellations (`Tess`) are the only way to pack vertices and render primitives. Their API is dense and rich but at their
+core, tessellations are quite easy to understand. A couple of raw concepts must be known before diving in:
+
+- _Vertex_: a vertex is an abstraction of a _point_. It’s an abstraction because by default, a vertex doesn’t carry any
+  _attribute_, so it doesn’t really have a representation. The representation depends on the attributes the vertex is
+  made of. For instance, a vertex with a _3D coordinates_ attribute is easy to imagine as a dot in 3D space. But it
+  might be not enough to even represent it. You might want to add another attribute, for its _weight_, so that you can
+  make the dot bigger or smaller. And you might also need the _color_ of the vertex. So verticese (plural of vertex)
+  cannot be pictured / rendered without talking about their attributes.
+- _Vertex index_: vertex indices represents the order in which vertex should go down the vertex stream processor to form
+  _primitives_. The index refers to a vertex in the input data. By default, vertices are sent down to vertex shaders in
+  the order in which they appear in the input data (in the `Tess`). You can decide to change that order. If you have
+  six vertices and no indices, you can imagine that it’s like sending virtual indices `[0, 1, 2, 3, 4, 5]`. Specifying
+  indices manually allows to optimize and reduce the number of vertices, and allows to implement something that is
+  called [primitive restart](#primitive-restart).
+- _Vertex instance data_: just like regular vertex attributes, vertex instance data are attached to vertces, but instead
+  of being attached to individual vertices, their attached to instances of those vertices. See [vertex
+  instancing](#vertex-instancing) for further information.
+- _Primitive_: a shape formed by connecting vertices together. See [primitives](#primitives). This is often refered to
+  as the _tessellation mode_, too.
+- _Vertex and instance storage_: vertices have attributes (vertex data and instance data). Those attributes must follow
+  a convention to know how to extract the _nth_ vertex attribute of a given type. This is managed by the
+  [vertex storage](#vertex-storage) of the tessellation.
+- _Slice mapping_: tessellations’ data can be mapped back to be updated. More on that in the
+  [slice mapping](tessellation-slice-mapping) section.
+
+### Primitives
+
+Primitives are ways of connecting vertices together. By default, vertices are not connected. This corresponds to the
+`Mode::Point` primitive. It is possible to connect vertices via other shapes:
+
+- `Mode::Line`: vertices are connected two by two, by using two consecutive vertices in the vertex stream. For instance,
+  if you have indices `[0, 1, 2, 3]`, indices `[0, 1]` will form a line and indices `[2, 3]` will form another, for a
+  total of two lines out of four vertices.
+- `Mode::LineStrip`: vertices are connected as a continuous line formed by segments. The first two points create the
+  first segment and each and every additional point connects the last point of the line to the vertex. For instance, for
+  indices `[0, 1, 2, 3]`, indices `[0, 1]` will form a line, `[1, 2]` will form another (that will look like attached by
+  the shared vertex `1`), and `[2, 3]` will form another (attached by the shared vertex `2`.
+- `Mode::Triangle`: vertices are connected three by three, by using three consecutive vertices in the vertex stream. For
+  instance, if you have indices `[0, 1, 2, 3, 4, 5]`, indices `[0, 1, 2]` will form a triangle and indices `[3, 4, 5]`
+  will form another.
+- `Mode::TriangleStrip`: vertices are connected as a triangle strip. What it means is that the first three vertices form
+  a triangle, and then every new vertex will form a triangle with the last two previous vertices, sharing an edge. For
+  instance, for indices `[0, 1, 2, 3, 4, 5]`, indices `[0, 1, 2]` will form the first triangle; indices `[1, 2, 3]` will
+  form the second triangle, sharing the `[1, 2]` indices; `[2, 3, 4]` will form another triangle and `[3, 4, 5]` the
+  latter.
+- `Mode::TriangleFan`: a useful alternative to `Mode::TriangleStrip`. It works the same way, but instead of using the
+  last two previous vertices to form a triangle, it uses the very first one and the last previous one. For instances,
+  for `[0, 1, 2, 3, 4, 5]`, the first triangle is still `[0, 1, 2]`. The second triangle is `[0, 2, 3]`. Then
+  `[0, 3, 4]` and `[0, 4, 5]`. This shape is useful to create _fan-like_ shapes, often rotating around the first vertex.
+- `Mode::Patch(nb)`: a special primitive. This doesn’t connect the vertices unless provided with the number of vertices,
+  such as `Mode::Patch(3)` is a triangle. That mode is used mainly with tessellation shaders.
+
+### Primitive restart
+
+When using `Mode::LineStrip`, `Mode::TriangleStrip` or `Mode::TriangleFan`, it is possible to restart building a
+primitive from scratch by passing a special index as vertex index. Using the maximum value of the index type will cause
+the graphics pipelines to stop and end the primitev and start another one at the next index. For instance:
+
+```rust
+let indices = [0, 1, 2, 3, u32::MAX, 0, 1, 4, 5];
+```
+
+Assuming we use `Mode::TriangleStrip`, this will create four triangles: `[0, 1, 2]`, `[1, 2, 3]`, `[0, 1, 4]` and
+[`1, 4, 5`].
+
+> It is likely that the API of `Tess` allows to change the value of the primitive restart. This is deprecated and will
+> soon be removed. You must use the max value of the index type.
+
+### Vertex storage
+
+### Vertex instancing
+
+### Tessellation slice mapping
 
 ## Textures
 

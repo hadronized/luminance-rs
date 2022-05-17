@@ -107,10 +107,12 @@ pub enum Mode {
   /// Points are left unconnected from each other and represent a _point cloud_. This is the typical
   /// primitive mode you want to do, for instance, particles rendering.
   Point,
+
   /// A line, defined by two points.
   ///
   /// Every pair of vertices are connected together to form a straight line.
   Line,
+
   /// A strip line, defined by at least two points and zero or many other ones.
   ///
   /// The first two vertices create a line, and every new vertex flowing in the graphics pipeline
@@ -119,8 +121,10 @@ pub enum Mode {
   ///
   /// > This kind of primitive mode allows the usage of _primitive restart_.
   LineStrip,
+
   /// A triangle, defined by three points.
   Triangle,
+
   /// A triangle fan, defined by at least three points and zero or many other ones.
   ///
   /// Such a mode is easy to picture: a cooling fan is a circular shape, with blades.
@@ -132,6 +136,7 @@ pub enum Mode {
   ///
   /// > This kind of primitive mode allows the usage of _primitive restart_.
   TriangleFan,
+
   /// A triangle strip, defined by at least three points and zero or many other ones.
   ///
   /// This mode is a bit different from [`Mode::TriangleFan`]. The first two vertices define the
@@ -144,6 +149,7 @@ pub enum Mode {
   ///
   /// > This kind of primitive mode allows the usage of _primitive restart_.
   TriangleStrip,
+
   /// A general purpose primitive with _n_ vertices, for use in tessellation shaders.
   /// For example, `Mode::Patch(3)` represents triangle patches, so every three vertices in the
   /// buffer form a patch.
