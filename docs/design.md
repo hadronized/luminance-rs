@@ -2,6 +2,10 @@
 
 This document describes the overall design of [luminance].
 
+> Disclaimer: it’s a continuous effort to try and keep the document up-to-date with the latest version of [luminance].
+> If you notice a difference, please do not hesitate to [create an
+> issue](https://github.com/phaazon/luminance-rs/issues/new).
+
 <!-- vim-markdown-toc GFM -->
 
 * [Foreword: crate ecosystem](#foreword-crate-ecosystem)
@@ -34,6 +38,11 @@ This document describes the overall design of [luminance].
     * [Vertex instancing](#vertex-instancing)
     * [Tessellation slice mapping](#tessellation-slice-mapping)
   * [Textures](#textures)
+    * [`Dim`, `Dimensionable` and others](#dim-dimensionable-and-others)
+    * [Pixel formats](#pixel-formats)
+      * [Normalized pixel formats](#normalized-pixel-formats)
+    * [Samplers and sampler types](#samplers-and-sampler-types)
+    * [Texture binding](#texture-binding)
   * [Pipelines and gates](#pipelines-and-gates)
   * [Queries](#queries)
 
@@ -662,6 +671,126 @@ tessellation construction goes through a lot of GPU settings (buffer allocation,
 faster. You also get access to function that works on slices, such as `copy_from_slice` for instance.
 
 ## Textures
+
+Textures can be used in a write path (framebuffer) or read path (shader stage):
+
+- As framebuffer color slots / depth slots (write).
+- As standalone entities that can be used to customize render, by fetching their texel data in shader stages (read).
+
+A texture is either created automatically for you (when part of a framebuffer slot) or manually. In both case, you need
+to provide two important information:
+
+- The dimension, which is a type that must implement `Dimensionable`. That type will allow the type system to track the
+  dimension (2D, 3D, cubemap, etc.), size / resolution, offset, zero values etc. associated with the dimension.
+- The pixel format. Pixel formats are tracked in the type system to know which kind of texels you are allowed to pass /
+  retrieve, and what should be used in shaders.
+
+Those properties are encoded in the type of a texture, as in `Texture<D, P>` where `D` is the dimension and `P` the
+pixel type.
+
+### `Dim`, `Dimensionable` and others
+
+A _dimension_ is a property that provides various kind of information. As a runtime value, it’s most of the time the
+“size” of a texture. For instance, a 2D texture will have a _width_ and _height_. A 3D texture will have a _width_,
+_height_ but also _depth_. Because of the various possible flavours of textures, it was a design choice to track their
+dimension type in the type system to provide more safety in the public API.
+
+Dimensions are then encoded as simple types and used as type parameters on `Texture` and `Framebuffer`. Those are just
+tags, not constant. What it means is that a texture that is tagged with `Dim2` is expected to have a dimension with a
+_width_ and _height_.
+
+The `Dimensionable` trait allows to reify the various dimension type to different kinds of other properties. The most
+important one being the _size_ (width / height / depth / etc.). The way it works is by using associated types. The trait
+provides several ones:
+
+- `Dimensionable::Size`: the size type of the dimension. For instance, `<Dim2 as Dimensionable>::Size` is `[u32; 2]`.
+- `Dimensionable::Offset`: the offset type of the dimension. For instance, `<Dim2 as Dimensionable>::Offset` is
+  `[u32; 2]`. Offsets are mainly used to select sub-part of textures and introduce arithmetics.
+
+Given those, `Dimensionable::ZERO_OFFSET` is a constant of type `Self::Offset` that must resolve to the _zero_ value of
+the offset type. For instance, for `[u32; 2]`, it’s `[0, 0]`. This _zero_ value is to be interpreted in the sense that
+it must represent the “starting point of the texture”, for instance (useful when updating a whole texture at once, for
+instance).
+
+The trait then provides a couple of methods. The important one is `Dimensionable::dim()`, which reifies the type (e.g.
+`Dim2`) to the `Dim` sum type. Then, you will find methods working on associated types, such as `Dimensionable::width`
+taking a `Self::Size` and returning the width. If the type doesn’t have a property (for instance, `Dim2` doesn’t have a
+_depth_), the default implementation should be enough (which is `1` for `Self::Size`). Same thing with
+`Dimensionable::y_offset`, returning the _y_ component of the offset (or the default if it doesn’t exist).
+
+Finally, `Dimensionable::count` takes a `Self::Size` and returns the amount of pixels that quantity represents. For 2D
+sizes, it represents the area. For 3D sizes, the volume. Etc. etc.
+
+### Pixel formats
+
+Pixel formats work a bit the same way as dimension types. They are empty types tracking information in the type system.
+Pixel formats must implement the `Pixel` trait, which provides lots of information:
+
+- `Pixel::Encoding`: an associated type providing the encoding of a single pixel. For instance, `RG8UI` has its
+  `Encoding` type set to `[u8; 2]`.
+- `Pixel::RawEncoding`: an associated type provding the raw encoding of a single pixel, ignoring channels. For instance,
+  for `RG8UI`, it’s `u8`. Think of this as the type that is required to be present in a foreign crate’s `Vec` or the
+  FFI.
+- `Pixel::SamplerType`: the sampler type required to access this pixel format.
+- `Pixel::pixel_format`: reify the type to a `PixelFormat`
+
+`PixelFormat` is a simple data type providing two informations:
+
+- The encoding type, among:
+  - `Type::NormIntegral`.
+  - `Type::NormUnsigned`.
+  - `Type::Integral`.
+  - `Type::Unsigned`.
+  - `Type::Floating`.
+- The format, among:
+  - `Format::R(Size)`.
+  - `Format::RG(Size, Size)`.
+  - `Format::RGB(Size, Size, Size)`.
+  - `Format::RGBA(Size, Size, Size, Size)`.
+  - `Format::SRGB(Size, Size, Size)`.
+  - `Format::SRGBA(Size, Size, Size, Size)`.
+  - `Format::Depth(Size)`.
+  - `Format::DepthStencil(Size, Size)`.
+
+The `Size` type is a sum type encoding possible sizes. Instead of using a `usize`, it was decided to use a sum type to
+prevent constructing unsupported sizes (and prevent checking for those). The current list is:
+
+- `Size::Eight`: 8-bit.
+- `Size::Ten`: 10-bit.
+- `Size::Eleven`: 11-bit.
+- `Size::Sixteen`: 16-bit.
+- `Size::ThirtyTwo`: 32-bit.
+
+#### Normalized pixel formats
+
+Some pixel formats are _normalized_, as in `Type::NormUnsigned`. What it means is that the texture encoding is going to
+be unsigned (like `u8`, `u16`, `u32`, etc.), but the data will be interpreted as normalized (floating point) when
+accessed in shaders. For instance, if you use `Type::NormUnsigned` along with `Format::R(Size::Eight)`, you should have
+a static type of `Pixel::Encoding` (and `Pixel::RawEncoding`) set to `u8`. The range of possible values is `0 -> 255`,
+but those values will be converted to floating point values and then divided by `255.0`, yielding a `0.0 -> 1.0` range,
+when accessed in shaders.
+
+Most of the time, it’s the type people want to deal with visual effects. The non-normalized type, `Type::Unsigned`, will
+not normalize the range and you will then access unsigned values in the shaders, which can be useful for various
+situations, like encoding UIDs, indices, etc.
+
+### Samplers and sampler types
+
+Samplers are objects representing how data / texels should be _sampled_ from a shader stage. They provide various
+information like:
+
+- How sampling should wrap at borders / edge.
+- How minification and magnification filters behave.
+- Depth comparison for depth textures.
+
+That is encoded in `Sampler`. This is not to be confused with `Pixel::SamplerType`, which must implement the
+`SamplerType` trait. That trait allows to sample with a different type than the one used to encode the texels in the
+textures, as long as the `Type` is the same.
+
+### Texture binding
+
+A `TextureBinding` is an opaque texture handle, obtained after binding a `Texture` in a graphics pipeline. This is the
+only way to pass a texture to a shader for reading.
 
 ## Pipelines and gates
 
