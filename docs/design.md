@@ -44,6 +44,9 @@ This document describes the overall design of [luminance].
     * [Samplers and sampler types](#samplers-and-sampler-types)
     * [Texture binding](#texture-binding)
   * [Pipelines and gates](#pipelines-and-gates)
+    * [Obtaining a pipeline gate](#obtaining-a-pipeline-gate)
+    * [Shading gates](#shading-gates)
+    * [Render gates](#render-gates)
   * [Queries](#queries)
 
 <!-- vim-markdown-toc -->
@@ -793,6 +796,44 @@ A `TextureBinding` is an opaque texture handle, obtained after binding a `Textur
 only way to pass a texture to a shader for reading.
 
 ## Pipelines and gates
+
+Pipelines and gates play an important role in how computations are effectively performed. The design befind pipelines
+and gates is based on the Rust type system and its lifetime / borrow semantics, and how graphics scarce resources should
+be shared.
+
+The idea is that there is a tree-like hierarchy of how resources are used and shared. At the top of the tree is found a
+framebuffer. Everything under it, in the tree, will then be affecting the tree (i.e. they will partake into rendering
+into it). Under a framebuffer can be found shaders. Each shader is a node directly connected to the framebuffer node.
+Under each shader node are render nodes, which encode various render options (those are encoded as `RenderState`),
+allowing to customize how tessellations will be rendered. And under each render node is found… tessellations to render
+(strictly speaking, `TessView`, because it’s possible to ask the backend to partially render tessellations).
+
+Two main ideas were imagined to represent such a sharing and running of resources:
+
+1. Implement a datastructure encoding that graph / tree.
+2. Recognize that code itself is a tree (i.e. AST), and leverage this and Rust’s borrow and lifetime system to enforce
+  it.
+
+The second point was chosen, as it feels more natural and can benefit from using the type system to track all objects.
+_“Gates”_ are the names given to those nodes mentioned earlier.
+
+### Obtaining a pipeline gate
+
+A pipeline gate is the top-most object in the graphics tree and is obtained via `GraphicsContext::new_pipeline_gate`.
+That object can then be used to create the first framebuffer node via `PipelineGate::pipeline`. That function expects a
+`FnOnce(Pipeline, ShadingGate)` (simplified for short). The `Pipeline` argument represents the running pipeline and
+allows to perform various operations, such as binding a texture or a shader data. The second argument represents the
+next gate down the tree, `ShadingGate`.
+
+### Shading gates
+
+Shading gates allow to shade with a given shader `Program`. Doing so will provide the user back with the uniform
+interface attached with the shader programs and allow them to change the uniform values. Shading gates, once entered via
+the `FnOnce`, will also provide a `RenderGate`, allowing to go down the tree once again.
+
+### Render gates
+
+Render gates create a sharing node around `RenderState`, allowing to render using the same `RenderState`.
 
 ## Queries
 
