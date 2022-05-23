@@ -37,6 +37,7 @@ This document describes the overall design of [luminance].
       * [Type-driven interface](#type-driven-interface)
     * [Vertex instancing](#vertex-instancing)
     * [Tessellation slice mapping](#tessellation-slice-mapping)
+    * [Tessellation views](#tessellation-views)
   * [Textures](#textures)
     * [`Dim`, `Dimensionable` and others](#dim-dimensionable-and-others)
     * [Pixel formats](#pixel-formats)
@@ -47,6 +48,7 @@ This document describes the overall design of [luminance].
     * [Obtaining a pipeline gate](#obtaining-a-pipeline-gate)
     * [Shading gates](#shading-gates)
     * [Render gates](#render-gates)
+    * [Tessellation gates](#tessellation-gates)
   * [Queries](#queries)
 
 <!-- vim-markdown-toc -->
@@ -500,6 +502,8 @@ core, tessellations are quite easy to understand. A couple of raw concepts must 
   [vertex storage](#vertex-storage) of the tessellation.
 - _Slice mapping_: tessellations’ data can be mapped back to be updated. More on that in the
   [slice mapping](#tessellation-slice-mapping) section.
+- Tessellation view: allow to _view_ into the whole / a subport of the tessellation. This is mainly used for rendering
+  with tessellation gates.
 
 ### Primitives
 
@@ -673,6 +677,19 @@ It is highly recommended to prefer using slice mapping to reconstructing a full 
 tessellation construction goes through a lot of GPU settings (buffer allocation, etc.), while slice mapping is much
 faster. You also get access to function that works on slices, such as `copy_from_slice` for instance.
 
+### Tessellation views
+
+Tessellation views allow to render a subpart of a `Tess`. You can decide to render the whole part of the tessellation,
+or a subpart, starting at a given vertex and ending at another.
+
+Tessellation views allow for various kinds of effects: particles engine, packing objects into the same GPU region, etc.
+etc.
+
+You can create a tessellation view using `TessView::whole`, `TessView::sub`, `TessView::slice` or the instance-based
+versions, which also accept the number of instances to render. Another good way to create tessellation views is to use
+the `View` trait, which allows to use ranges with the `view()` and `inst_view()` methods, which are implemented on
+`&Tess`. That allows calls like `tess.view(..)`, `tess.view(..12)` or `tess.inst_view(3..=10, 1000)`, for instance.
+
 ## Textures
 
 Textures can be used in a write path (framebuffer) or read path (shader stage):
@@ -833,7 +850,13 @@ the `FnOnce`, will also provide a `RenderGate`, allowing to go down the tree onc
 
 ### Render gates
 
-Render gates create a sharing node around `RenderState`, allowing to render using the same `RenderState`.
+Render gates create a sharing node around `RenderState`, allowing to render using the same `RenderState`. Once entered,
+they give access to tessellation gates.
+
+### Tessellation gates
+
+Tessellation gates allow to render various `Tess`, for which the vertices types must be compatible with the shading gate
+vertex semantics. Tessellations are not rendered directly, but instead require passing via a `TessView`.
 
 ## Queries
 
