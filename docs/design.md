@@ -860,6 +860,16 @@ vertex semantics. Tessellations are not rendered directly, but instead require p
 
 ## Queries
 
+[luminance] also provides a _query_ API that is currently not very developed, as not being the target of the ecosystem.
+You can currently query a couple of features:
+
+- Backend author: a `String` representing the “vendor” or “company” of your GPU.
+- Backend name: a `String` representing the name of the backend.
+- Backend version: a `String` giving the version of the backend.
+- Backend shading language version: a `String` giving the version of the backend’s shading language version.
+- Backend maximum number of _a scarce resource_: different `usizes` providing maximum amount of scarce resources. For
+  instance, you will find the maximum number of textures an array of textures can hold, etc.
+
 [luminance]: https://crates.io/crates/luminance
 [luminance-derive]: https://crates.io/crates/luminance-derive
 [luminance-front]: https://crates.io/crates/luminance-front
