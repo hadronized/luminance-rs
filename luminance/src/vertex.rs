@@ -101,11 +101,14 @@ pub enum VertexInstancing {
 pub struct VertexAttribDesc {
   /// Type of the attribute. See [`VertexAttribType`] for further details.
   pub ty: VertexAttribType,
+
   /// Dimension of the attribute. It should be in 1–4. See [`VertexAttribDim`] for further details.
   pub dim: VertexAttribDim,
+
   /// Size in bytes that a single element of the attribute takes. That is, if your attribute has
   /// a dimension set to 2, then the unit size should be the size of a single element (not two).
   pub unit_size: usize,
+
   /// Alignment of the attribute. The best advice is to respect what Rust does, so it’s highly
   /// recommended to use `::std::mem::align_of` to let it does the job for you.
   pub align: usize,
@@ -210,8 +213,10 @@ pub unsafe trait VertexAttrib {
 pub trait Semantics: Sized + Copy + Clone + Debug {
   /// Retrieve the semantics index of this semantics.
   fn index(&self) -> usize;
+
   /// Get the name of this semantics.
   fn name(&self) -> &'static str;
+
   /// Get all available semantics.
   fn semantics_set() -> Vec<SemanticsDesc>;
 }
@@ -235,6 +240,7 @@ impl Semantics for () {
 pub struct SemanticsDesc {
   /// Semantics index.
   pub index: usize,
+
   /// Name of the semantics (used in shaders).
   pub name: String,
 }
