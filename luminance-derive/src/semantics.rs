@@ -1,10 +1,10 @@
-use crate::attrib::{get_field_attr_once, AttrError};
+use crate::attrib::{get_field_attr_many, get_field_attr_once, AttrError};
 use proc_macro::TokenStream;
 use quote::quote;
 use std::{error, fmt};
 use syn::{Attribute, DataEnum, Ident, Type};
 
-const KNOWN_SUBKEYS: &[&str] = &["name", "repr", "wrapper"];
+const KNOWN_SUBKEYS: &[&str] = &["name", "repr", "wrapper", "wrapper_attr"];
 
 #[derive(Debug)]
 pub(crate) enum SemanticsImplError {
@@ -54,7 +54,7 @@ impl error::Error for SemanticsImplError {
 fn get_vertex_sem_attribs<'a, A>(
   var_name: &Ident,
   attrs: A,
-) -> Result<(Ident, Type, Type), AttrError>
+) -> Result<(Ident, Type, Type, Vec<syn::MetaList>), AttrError>
 where
   A: Iterator<Item = &'a Attribute> + Clone,
 {
@@ -63,9 +63,11 @@ where
   let sem_repr =
     get_field_attr_once::<_, Type>(var_name, attrs.clone(), "sem", "repr", KNOWN_SUBKEYS)?;
   let sem_wrapper =
-    get_field_attr_once::<_, Type>(var_name, attrs, "sem", "wrapper", KNOWN_SUBKEYS)?;
+    get_field_attr_once::<_, Type>(var_name, attrs.clone(), "sem", "wrapper", KNOWN_SUBKEYS)?;
+  let sem_wrapper_attrs =
+    get_field_attr_many::<_, syn::MetaList>(var_name, attrs, "sem", "wrapper_attr", KNOWN_SUBKEYS)?;
 
-  Ok((sem_name, sem_repr, sem_wrapper))
+  Ok((sem_name, sem_repr, sem_wrapper, sem_wrapper_attrs))
 }
 
 pub(crate) fn generate_enum_semantics_impl(
@@ -74,7 +76,7 @@ pub(crate) fn generate_enum_semantics_impl(
 ) -> Result<TokenStream, SemanticsImplError> {
   let fields = enum_.variants.into_iter().map(|var| {
     get_vertex_sem_attribs(&var.ident, var.attrs.iter())
-      .map(|attrs| (var.ident, attrs.0, attrs.1, attrs.2))
+      .map(|attrs| (var.ident, attrs.0, attrs.1, attrs.2, attrs.3))
   });
 
   let mut parse_branches = Vec::new();
@@ -92,6 +94,7 @@ pub(crate) fn generate_enum_semantics_impl(
         let sem_name = field.1.to_string();
         let repr_ty_name = field.2;
         let ty_name = field.3;
+        let ty_attrs = field.4;
 
         // dynamic branch used for parsing the semantics from a string
         parse_branches.push(quote! {
@@ -114,6 +117,8 @@ pub(crate) fn generate_enum_semantics_impl(
         let field_gen = quote! {
           /// Vertex attribute type (representing #repr_ty_name).
           #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+          #[repr(transparent)]
+          #(#[#ty_attrs])*
           pub struct #ty_name {
             /// Internal representation.
             pub repr: #repr_ty_name
