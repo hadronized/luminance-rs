@@ -9,6 +9,12 @@ how `cargo` resolves dependencies. `cargo update` is not enough, because all lum
 [SemVer ranges](https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html) to stay
 compatible with as many crates as possible. In that case, you want `cargo update --aggressive`.
 
+# 0.18.3
+
+> Jul 7, 2022
+
+- Support of `glfw-0.45`.
+
 # 0.18.2
 
 > Apr 22, 2022

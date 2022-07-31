@@ -5,7 +5,7 @@ jobs:
   build-linux:
     strategy:
       matrix:
-        rustc: ["1.56.0"]
+        rustc: ["1.56.0", "stable"]
     runs-on: ubuntu-latest
     steps:
       - name: Install dependencies
