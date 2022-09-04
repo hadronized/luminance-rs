@@ -8,7 +8,7 @@ use crate::{
   backend::shading_gate::ShadingGate as ShadingGateBackend,
   render_gate::RenderGate,
   shader::{Program, ProgramInterface, UniformInterface},
-  vertex::Semantics,
+  vertex::Vertex,
 };
 
 /// A shading gate.
@@ -35,13 +35,13 @@ where
   /// - A [`ProgramInterface`], that allows to pass values (via [`ProgramInterface::set`]) to the
   ///   in-use shader [`Program`] and/or perform dynamic lookup of uniforms.
   /// - A [`RenderGate`], allowing to create deeper nodes in the graphics pipeline.
-  pub fn shade<E, Sem, Out, Uni, F>(
+  pub fn shade<E, V, Out, Uni, F>(
     &mut self,
-    program: &mut Program<B, Sem, Out, Uni>,
+    program: &mut Program<B, V, Out, Uni>,
     f: F,
   ) -> Result<(), E>
   where
-    Sem: Semantics,
+    V: Vertex,
     Uni: UniformInterface<B>,
     F: for<'b> FnOnce(ProgramInterface<'b, B>, &'b Uni, RenderGate<'b, B>) -> Result<(), E>,
   {

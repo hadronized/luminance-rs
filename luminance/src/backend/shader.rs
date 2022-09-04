@@ -30,7 +30,7 @@ use crate::{
     ProgramError, ShaderDataError, StageError, StageType, TessellationStages, Uniform, UniformType,
     UniformWarning, VertexAttribWarning,
   },
-  vertex::Semantics,
+  vertex::Vertex,
 };
 
 /// Backend support for uniforms.
@@ -105,11 +105,11 @@ pub unsafe trait Shader {
   /// This is a very specific operations that happen right after the shader program got successfully created by the
   /// backend. This function is responsible in setting whatever might be needed by the backend to allocate, prepare or
   /// validate the semantics — i.e. `Sem` which implements [`Semantics`].
-  unsafe fn apply_semantics<Sem>(
+  unsafe fn apply_semantics<V>(
     program: &mut Self::ProgramRepr,
   ) -> Result<Vec<VertexAttribWarning>, ProgramError>
   where
-    Sem: Semantics;
+    V: Vertex;
 
   /// Construct a new uniform builder.
   ///

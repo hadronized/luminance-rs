@@ -53,7 +53,7 @@ where
         .iter()
         .enumerate()
         .map(|(rank, field)| {
-          let field_ident = field.ident.as_ref().unwrap();
+          let field_ident = field.ident.as_ref().unwrap().to_string();
           let field_ty = &field.ty;
 
           let vertex_attrib_desc = field_vertex_attrib_desc(
@@ -64,7 +64,7 @@ where
           )?;
 
           let deinterleave_impl = quote! {
-            impl luminance::vertex::Deinterleave2<#field_ident> for #struct_ident {
+            impl luminance::vertex::Deinterleave<#field_ident> for #struct_ident {
               type FieldType = #field_ty;
 
               const RANK: usize = #rank;
@@ -113,7 +113,7 @@ fn field_vertex_attrib_desc(
     .map_err(StructImplError::FieldError)?;
 
   let field_ty = &field.ty;
-  let field_name = &field.ident;
+  let field_name = field.ident.as_ref().unwrap().to_string();
 
   let vertex_attrib_desc = if normalized {
     quote! { (<#field_ty as luminance::vertex::VertexAttrib>::VERTEX_ATTRIB_DESC).normalize() }
@@ -122,7 +122,7 @@ fn field_vertex_attrib_desc(
   };
 
   let q = quote! {
-    luminance::vertex::VertexBufferDesc::new::(
+    luminance::vertex::VertexBufferDesc::new(
       <#namespace as luminance::named_index::NamedIndex<#field_name>>::INDEX,
       #field_name,
       #instancing,

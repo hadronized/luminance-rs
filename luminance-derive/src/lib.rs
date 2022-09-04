@@ -9,12 +9,6 @@
 //!
 //! [See the full documentation here](https://docs.rs/luminance/latest/luminance/#vertex)
 //!
-//! # `Semantics`
-//!
-//! This macro allows to derive the [`Semantics`] trait for a custom `enum` type.
-//!
-//! [See the full documentation here](https://docs.rs/luminance/latest/luminance/#semantics)
-//!
 //! # `UniformInterface`
 //!
 //! This macro allows to derive the [`UniformInterface`] trait for a custom `struct` type.
@@ -23,14 +17,11 @@
 //!
 //! [luminance]: https://crates.io/crates/luminance
 //! [`Vertex`]: https://docs.rs/luminance/latest/luminance/vertex/trait.Vertex.html
-//! [`Semantics`]: https://docs.rs/luminance/latest/luminance/vertex/trait.Semantics.html
 
 mod attrib;
-mod semantics;
 mod uniform_interface;
 mod vertex;
 
-use crate::semantics::generate_enum_semantics_impl;
 use crate::uniform_interface::generate_uniform_interface_impl;
 use crate::vertex::generate_vertex_impl;
 use proc_macro::TokenStream;
@@ -48,21 +39,6 @@ pub fn derive_vertex(input: TokenStream) -> TokenStream {
     },
 
     _ => panic!("only structs are currently supported for deriving Vertex"),
-  }
-}
-
-#[proc_macro_derive(Semantics, attributes(sem))]
-pub fn derive_semantics(input: TokenStream) -> TokenStream {
-  let di: DeriveInput = parse_macro_input!(input);
-
-  match di.data {
-    // for now, we only handle enums
-    Data::Enum(enum_) => match generate_enum_semantics_impl(di.ident, enum_) {
-      Ok(impl_) => impl_,
-      Err(e) => panic!("{}", e),
-    },
-
-    _ => panic!("only enums are currently supported for deriving VertexAttribSem"),
   }
 }
 

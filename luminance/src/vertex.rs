@@ -30,13 +30,7 @@ unsafe impl Vertex for () {
   }
 }
 
-/// TODO: delete
-pub trait Deinterleave<T> {
-  /// Rank of the type in the original type.
-  const RANK: usize;
-}
-
-pub trait Deinterleave2<const NAME: &'static str> {
+pub trait Deinterleave<const NAME: &'static str> {
   /// Type of the field.
   type FieldType;
 
@@ -94,6 +88,7 @@ impl VertexBufferDesc {
 pub enum VertexInstancing {
   /// Use vertex instancing.
   On,
+
   /// Disable vertex instancing.
   Off,
 }
@@ -182,10 +177,13 @@ pub enum Normalized {
 pub enum VertexAttribDim {
   /// 1D.
   Dim1,
+
   /// 2D.
   Dim2,
+
   /// 3D.
   Dim3,
+
   /// 4D.
   Dim4,
 }
@@ -197,76 +195,6 @@ pub enum VertexAttribDim {
 pub unsafe trait VertexAttrib {
   /// The vertex attribute descriptor.
   const VERTEX_ATTRIB_DESC: VertexAttribDesc;
-}
-
-/// Vertex attribute semantics.
-///
-/// Vertex attribute semantics are a mean to make shaders and vertex buffers talk to each other
-/// correctly. This is important for several reasons:
-///
-///   - The memory layout of your vertex buffers might be very different from an ideal case or even
-///     the common case. Shaders don’t have any way to know where to pick vertex attributes from, so
-///     a mapping is needed.
-///   - Sometimes, a shader just need a few information from the vertex attributes. You then want to
-///     be able to authorize _“gaps”_ in the semantics so that shaders can be used for several
-///     varieties of vertex formats.
-///
-/// Vertex attribute semantics are any type that can implement this trait. The idea is that
-/// semantics must be unique. The vertex position should have an index that is never used anywhere
-/// else in the vertex buffer. Because of the second point above, it’s also highly recommended
-/// (even though valid not to) to stick to the same index for a given semantics when you have
-/// several tessellations – that allows better composition with shaders. Basically, the best advice
-/// to follow: define your semantics once, and keep to them.
-///
-/// > Note: feel free to use the [luminance-derive] crate to automatically derive this trait from
-/// > an `enum`.
-pub trait Semantics: Sized + Copy + Clone + Debug {
-  /// Retrieve the semantics index of this semantics.
-  fn index(&self) -> usize;
-
-  /// Get the name of this semantics.
-  fn name(&self) -> &'static str;
-
-  /// Get all available semantics.
-  fn semantics_set() -> Vec<SemanticsDesc>;
-}
-
-impl Semantics for () {
-  fn index(&self) -> usize {
-    0
-  }
-
-  fn name(&self) -> &'static str {
-    ""
-  }
-
-  fn semantics_set() -> Vec<SemanticsDesc> {
-    Vec::new()
-  }
-}
-
-/// Semantics description.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct SemanticsDesc {
-  /// Semantics index.
-  pub index: usize,
-
-  /// Name of the semantics (used in shaders).
-  pub name: String,
-}
-
-/// Class of types that have an associated value which type implements [`Semantics`], defining
-/// vertex legit attributes.
-///
-/// Vertex attribute types can be associated with only one semantics.
-pub trait HasSemantics {
-  /// Type of the semantics.
-  ///
-  /// See the [`Semantics`] trait for further information.
-  type Sem: Semantics;
-
-  /// The aforementioned vertex semantics for the attribute type.
-  const SEMANTICS: Self::Sem;
 }
 
 /// A local version of size_of that depends on the state of the std feature.

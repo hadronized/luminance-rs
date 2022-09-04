@@ -53,17 +53,14 @@ use crate::{
     tess::Tess as TessBackend,
     texture::Texture as TextureBackend,
   },
-  texture::TexelUpload,
-};
-use crate::{
   framebuffer::{Framebuffer, FramebufferError},
   pipeline::PipelineGate,
   pixel::Pixel,
   query::Query,
   shader::{ProgramBuilder, ShaderData, ShaderDataError, Stage, StageError, StageType},
   tess::{Deinterleaved, Interleaved, TessBuilder, TessVertexData},
-  texture::{Dimensionable, Sampler, Texture, TextureError},
-  vertex::Semantics,
+  texture::{Dimensionable, Sampler, TexelUpload, Texture, TextureError},
+  vertex::Vertex,
 };
 
 /// Class of graphics context.
@@ -127,10 +124,10 @@ pub unsafe trait GraphicsContext: Sized {
   /// Create a new shader program.
   ///
   /// See the documentation of [`ProgramBuilder::new`] for further details.
-  fn new_shader_program<Sem, Out, Uni>(&mut self) -> ProgramBuilder<Self, Sem, Out, Uni>
+  fn new_shader_program<V, Out, Uni>(&mut self) -> ProgramBuilder<Self, V, Out, Uni>
   where
     Self::Backend: Shader,
-    Sem: Semantics,
+    V: Vertex,
   {
     ProgramBuilder::new(self)
   }

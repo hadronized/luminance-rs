@@ -739,16 +739,18 @@ where
   /// Add vertices to be bundled in the [`Tess`].
   ///
   /// Every time you call that function, the set of vertices is replaced by the one you provided.
-  pub fn set_attributes<A, X>(mut self, attributes: X) -> Self
+  pub fn set_attributes<const NAME: &'static str>(
+    mut self,
+    attributes: impl Into<Vec<V::FieldType>>,
+  ) -> Self
   where
-    X: Into<Vec<A>>,
-    V: Deinterleave<A>,
+    V: Deinterleave<NAME>,
   {
     let build_raw = |deinterleaved: &mut Vec<DeinterleavedData>| {
       // turn the attribute into a raw vector (Vec<u8>)
       let boxed_slice = attributes.into().into_boxed_slice();
       let len = boxed_slice.len();
-      let len_bytes = len * std::mem::size_of::<A>();
+      let len_bytes = len * std::mem::size_of::<V::FieldType>();
       let ptr = Box::into_raw(boxed_slice);
       // please Dog pardon me
       let raw = unsafe { Vec::from_raw_parts(ptr as _, len_bytes, len_bytes) };
@@ -776,16 +778,18 @@ where
   /// Add instances to be bundled in the [`Tess`].
   ///
   /// Every time you call that function, the set of instances is replaced by the one you provided.
-  pub fn set_instance_attributes<A, X>(mut self, attributes: X) -> Self
+  pub fn set_instance_attributes<const NAME: &'static str>(
+    mut self,
+    attributes: impl Into<Vec<W::FieldType>>,
+  ) -> Self
   where
-    X: Into<Vec<A>>,
-    W: Deinterleave<A>,
+    W: Deinterleave<NAME>,
   {
     let build_raw = |deinterleaved: &mut Vec<DeinterleavedData>| {
       // turn the attribute into a raw vector (Vec<u8>)
       let boxed_slice = attributes.into().into_boxed_slice();
       let len = boxed_slice.len();
-      let len_bytes = len * std::mem::size_of::<A>();
+      let len_bytes = len * std::mem::size_of::<W::FieldType>();
       let ptr = Box::into_raw(boxed_slice);
       // please Dog pardon me
       let raw = unsafe { Vec::from_raw_parts(ptr as _, len_bytes, len_bytes) };
@@ -1077,12 +1081,12 @@ where
   /// Slice the [`Tess`] in order to read its content via usual slices.
   ///
   /// This method gives access to the underlying _vertex storage_.
-  pub fn vertices<'a, T>(
+  pub fn vertices<'a, const NAME: &'static str>(
     &'a mut self,
-  ) -> Result<Vertices<'a, B, V, I, W, Deinterleaved, T>, TessMapError>
+  ) -> Result<Vertices<'a, B, V, I, W, Deinterleaved, V::FieldType>, TessMapError>
   where
-    B: VertexSliceBackend<'a, V, I, W, Deinterleaved, T>,
-    V: Deinterleave<T>,
+    B: VertexSliceBackend<'a, V, I, W, Deinterleaved, V::FieldType>,
+    V: Deinterleave<NAME>,
   {
     unsafe { B::vertices(&mut self.repr).map(|repr| Vertices { repr }) }
   }
@@ -1090,12 +1094,12 @@ where
   /// Slice the [`Tess`] in order to read its content via usual slices.
   ///
   /// This method gives access to the underlying _vertex storage_.
-  pub fn vertices_mut<'a, T>(
+  pub fn vertices_mut<'a, const NAME: &'static str>(
     &'a mut self,
-  ) -> Result<VerticesMut<'a, B, V, I, W, Deinterleaved, T>, TessMapError>
+  ) -> Result<VerticesMut<'a, B, V, I, W, Deinterleaved, V::FieldType>, TessMapError>
   where
-    B: VertexSliceBackend<'a, V, I, W, Deinterleaved, T>,
-    V: Deinterleave<T>,
+    B: VertexSliceBackend<'a, V, I, W, Deinterleaved, V::FieldType>,
+    V: Deinterleave<NAME>,
   {
     unsafe { B::vertices_mut(&mut self.repr).map(|repr| VerticesMut { repr }) }
   }
@@ -1103,12 +1107,12 @@ where
   /// Slice the [`Tess`] in order to read its content via usual slices.
   ///
   /// This method gives access to the underlying _instance storage_.
-  pub fn instances<'a, T>(
+  pub fn instances<'a, const NAME: &'static str>(
     &'a mut self,
-  ) -> Result<Instances<'a, B, V, I, W, Deinterleaved, T>, TessMapError>
+  ) -> Result<Instances<'a, B, V, I, W, Deinterleaved, W::FieldType>, TessMapError>
   where
-    B: InstanceSliceBackend<'a, V, I, W, Deinterleaved, T>,
-    W: Deinterleave<T>,
+    B: InstanceSliceBackend<'a, V, I, W, Deinterleaved, W::FieldType>,
+    W: Deinterleave<NAME>,
   {
     unsafe { B::instances(&mut self.repr).map(|repr| Instances { repr }) }
   }
@@ -1116,12 +1120,12 @@ where
   /// Slice the [`Tess`] in order to read its content via usual slices.
   ///
   /// This method gives access to the underlying _instance storage_.
-  pub fn instances_mut<'a, T>(
+  pub fn instances_mut<'a, const NAME: &'static str>(
     &'a mut self,
-  ) -> Result<InstancesMut<'a, B, V, I, W, Deinterleaved, T>, TessMapError>
+  ) -> Result<InstancesMut<'a, B, V, I, W, Deinterleaved, W::FieldType>, TessMapError>
   where
-    B: InstanceSliceBackend<'a, V, I, W, Deinterleaved, T>,
-    W: Deinterleave<T>,
+    B: InstanceSliceBackend<'a, V, I, W, Deinterleaved, W::FieldType>,
+    W: Deinterleave<NAME>,
   {
     unsafe { B::instances_mut(&mut self.repr).map(|repr| InstancesMut { repr }) }
   }

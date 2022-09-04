@@ -131,7 +131,7 @@ pub mod types;
 use crate::{
   backend::shader::{Shader, ShaderData as ShaderDataBackend, Uniformable},
   context::GraphicsContext,
-  vertex::Semantics,
+  vertex::Vertex,
 };
 use std::{error, fmt, marker::PhantomData};
 
@@ -815,19 +815,12 @@ where
 /// A built program with potential warnings.
 ///
 /// The sole purpose of this type is to be destructured when a program is built.
-///
-/// # Parametricity
-///
-/// - `B` is the backend type.
-/// - `Sem` is the [`Semantics`] type.
-/// - `Out` is the render target type.
-/// - `Uni` is the [`UniformInterface`] type.
-pub struct BuiltProgram<B, Sem, Out, Uni>
+pub struct BuiltProgram<B, V, Out, Uni>
 where
   B: Shader,
 {
   /// Built program.
-  pub program: Program<B, Sem, Out, Uni>,
+  pub program: Program<B, V, Out, Uni>,
   /// Potential warnings.
   pub warnings: Vec<ProgramError>,
 }
@@ -843,33 +836,26 @@ where
 }
 
 /// A [`Program`] uniform adaptation that has failed.
-///
-/// # Parametricity
-///
-/// - `B` is the backend type.
-/// - `Sem` is the [`Semantics`] type.
-/// - `Out` is the render target type.
-/// - `Uni` is the [`UniformInterface`] type.
-pub struct AdaptationFailure<B, Sem, Out, Uni>
+pub struct AdaptationFailure<B, V, Out, Uni>
 where
   B: Shader,
 {
   /// Program used before trying to adapt.
-  pub program: Program<B, Sem, Out, Uni>,
+  pub program: Program<B, V, Out, Uni>,
   /// Program error that prevented to adapt.
   pub error: ProgramError,
 }
 
-impl<B, Sem, Out, Uni> AdaptationFailure<B, Sem, Out, Uni>
+impl<B, V, Out, Uni> AdaptationFailure<B, V, Out, Uni>
 where
   B: Shader,
 {
-  pub(crate) fn new(program: Program<B, Sem, Out, Uni>, error: ProgramError) -> Self {
+  pub(crate) fn new(program: Program<B, V, Out, Uni>, error: ProgramError) -> Self {
     AdaptationFailure { program, error }
   }
 
   /// Get the program and ignore the error.
-  pub fn ignore_error(self) -> Program<B, Sem, Out, Uni> {
+  pub fn ignore_error(self) -> Program<B, V, Out, Uni> {
     self.program
   }
 }
@@ -924,16 +910,16 @@ where
 ///
 /// This type allows to create shader programs without having to worry too much about the highly
 /// generic API.
-pub struct ProgramBuilder<'a, C, Sem, Out, Uni> {
+pub struct ProgramBuilder<'a, C, V, Out, Uni> {
   ctx: &'a mut C,
-  _phantom: PhantomData<(Sem, Out, Uni)>,
+  _phantom: PhantomData<(V, Out, Uni)>,
 }
 
-impl<'a, C, Sem, Out, Uni> ProgramBuilder<'a, C, Sem, Out, Uni>
+impl<'a, C, V, Out, Uni> ProgramBuilder<'a, C, V, Out, Uni>
 where
   C: GraphicsContext,
   C::Backend: Shader,
-  Sem: Semantics,
+  V: Vertex,
 {
   /// Create a new [`ProgramBuilder`] from a [`GraphicsContext`].
   pub fn new(ctx: &'a mut C) -> Self {
@@ -955,18 +941,16 @@ where
   ///
   /// Feel free to look at the documentation of [`GraphicsContext::new_shader_program`] for
   /// a simpler interface.
-  pub fn from_stages_env<'b, T, G, E>(
+  pub fn from_stages_env<'b, E>(
     &mut self,
     vertex: &'b Stage<C::Backend>,
-    tess: T,
-    geometry: G,
+    tess: impl Into<Option<TessellationStages<'b, Stage<C::Backend>>>>,
+    geometry: impl Into<Option<&'b Stage<C::Backend>>>,
     fragment: &'b Stage<C::Backend>,
     env: &mut E,
-  ) -> Result<BuiltProgram<C::Backend, Sem, Out, Uni>, ProgramError>
+  ) -> Result<BuiltProgram<C::Backend, V, Out, Uni>, ProgramError>
   where
     Uni: UniformInterface<C::Backend, E>,
-    T: Into<Option<TessellationStages<'b, Stage<C::Backend>>>>,
-    G: Into<Option<&'b Stage<C::Backend>>>,
   {
     let tess = tess.into();
     let geometry = geometry.into();
@@ -982,7 +966,7 @@ where
         &fragment.repr,
       )?;
 
-      let warnings = C::Backend::apply_semantics::<Sem>(&mut repr)?
+      let warnings = C::Backend::apply_semantics::<V>(&mut repr)?
         .into_iter()
         .map(|w| ProgramError::Warning(w.into()))
         .collect();
@@ -1000,8 +984,7 @@ where
       let program = Program {
         repr,
         uni,
-        _sem: PhantomData,
-        _out: PhantomData,
+        _phantom: PhantomData,
       };
 
       Ok(BuiltProgram { program, warnings })
@@ -1019,17 +1002,15 @@ where
   ///
   /// Feel free to look at the documentation of [`GraphicsContext::new_shader_program`] for
   /// a simpler interface.
-  pub fn from_stages<'b, T, G>(
+  pub fn from_stages<'b>(
     &mut self,
     vertex: &'b Stage<C::Backend>,
-    tess: T,
-    geometry: G,
+    tess: impl Into<Option<TessellationStages<'b, Stage<C::Backend>>>>,
+    geometry: impl Into<Option<&'b Stage<C::Backend>>>,
     fragment: &'b Stage<C::Backend>,
-  ) -> Result<BuiltProgram<C::Backend, Sem, Out, Uni>, ProgramError>
+  ) -> Result<BuiltProgram<C::Backend, V, Out, Uni>, ProgramError>
   where
     Uni: UniformInterface<C::Backend>,
-    T: Into<Option<TessellationStages<'b, Stage<C::Backend>>>>,
-    G: Into<Option<&'b Stage<C::Backend>>>,
   {
     Self::from_stages_env(self, vertex, tess, geometry, fragment, &mut ())
   }
@@ -1056,7 +1037,7 @@ where
     geometry: G,
     fragment: &'b str,
     env: &mut E,
-  ) -> Result<BuiltProgram<C::Backend, Sem, Out, Uni>, ProgramError>
+  ) -> Result<BuiltProgram<C::Backend, V, Out, Uni>, ProgramError>
   where
     Uni: UniformInterface<C::Backend, E>,
     T: Into<Option<TessellationStages<'b, str>>>,
@@ -1124,7 +1105,7 @@ where
     tess: T,
     geometry: G,
     fragment: &'b str,
-  ) -> Result<BuiltProgram<C::Backend, Sem, Out, Uni>, ProgramError>
+  ) -> Result<BuiltProgram<C::Backend, V, Out, Uni>, ProgramError>
   where
     Uni: UniformInterface<C::Backend>,
     T: Into<Option<TessellationStages<'b, str>>>,
@@ -1144,27 +1125,26 @@ where
 /// - `Sem` is the [`Semantics`] type.
 /// - `Out` is the render target type.
 /// - `Uni` is the [`UniformInterface`] type.
-pub struct Program<B, Sem, Out, Uni>
+pub struct Program<B, V, Out, Uni>
 where
   B: Shader,
 {
   pub(crate) repr: B::ProgramRepr,
   pub(crate) uni: Uni,
-  _sem: PhantomData<*const Sem>,
-  _out: PhantomData<*const Out>,
+  _phantom: PhantomData<*const (V, Out)>,
 }
 
-impl<B, Sem, Out, Uni> Program<B, Sem, Out, Uni>
+impl<B, V, Out, Uni> Program<B, V, Out, Uni>
 where
   B: Shader,
-  Sem: Semantics,
+  V: Vertex,
 {
   /// Create a new [`UniformInterface`] but keep the [`Program`] around without rebuilding it.
   ///
   /// # Parametricity
   ///
   /// - `Q` is the new [`UniformInterface`].
-  pub fn adapt<Q>(self) -> Result<BuiltProgram<B, Sem, Out, Q>, AdaptationFailure<B, Sem, Out, Uni>>
+  pub fn adapt<Q>(self) -> Result<BuiltProgram<B, V, Out, Q>, AdaptationFailure<B, V, Out, Uni>>
   where
     Q: UniformInterface<B>,
   {
@@ -1181,7 +1161,7 @@ where
   pub fn adapt_env<Q, E>(
     mut self,
     env: &mut E,
-  ) -> Result<BuiltProgram<B, Sem, Out, Q>, AdaptationFailure<B, Sem, Out, Uni>>
+  ) -> Result<BuiltProgram<B, V, Out, Q>, AdaptationFailure<B, V, Out, Uni>>
   where
     Q: UniformInterface<B, E>,
   {
@@ -1216,8 +1196,7 @@ where
     let program = Program {
       repr: self.repr,
       uni,
-      _sem: PhantomData,
-      _out: PhantomData,
+      _phantom: PhantomData,
     };
 
     Ok(BuiltProgram { program, warnings })
@@ -1231,7 +1210,7 @@ where
   pub fn readapt_env<E>(
     self,
     env: &mut E,
-  ) -> Result<BuiltProgram<B, Sem, Out, Uni>, AdaptationFailure<B, Sem, Out, Uni>>
+  ) -> Result<BuiltProgram<B, V, Out, Uni>, AdaptationFailure<B, V, Out, Uni>>
   where
     Uni: UniformInterface<B, E>,
   {
