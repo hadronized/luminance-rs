@@ -30,9 +30,17 @@ unsafe impl Vertex for () {
   }
 }
 
-/// TODO
+/// TODO: delete
 pub trait Deinterleave<T> {
   /// Rank of the type in the original type.
+  const RANK: usize;
+}
+
+pub trait Deinterleave2<const NAME: &'static str> {
+  /// Type of the field.
+  type FieldType;
+
+  /// Rank of the field.
   const RANK: usize;
 }
 
@@ -53,20 +61,22 @@ pub struct VertexBufferDesc {
   ///
   /// Such a name is used in vertex shaders to perform mapping.
   pub name: &'static str,
+
   /// Whether _vertex instancing_ should be used with that vertex attribute.
   pub instancing: VertexInstancing,
+
   /// Vertex attribute descriptor.
   pub attrib_desc: VertexAttribDesc,
 }
 
 impl VertexBufferDesc {
   /// Create a new [`VertexBufferDesc`].
-  pub fn new<S>(sem: S, instancing: VertexInstancing, attrib_desc: VertexAttribDesc) -> Self
-  where
-    S: Semantics,
-  {
-    let index = sem.index();
-    let name = sem.name();
+  pub fn new(
+    index: usize,
+    name: &'static str,
+    instancing: VertexInstancing,
+    attrib_desc: VertexAttribDesc,
+  ) -> Self {
     VertexBufferDesc {
       index,
       name,

@@ -25,8 +25,6 @@
 //! [`Vertex`]: https://docs.rs/luminance/latest/luminance/vertex/trait.Vertex.html
 //! [`Semantics`]: https://docs.rs/luminance/latest/luminance/vertex/trait.Semantics.html
 
-extern crate proc_macro;
-
 mod attrib;
 mod semantics;
 mod uniform_interface;

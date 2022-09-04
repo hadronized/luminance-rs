@@ -1,48 +1,26 @@
 use crate::attrib::{get_field_attr_once, AttrError};
 use proc_macro::TokenStream;
-use quote::{format_ident, quote};
+use quote::quote;
 use std::error;
 use std::fmt;
-use syn::{Attribute, DataStruct, Field, Fields, Ident, Index, LitBool, Type};
+use syn::{Attribute, DataStruct, Field, Fields, Ident, LitBool};
 
 // accepted sub keys for the "vertex" key
-const KNOWN_SUBKEYS: &[&str] = &["sem", "instanced", "normalized"];
+const KNOWN_SUBKEYS: &[&str] = &["instanced", "normalized", "namespace"];
 
 #[derive(Debug)]
 pub(crate) enum StructImplError {
-  SemanticsError(AttrError),
   FieldError(AttrError),
+  UnsupportedUnnamed,
   UnsupportedUnit,
-  SameTypes(String, String),
-}
-
-impl StructImplError {
-  pub(crate) fn semantics_error(e: AttrError) -> Self {
-    StructImplError::SemanticsError(e)
-  }
-
-  pub(crate) fn field_error(e: AttrError) -> Self {
-    StructImplError::FieldError(e)
-  }
-
-  pub(crate) fn unsupported_unit() -> Self {
-    StructImplError::UnsupportedUnit
-  }
-
-  pub(crate) fn same_types(ident: String, dup: String) -> Self {
-    StructImplError::SameTypes(ident, dup)
-  }
 }
 
 impl fmt::Display for StructImplError {
   fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
     match self {
-      StructImplError::SemanticsError(ref e) => write!(f, "error with semantics type; {}", e),
       StructImplError::FieldError(ref e) => write!(f, "error with vertex attribute field; {}", e),
+      StructImplError::UnsupportedUnnamed => f.write_str("unsupported unnamed fields in struct"),
       StructImplError::UnsupportedUnit => f.write_str("unsupported unit struct"),
-      StructImplError::SameTypes(field, dup) => {
-        write!(f, "field {} has the same type as field {}. Each field of this struct must have a different type", field, dup)
-      }
     }
   }
 }
@@ -50,7 +28,6 @@ impl fmt::Display for StructImplError {
 impl error::Error for StructImplError {
   fn source(&self) -> Option<&(dyn error::Error + 'static)> {
     match self {
-      StructImplError::SemanticsError(e) => Some(e),
       StructImplError::FieldError(e) => Some(e),
       _ => None,
     }
@@ -59,86 +36,73 @@ impl error::Error for StructImplError {
 
 /// Generate the Vertex impl for a struct.
 pub(crate) fn generate_vertex_impl<'a, A>(
-  ident: Ident,
+  struct_ident: Ident,
   attrs: A,
   struct_: DataStruct,
 ) -> Result<TokenStream, StructImplError>
 where
   A: Iterator<Item = &'a Attribute> + Clone,
 {
-  // search the semantics name
-  let sem_type: Type = get_field_attr_once(&ident, attrs.clone(), "vertex", "sem", KNOWN_SUBKEYS)
-    .map_err(StructImplError::semantics_error)?;
-
-  let instancing = get_instancing(&ident, attrs.clone())?;
+  let instancing = get_instancing(&struct_ident, attrs.clone())?;
+  let namespace = get_namespace(&struct_ident, attrs.clone())?;
 
   match struct_.fields {
-    Fields::Unnamed(unnamed_fields) => {
-      let mut indexed_vertex_attrib_descs = Vec::new();
-      let mut fields_types = Vec::new();
-
-      for (i, field) in unnamed_fields.unnamed.into_iter().enumerate() {
-        let field_ident = format_ident!("field_{}", i);
-
-        process_field(
-          &field,
-          field_ident,
-          &sem_type,
-          &instancing,
-          &mut indexed_vertex_attrib_descs,
-          &mut fields_types,
-          None,
-        )?;
-      }
-
-      let output = process_struct(ident, indexed_vertex_attrib_descs, Vec::new(), fields_types);
-      Ok(output.into())
-    }
-
     Fields::Named(named_fields) => {
-      let mut indexed_vertex_attrib_descs = Vec::new();
-      let mut fields_types = Vec::new();
-      let mut fields_names = Vec::new();
+      let per_field = named_fields
+        .named
+        .iter()
+        .enumerate()
+        .map(|(rank, field)| {
+          let field_ident = field.ident.as_ref().unwrap();
+          let field_ty = &field.ty;
 
-      for field in named_fields.named {
-        let field_ident = field.ident.clone().unwrap();
+          let vertex_attrib_desc = field_vertex_attrib_desc(
+            &field,
+            field.ident.as_ref().unwrap(),
+            &instancing,
+            &namespace,
+          )?;
 
-        process_field(
-          &field,
-          field_ident,
-          &sem_type,
-          &instancing,
-          &mut indexed_vertex_attrib_descs,
-          &mut fields_types,
-          &mut fields_names,
-        )?;
-      }
+          let deinterleave_impl = quote! {
+            impl luminance::vertex::Deinterleave2<#field_ident> for #struct_ident {
+              type FieldType = #field_ty;
 
-      let output = process_struct(
-        ident,
-        indexed_vertex_attrib_descs,
-        fields_names,
-        fields_types,
-      );
+              const RANK: usize = #rank;
+            }
+          };
+
+          Ok((vertex_attrib_desc, deinterleave_impl))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+      let vertex_attrib_descs = per_field.iter().map(|pf| &pf.0);
+      let deinterleave_impls = per_field.iter().map(|pf| &pf.1);
+      let output = quote! {
+        // Vertex impl
+        unsafe impl luminance::vertex::Vertex for #struct_ident {
+          fn vertex_desc() -> luminance::vertex::VertexDesc {
+            vec![#(#vertex_attrib_descs),*]
+          }
+        }
+
+        #(#deinterleave_impls)*
+      };
+
       Ok(output.into())
     }
 
-    Fields::Unit => Err(StructImplError::unsupported_unit()),
+    Fields::Unnamed(..) => Err(StructImplError::UnsupportedUnnamed),
+
+    Fields::Unit => Err(StructImplError::UnsupportedUnit),
   }
 }
 
-fn process_field<'a, FN>(
+fn field_vertex_attrib_desc(
   field: &Field,
-  ident: Ident,
-  sem_type: &Type,
+  ident: &Ident,
   instancing: &proc_macro2::TokenStream,
-  indexed_vertex_attrib_descs: &mut Vec<proc_macro2::TokenStream>,
-  fields_types: &mut Vec<Type>,
-  fields_names: FN,
-) -> Result<(), StructImplError>
-where
-  FN: Into<Option<&'a mut Vec<Ident>>>,
-{
+  namespace: &proc_macro2::TokenStream,
+) -> Result<proc_macro2::TokenStream, StructImplError> {
   // search for the normalized argument; if not there, we don’t normalize anything
   let normalized = get_field_attr_once(&ident, &field.attrs, "vertex", "normalized", KNOWN_SUBKEYS)
     .map(|b: LitBool| b.value)
@@ -146,29 +110,10 @@ where
       AttrError::CannotFindAttribute(..) => Ok(false),
       _ => Err(e),
     })
-    .map_err(StructImplError::field_error)?;
+    .map_err(StructImplError::FieldError)?;
 
   let field_ty = &field.ty;
-  let names = fields_names.into();
-
-  // check if field type has already been used in this struct
-  if let Some(i) = fields_types.iter().position(|ty| ty == field_ty) {
-    match names {
-      Some(idents) => {
-        // if fields are named, then the one we're processing must also be named
-        return Err(StructImplError::same_types(
-          field.ident.as_ref().unwrap().to_string(),
-          idents[i].to_string(),
-        ));
-      }
-      None => {
-        return Err(StructImplError::same_types(
-          fields_types.len().to_string(),
-          i.to_string(),
-        ));
-      }
-    }
-  }
+  let field_name = &field.ident;
 
   let vertex_attrib_desc = if normalized {
     quote! { (<#field_ty as luminance::vertex::VertexAttrib>::VERTEX_ATTRIB_DESC).normalize() }
@@ -176,80 +121,16 @@ where
     quote! { <#field_ty as luminance::vertex::VertexAttrib>::VERTEX_ATTRIB_DESC }
   };
 
-  let indexed_vertex_attrib_desc_q = quote! {
-    luminance::vertex::VertexBufferDesc::new::<#sem_type>(
-      <#field_ty as luminance::vertex::HasSemantics>::SEMANTICS,
+  let q = quote! {
+    luminance::vertex::VertexBufferDesc::new::(
+      <#namespace as luminance::named_index::NamedIndex<#field_name>>::INDEX,
+      #field_name,
       #instancing,
       #vertex_attrib_desc,
     )
   };
 
-  indexed_vertex_attrib_descs.push(indexed_vertex_attrib_desc_q);
-  fields_types.push(field_ty.clone());
-
-  if let Some(fields_names) = names {
-    fields_names.push(ident);
-  }
-
-  Ok(())
-}
-
-/// Process the output struct.
-///
-/// If fields_names is empty, it is assumed to be a struct-tuple.
-fn process_struct(
-  struct_name: Ident,
-  indexed_vertex_attrib_descs: Vec<proc_macro2::TokenStream>,
-  fields_names: Vec<Ident>,
-  fields_types: Vec<Type>,
-) -> proc_macro2::TokenStream {
-  let fn_new = if fields_names.is_empty() {
-    // struct tuple
-    let i: Vec<_> = (0..fields_types.len())
-      .map(|i| format_ident!("field_{}", i))
-      .collect();
-
-    quote! {
-      impl #struct_name {
-        /// Create a new vertex.
-        pub const fn new(#(#i : #fields_types),*) -> Self {
-          #struct_name ( #(#i),* )
-        }
-      }
-    }
-  } else {
-    quote! {
-      impl #struct_name {
-        /// Create a new vertex.
-        pub const fn new(#(#fields_names : #fields_types),*) -> Self {
-          #struct_name { #(#fields_names),* }
-        }
-      }
-    }
-  };
-
-  let fields_ranks = (0..fields_types.len()).into_iter().map(Index::from);
-  let deinterleave_impls = quote! {
-    #(
-      impl luminance::vertex::Deinterleave<#fields_types> for #struct_name {
-        const RANK: usize = #fields_ranks;
-      }
-    )*
-  };
-
-  quote! {
-    // Vertex impl
-    unsafe impl luminance::vertex::Vertex for #struct_name {
-      fn vertex_desc() -> luminance::vertex::VertexDesc {
-        vec![#(#indexed_vertex_attrib_descs),*]
-      }
-    }
-
-    #deinterleave_impls
-
-    // helper function for the generate type
-    #fn_new
-  }
+  Ok(q)
 }
 
 fn get_instancing<'a, A>(
@@ -273,5 +154,19 @@ where
 
       _ => Err(e),
     })
-    .map_err(StructImplError::field_error)
+    .map_err(StructImplError::FieldError)
+}
+
+fn get_namespace<'a, A>(
+  ident: &Ident,
+  attrs: A,
+) -> Result<proc_macro2::TokenStream, StructImplError>
+where
+  A: IntoIterator<Item = &'a Attribute>,
+{
+  get_field_attr_once(ident, attrs, "vertex", "namespace", KNOWN_SUBKEYS)
+    .map(|namespace: Ident| {
+      quote! { #namespace }
+    })
+    .map_err(StructImplError::FieldError)
 }

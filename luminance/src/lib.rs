@@ -320,7 +320,8 @@
 #![doc(
   html_logo_url = "https://raw.githubusercontent.com/phaazon/luminance-rs/master/docs/imgs/luminance_alt.svg"
 )]
-#![deny(missing_docs)]
+#![allow(incomplete_features)]
+#![feature(adt_const_params)]
 
 #[cfg(feature = "derive")]
 pub use luminance_derive::*;
@@ -331,6 +332,7 @@ pub mod context;
 pub mod depth_stencil;
 pub mod face_culling;
 pub mod framebuffer;
+pub mod named_index;
 pub mod pipeline;
 pub mod pixel;
 pub mod query;
@@ -343,3 +345,4 @@ pub mod tess;
 pub mod tess_gate;
 pub mod texture;
 pub mod vertex;
+pub mod vertex_entity;
