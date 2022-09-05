@@ -30,10 +30,11 @@ unsafe impl Vertex for () {
   }
 }
 
-pub trait Deinterleave<const NAME: &'static str> {
-  /// Type of the field.
+pub trait HasField<const NAME: &'static str> {
   type FieldType;
+}
 
+pub trait Deinterleave<const NAME: &'static str>: HasField<NAME> {
   /// Rank of the field.
   const RANK: usize;
 }

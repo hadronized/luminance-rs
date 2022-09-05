@@ -64,9 +64,11 @@ where
           )?;
 
           let deinterleave_impl = quote! {
-            impl luminance::vertex::Deinterleave<#field_ident> for #struct_ident {
+            impl luminance::vertex::HasField<#field_ident> for #struct_ident {
               type FieldType = #field_ty;
+            }
 
+            impl luminance::vertex::Deinterleave<#field_ident> for #struct_ident {
               const RANK: usize = #rank;
             }
           };
