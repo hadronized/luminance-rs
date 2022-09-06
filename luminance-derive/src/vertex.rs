@@ -73,12 +73,17 @@ where
             }
           };
 
-          Ok((vertex_attrib_desc, deinterleave_impl))
+          let has_field_trait_bound = quote! {
+            luminance::vertex::HasField<#field_ident, FieldType = #field_ty>
+          };
+
+          Ok((vertex_attrib_desc, deinterleave_impl, has_field_trait_bound))
         })
         .collect::<Result<Vec<_>, _>>()?;
 
       let vertex_attrib_descs = per_field.iter().map(|pf| &pf.0);
       let deinterleave_impls = per_field.iter().map(|pf| &pf.1);
+      let has_field_trait_bounds = per_field.iter().map(|pf| &pf.2);
       let output = quote! {
         // Vertex impl
         unsafe impl luminance::vertex::Vertex for #struct_ident {
@@ -88,6 +93,11 @@ where
         }
 
         #(#deinterleave_impls)*
+
+        impl<V> luminance::vertex::CompatibleVertex<V> for #struct_ident
+        where V: luminance::vertex::Vertex + #(#has_field_trait_bounds)+*
+        {
+        }
       };
 
       Ok(output.into())

@@ -100,11 +100,11 @@ pub unsafe trait Shader {
     fragment: &Self::StageRepr,
   ) -> Result<Self::ProgramRepr, ProgramError>;
 
-  /// Apply semantics.
+  /// Apply vertex settings.
   ///
   /// This is a very specific operations that happen right after the shader program got successfully created by the
   /// backend. This function is responsible in setting whatever might be needed by the backend to allocate, prepare or
-  /// validate the semantics — i.e. `Sem` which implements [`Semantics`].
+  /// validate the vertex type.
   unsafe fn apply_semantics<V>(
     program: &mut Self::ProgramRepr,
   ) -> Result<Vec<VertexAttribWarning>, ProgramError>

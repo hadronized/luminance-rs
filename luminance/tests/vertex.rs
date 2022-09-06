@@ -4,45 +4,92 @@
 
 use luminance::{
   namespace,
-  vertex::{Vertex as _, VertexAttrib, VertexBufferDesc, VertexInstancing},
+  vertex::{
+    CompatibleVertex, HasField, Vertex as _, VertexAttrib, VertexBufferDesc, VertexInstancing,
+  },
   Vertex,
 };
 
 namespace! {
-  Namespace = { "pos", "nor", "col" }
+  Namespace = { "pos", "nor", "col", "weight" }
 }
 
-#[derive(Clone, Copy, Debug, Vertex)]
 #[repr(C)]
-#[vertex(namespace = "Namespace", instanced = "true")]
+#[derive(Clone, Copy, Debug, Vertex)]
+#[vertex(namespace = "Namespace")]
 struct Vertex {
   pos: [f32; 3],
   nor: [f32; 3],
-  col: [f32; 4],
+  col: [u8; 4],
 }
 
 #[test]
-fn derive_vertex() {
+fn vertex_desc() {
   let expected_desc = vec![
     VertexBufferDesc::new(
       0,
       "pos",
-      VertexInstancing::On,
+      VertexInstancing::Off,
       <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_DESC,
     ),
     VertexBufferDesc::new(
       1,
       "nor",
-      VertexInstancing::On,
+      VertexInstancing::Off,
       <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_DESC,
     ),
     VertexBufferDesc::new(
       2,
       "col",
-      VertexInstancing::On,
-      <[f32; 4] as VertexAttrib>::VERTEX_ATTRIB_DESC,
+      VertexInstancing::Off,
+      <[u8; 4] as VertexAttrib>::VERTEX_ATTRIB_DESC,
     ),
   ];
 
   assert_eq!(Vertex::vertex_desc(), expected_desc);
+}
+
+#[test]
+fn has_field() {
+  fn must_have_field<const NAME: &'static str, V, F>()
+  where
+    V: HasField<NAME, FieldType = F>,
+  {
+  }
+
+  must_have_field::<"pos", Vertex, [f32; 3]>();
+  must_have_field::<"nor", Vertex, [f32; 3]>();
+  must_have_field::<"col", Vertex, [u8; 4]>();
+}
+
+#[test]
+fn compatible_vertex_types() {
+  fn is_compatible<V, W>()
+  where
+    V: CompatibleVertex<W>,
+  {
+  }
+
+  #[repr(C)]
+  #[derive(Clone, Copy, Debug, Vertex)]
+  #[vertex(namespace = "Namespace")]
+  struct VertexSame {
+    pos: [f32; 3],
+    nor: [f32; 3],
+    col: [u8; 4],
+  }
+
+  is_compatible::<Vertex, VertexSame>();
+
+  #[repr(C)]
+  #[derive(Clone, Copy, Debug, Vertex)]
+  #[vertex(namespace = "Namespace")]
+  struct VertexInclude {
+    pos: [f32; 3],
+    nor: [f32; 3],
+    col: [u8; 4],
+    weight: f32,
+  }
+
+  is_compatible::<Vertex, VertexInclude>();
 }

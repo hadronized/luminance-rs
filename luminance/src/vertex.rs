@@ -34,6 +34,8 @@ pub trait HasField<const NAME: &'static str> {
   type FieldType;
 }
 
+pub trait CompatibleVertex<V> {}
+
 pub trait Deinterleave<const NAME: &'static str>: HasField<NAME> {
   /// Rank of the field.
   const RANK: usize;
