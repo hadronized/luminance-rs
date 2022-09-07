@@ -1,30 +1,30 @@
 [workspace]
 
 members = [
-  "examples/common",
-  "examples/desktop",
-  "examples/web",
+  # "examples/common",
+  # "examples/desktop",
+  # "examples/web",
   "luminance",
   "luminance-derive",
-  "luminance-front",
-  "luminance-gl",
-  "luminance-glfw",
-  "luminance-glutin",
-  "luminance-sdl2",
-  "luminance-std140",
-  "luminance-webgl",
-  "luminance-web-sys",
+  # "luminance-front",
+  # "luminance-gl",
+  # "luminance-glfw",
+  # "luminance-glutin",
+  # "luminance-sdl2",
+  # "luminance-std140",
+  # "luminance-webgl",
+  # "luminance-web-sys",
 ]
 
 default-members = [
-  "examples/common",
-  "examples/desktop",
+  # "examples/common",
+  # "examples/desktop",
   "luminance",
   "luminance-derive",
-  "luminance-front",
-  "luminance-gl",
-  "luminance-glfw",
-  "luminance-glutin",
+  # "luminance-front",
+  # "luminance-gl",
+  # "luminance-glfw",
+  # "luminance-glutin",
   #"luminance-sdl2", # commented out because of <https://github.com/Rust-SDL2/rust-sdl2/issues/1029>
-  "luminance-std140",
+  # "luminance-std140",
 ]
