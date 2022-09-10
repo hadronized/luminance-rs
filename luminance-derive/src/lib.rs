@@ -1,29 +1,12 @@
-//! Derive procedural macros for [luminance].
-//!
-//! This crate exports several macros used to ease development with [luminance]. You are
-//! strongly advised to read the documentation of [luminance] in the first place.
-//!
-//! # `Vertex`
-//!
-//! This macro allows to derive the [`Vertex`] trait for a custom `struct` type.
-//!
-//! [See the full documentation here](https://docs.rs/luminance/latest/luminance/#vertex)
-//!
-//! # `UniformInterface`
-//!
-//! This macro allows to derive the [`UniformInterface`] trait for a custom `struct` type.
-//!
-//! [See the full documentation here](https://docs.rs/luminance/latest/luminance/#uniform-interface)
-//!
-//! [luminance]: https://crates.io/crates/luminance
-//! [`Vertex`]: https://docs.rs/luminance/latest/luminance/vertex/trait.Vertex.html
+#![feature(proc_macro_diagnostic)]
 
 mod attrib;
+mod render_slots;
 mod uniform_interface;
 mod vertex;
 
-use crate::uniform_interface::generate_uniform_interface_impl;
 use crate::vertex::generate_vertex_impl;
+use crate::{render_slots::impl_render_slots, uniform_interface::generate_uniform_interface_impl};
 use proc_macro::TokenStream;
 use syn::{self, parse_macro_input, Data, DeriveInput};
 
@@ -55,4 +38,10 @@ pub fn derive_uniform_interface(input: TokenStream) -> TokenStream {
 
     _ => panic!("only structs are currently supported for deriving UniformInterface"),
   }
+}
+
+#[proc_macro_derive(RenderSlots)]
+pub fn derive_render_slots(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+  let item: DeriveInput = parse_macro_input!(input);
+  impl_render_slots(item).into()
 }

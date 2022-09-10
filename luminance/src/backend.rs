@@ -1,8 +1,12 @@
 #![allow(missing_docs)]
 
 use crate::{
+  dim::Dimensionable,
+  framebuffer::Framebuffer,
+  render_channel::IsRenderChannelType,
+  render_slots::{RenderLayer, RenderSlots},
   vertex::Vertex,
-  vertex_entity::{Indices, MappedIndices, MappedVertices, VertexEntity, Vertices},
+  vertex_entity::{Indices, VertexEntity, Vertices},
   vertex_storage::VertexStorage,
 };
 
@@ -74,4 +78,17 @@ pub unsafe trait Backend {
   where
     V: Vertex,
     S: VertexStorage<V>;
+
+  unsafe fn new_render_layer<D, RC>(&mut self, size: D::Size) -> Result<RenderLayer<RC>, Self::Err>
+  where
+    D: Dimensionable,
+    RC: IsRenderChannelType;
+
+  unsafe fn new_framebuffer<D, RS>(
+    &mut self,
+    size: D::Size,
+  ) -> Result<Framebuffer<D, RS>, Self::Err>
+  where
+    D: Dimensionable,
+    RS: RenderSlots;
 }

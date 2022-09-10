@@ -7,29 +7,20 @@ use crate::{
     framebuffer::{Framebuffer as FramebufferBackend, FramebufferBackBuffer},
   },
   context::GraphicsContext,
+  dim::Dimensionable,
+  render_slots::RenderSlots,
   texture::{Dim2, Dimensionable, Sampler, TextureError},
 };
 
-/// Typed framebuffers.
-///
-/// # Parametricity
-///
-/// - `B` is the backend type. It must implement [backend::framebuffer::Framebuffer].
-/// - `D` is the dimension type. It must implement [`Dimensionable`].
-/// - `CS` is the color slot type. It must implement [`ColorSlot`].
-/// - `DS` is the depth slot type. It must implement [`DepthStencilSlot`].
-///
-/// [backend::framebuffer::Framebuffer]: crate::backend::framebuffer::Framebuffer
-pub struct Framebuffer<B, D, CS, DS>
+#[derive(Debug)]
+pub struct Framebuffer<D, RS>
 where
-  B: ?Sized + FramebufferBackend<D>,
   D: Dimensionable,
-  CS: ColorSlot<B, D>,
-  DS: DepthStencilSlot<B, D>,
+  RS: RenderSlots,
 {
-  pub(crate) repr: B::FramebufferRepr,
-  color_slot: CS::ColorTextures,
-  depth_stencil_slot: DS::DepthStencilTexture,
+  handle: usize,
+  size: D::Size,
+  layers: RS::RenderLayers,
 }
 
 impl<B, D, CS, DS> Framebuffer<B, D, CS, DS>
