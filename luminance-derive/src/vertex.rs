@@ -64,7 +64,7 @@ where
           )?;
 
           let deinterleave_impl = quote! {
-            impl luminance::vertex::HasField<#field_ident> for #struct_ident {
+            impl luminance::has_field::HasField<#field_ident> for #struct_ident {
               type FieldType = #field_ty;
             }
 
@@ -74,7 +74,7 @@ where
           };
 
           let has_field_trait_bound = quote! {
-            luminance::vertex::HasField<#field_ident, FieldType = #field_ty>
+            luminance::has_field::HasField<#field_ident, FieldType = #field_ty>
           };
 
           Ok((vertex_attrib_desc, deinterleave_impl, has_field_trait_bound))

@@ -8,6 +8,7 @@
 //! [`VertexAttribDim`]: crate::vertex::VertexAttribDim
 //! [`VertexAttribType`]: crate::vertex::VertexAttribType
 
+use crate::has_field::HasField;
 use std::fmt::Debug;
 
 /// A type that can be used as a [`Vertex`] has to implement that trait – it must provide an
@@ -30,11 +31,10 @@ unsafe impl Vertex for () {
   }
 }
 
-pub trait HasField<const NAME: &'static str> {
-  type FieldType;
-}
-
 pub trait CompatibleVertex<V> {}
+
+/// A vertex with no attribute is compatible with any kind of vertex.
+impl<V> CompatibleVertex<V> for () where V: Vertex {}
 
 pub trait Deinterleave<const NAME: &'static str>: HasField<NAME> {
   /// Rank of the field.

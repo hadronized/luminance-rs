@@ -14,6 +14,7 @@ pub mod depth_stencil;
 pub mod face_culling;
 pub mod primitive;
 // pub mod framebuffer;
+pub mod has_field;
 pub mod named_index;
 pub mod render_channel;
 pub mod render_slots;
