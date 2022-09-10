@@ -20,7 +20,7 @@ pub mod render_channel;
 pub mod render_slots;
 // pub mod pipeline;
 pub mod pixel;
-pub mod query;
+// pub mod query;
 // pub mod render_gate;
 pub mod dim;
 pub mod render_state;

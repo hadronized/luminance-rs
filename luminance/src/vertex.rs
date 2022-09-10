@@ -23,11 +23,19 @@ use std::fmt::Debug;
 pub unsafe trait Vertex: Copy {
   /// The associated vertex format.
   fn vertex_desc() -> VertexDesc;
+
+  fn components_count() -> usize {
+    Self::vertex_desc().len()
+  }
 }
 
 unsafe impl Vertex for () {
   fn vertex_desc() -> VertexDesc {
     Vec::new()
+  }
+
+  fn components_count() -> usize {
+    0
   }
 }
 

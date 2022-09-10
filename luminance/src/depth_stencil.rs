@@ -2,7 +2,7 @@
 
 /// Comparison to perform for depth / stencil operations. `a` is the incoming fragment’s data and b is the fragment’s
 /// data that is already stored.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Comparison {
   /// Test never succeeds.
   Never,

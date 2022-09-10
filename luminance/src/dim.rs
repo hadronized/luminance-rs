@@ -50,6 +50,7 @@ pub trait Dimensionable {
   fn count(size: Self::Size) -> usize;
 }
 
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Size2 {
   pub width: u32,
   pub height: u32,
@@ -61,6 +62,7 @@ impl Size2 {
   }
 }
 
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Size3 {
   pub width: u32,
   pub height: u32,
@@ -77,6 +79,7 @@ impl Size3 {
   }
 }
 
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Off2 {
   pub x: u32,
   pub y: u32,
@@ -88,6 +91,7 @@ impl Off2 {
   }
 }
 
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Off3 {
   pub x: u32,
   pub y: u32,

@@ -85,7 +85,7 @@ pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
             #channels_count
           }
 
-          unsafe fn new_render_slots<B, D>(backend: &mut B, size: D::Size) -> Result<Self::RenderLayers, B::Err>
+          unsafe fn new_render_layers<B, D>(backend: &mut B, size: D::Size) -> Result<Self::RenderLayers, B::Err>
           where
             B: Backend,
             D: Dimensionable,

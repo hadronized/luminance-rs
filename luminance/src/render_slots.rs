@@ -16,7 +16,7 @@ pub trait RenderSlots {
     Self::CHANNELS.len()
   }
 
-  unsafe fn new_render_slots<B, D>(
+  unsafe fn new_render_layers<B, D>(
     backend: &mut B,
     size: D::Size,
   ) -> Result<Self::RenderLayers, B::Err>
@@ -34,7 +34,7 @@ impl RenderSlots for () {
     0
   }
 
-  unsafe fn new_render_slots<B, D>(_: &mut B, _: D::Size) -> Result<Self::RenderLayers, B::Err>
+  unsafe fn new_render_layers<B, D>(_: &mut B, _: D::Size) -> Result<Self::RenderLayers, B::Err>
   where
     B: Backend,
     D: Dimensionable,
@@ -49,4 +49,17 @@ pub trait CompatibleRenderSlots<S> {}
 pub struct RenderLayer<RC> {
   handle: usize,
   _phantom: PhantomData<*const RC>,
+}
+
+impl<RC> RenderLayer<RC> {
+  pub unsafe fn new(handle: usize) -> Self {
+    Self {
+      handle,
+      _phantom: PhantomData,
+    }
+  }
+
+  pub fn handle(&self) -> usize {
+    self.handle
+  }
 }

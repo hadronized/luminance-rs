@@ -45,7 +45,7 @@ where
   pub fn update_vertices<'a, V, S>(
     &'a mut self,
     entity: &VertexEntity<V, S>,
-    vertices: Vertices<'a>,
+    vertices: Vertices<'a, V, S>,
   ) -> Result<(), B::Err>
   where
     V: Vertex,
@@ -66,7 +66,11 @@ where
     &'a mut self,
     entity: &VertexEntity<V, S>,
     indices: Indices<'a>,
-  ) -> Result<(), B::Err> {
+  ) -> Result<(), B::Err>
+  where
+    V: Vertex,
+    S: VertexStorage<V>,
+  {
     unsafe { self.backend.vertex_entity_update_indices(entity, indices) }
   }
 }

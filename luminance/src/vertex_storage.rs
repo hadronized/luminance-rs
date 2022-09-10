@@ -1,6 +1,9 @@
 //! Vertex storage containers.
 
-use crate::vertex::{Deinterleave, HasField, Vertex};
+use crate::{
+  has_field::HasField,
+  vertex::{Deinterleave, Vertex},
+};
 use std::{marker::PhantomData, mem};
 
 pub trait VertexStorage<V>
@@ -50,7 +53,10 @@ pub struct Deinterleaved<V> {
   _phantom: PhantomData<V>,
 }
 
-impl<V: Vertex> Deinterleaved<V> {
+impl<V> Deinterleaved<V>
+where
+  V: Vertex,
+{
   /// Create a new empty deinterleaved storage.
   pub fn new() -> Self {
     let components_count = V::components_count();
