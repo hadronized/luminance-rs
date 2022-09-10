@@ -40,7 +40,7 @@ pub fn derive_uniform_interface(input: TokenStream) -> TokenStream {
   }
 }
 
-#[proc_macro_derive(RenderSlots)]
+#[proc_macro_derive(RenderSlots, attributes(slot))]
 pub fn derive_render_slots(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
   let item: DeriveInput = parse_macro_input!(input);
   impl_render_slots(item).into()

@@ -1,11 +1,19 @@
+#![allow(incomplete_features)]
+#![feature(adt_const_params)]
+
 use luminance::{
   has_field::HasField,
+  namespace,
   render_channel::{RenderChannel, RenderChannelDim, RenderChannelType},
-  render_slots::{CompatibleRenderSlots, RenderSlots as _},
+  render_slots::{CompatibleRenderSlots, RenderSlots},
   RenderSlots,
 };
 
+namespace! {
+  Namespace = { "_diffuse", "_normal", "_test" }
+}
 #[derive(RenderSlots)]
+#[slot(namespace = "Namespace")]
 struct Slots {
   _diffuse: mint::Vector3<f32>,
   _normal: mint::Vector3<f32>,

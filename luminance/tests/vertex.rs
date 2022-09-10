@@ -1,11 +1,10 @@
 #![allow(incomplete_features)]
 #![feature(adt_const_params)]
-#![cfg(feature = "derive")]
 
 use luminance::{
   has_field::HasField,
   namespace,
-  vertex::{CompatibleVertex, Vertex as _, VertexAttrib, VertexComponent, VertexInstancing},
+  vertex::{CompatibleVertex, Vertex as _, VertexAttrib, VertexInstancing},
   Vertex,
 };
 
@@ -25,7 +24,7 @@ struct Vertex {
 #[test]
 fn vertex_desc() {
   let expected_desc = vec![
-    VertexComponent::new(
+    VertexBufferDesc::new(
       0,
       "pos",
       VertexInstancing::Off,

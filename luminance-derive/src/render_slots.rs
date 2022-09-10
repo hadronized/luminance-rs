@@ -3,24 +3,38 @@
 use proc_macro::{Diagnostic, Level};
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::DeriveInput;
+use syn::{DeriveInput, Ident};
+
+use crate::attrib::get_field_attr_once;
+
+// accepted sub keys for the "vertex" key
+const KNOWN_SUBKEYS: &[&str] = &["namespace"];
 
 pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
   let type_ident = &item.ident;
+  let attrs = &item.attrs;
+
+  let namespace = get_field_attr_once(type_ident, attrs, "slot", "namespace", KNOWN_SUBKEYS)
+    .map(|namespace: Ident| {
+      quote! { #namespace }
+    })
+    .unwrap_or_else(|e| {
+      Diagnostic::new(Level::Error, format!("cannot find namespace: {}", e)).emit();
+      proc_macro2::TokenStream::new()
+    });
 
   match item.data {
     syn::Data::Struct(data) => {
       let per_channel = data
         .fields
         .iter()
-        .enumerate()
-        .map(|(index, field)| {
+        .map(|field| {
           let field_ident = field.ident.as_ref().expect("ident name").to_string();
           let field_ty = &field.ty;
 
           let render_channel = quote! {
             luminance::render_channel::RenderChannel {
-              index: #index,
+              index: <#namespace as luminance::named_index::NamedIndex<#field_ident>>::INDEX,
               name: #field_ident,
               ty: <#field_ty as luminance::render_channel::IsRenderChannelType>::CHANNEL_TY,
               dim: <#field_ty as luminance::render_channel::IsRenderChannelType>::CHANNEL_DIM,
