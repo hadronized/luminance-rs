@@ -10,7 +10,7 @@
 #![deny(missing_docs)]
 
 use crate::{Example, InputAction, LoopFeedback, PlatformServices};
-use luminance::{tess::Deinterleaved, Semantics, Vertex};
+use luminance::{vertex_entity::Deinterleaved, Semantics, Vertex};
 use luminance_front::{
   context::GraphicsContext,
   framebuffer::Framebuffer,

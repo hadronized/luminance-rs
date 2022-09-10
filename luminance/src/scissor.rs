@@ -5,16 +5,20 @@
 
 /// The region outside of which fragments will be discarded.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct ScissorRegion {
-  /// The x screen position of the scissor region.
-  pub x: u32,
+pub enum Scissor {
+  Off,
 
-  /// The y screen position of the scissor region.
-  pub y: u32,
+  On {
+    /// The x screen position of the scissor region.
+    x: u32,
 
-  /// The screen width of the scissor region.
-  pub width: u32,
+    /// The y screen position of the scissor region.
+    y: u32,
 
-  /// The screen height of the scissor region.
-  pub height: u32,
+    /// The screen width of the scissor region.
+    width: u32,
+
+    /// The screen height of the scissor region.
+    height: u32,
+  },
 }

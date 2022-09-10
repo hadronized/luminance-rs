@@ -17,7 +17,7 @@ use crate::{
   shared::{Semantics, Vertex, VertexColor, VertexPosition},
   Example, InputAction, LoopFeedback, PlatformServices,
 };
-use luminance::tess::View as _;
+use luminance::vertex_entity::View as _;
 use luminance_front::{
   context::GraphicsContext,
   framebuffer::Framebuffer,

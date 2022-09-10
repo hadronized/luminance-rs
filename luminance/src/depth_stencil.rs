@@ -22,100 +22,61 @@ pub enum Comparison {
   GreaterOrEqual,
 }
 
-/// Whether or not writes should be performed when rendering.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum Write {
-  /// Write values.
+/// Depth test, either enabled with a [`Comparison`] function, or disabled.
+///
+/// If you disable depth test, fragments will always be blended, whatever the order in which they are written.
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
+pub enum DepthTest {
+  /// Depth test is disabled.
+  Off,
+
+  /// Depth test is enabled and depth data will be compared with the carried [`Comparison`] value.
+  On(Comparison),
+}
+
+/// Depth write mode.
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
+pub enum DepthWrite {
+  /// Will write depth data.
   On,
-  /// Do not write values.
+
+  /// Will not write depth data.
   Off,
 }
 
-/// The stencil test is a bit weird. It’s a [`Comparison`] as well as the « stencil mask ».
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct StencilTest {
-  /// Comparison to apply to make a fragment pass the test.
-  pub comparison: Comparison,
-
-  /// Reference value for the comparison.
-  pub reference: u8,
-
-  /// The mask to apply on the fragment stencil value.
-  pub mask: u8,
-}
-
-impl StencilTest {
-  /// Create a new [`StencilTest`] from the comparison, reference and mask values.
-  pub fn new(comparison: Comparison, reference: u8, mask: u8) -> Self {
-    Self {
-      comparison,
-      reference,
-      mask,
-    }
-  }
-}
-
-/// The stencil operations are executed whenever a stencil test passes.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct StencilOperations {
-  /// Action to take when the depth test passes but not the stencil test.
-  pub depth_passes_stencil_fails: StencilOp,
-
-  /// Action to take when the stencil test passes but not the depth test.
-  pub depth_fails_stencil_passes: StencilOp,
-
-  /// Action to take when both the depth and stencil tests pass.
-  pub depth_stencil_pass: StencilOp,
-}
-
-impl StencilOperations {
-  /// Create [`Default`] [`StencilOperations`].
-  pub fn new() -> Self {
-    Self::default()
-  }
-
-  /// Set the [`StencilOp`] to do when the depth test passes but stencil test fails:
-  pub fn on_depth_passes_stencil_fails(self, op: StencilOp) -> Self {
-    Self {
-      depth_passes_stencil_fails: op,
-      ..self
-    }
-  }
-
-  /// Set the [`StencilOp`] to do when the depth test fails but stencil test passes:
-  pub fn on_depth_fails_stencil_passes(self, op: StencilOp) -> Self {
-    Self {
-      depth_fails_stencil_passes: op,
-      ..self
-    }
-  }
-
-  /// Set the [`StencilOp`] to do when both the depth test and stencil test pass:
-  pub fn on_depth_stencil_pass(self, op: StencilOp) -> Self {
-    Self {
-      depth_stencil_pass: op,
-      ..self
-    }
-  }
-}
-
-/// Default implementation for [`StencilOperations`]:
+/// Stencil test, either enabled with a [`Comparison`] function and reference / mask values, and operations, or
+/// disabled.
 ///
-/// - when depth test passes but stencil fail: [`StencilOp::Keep`].
-/// - when depth test fails but stencil passes: [`StencilOp::Keep`].
-/// - when both depth test and stencil test pass: [`StencilOp::Keep`].
-impl Default for StencilOperations {
-  fn default() -> Self {
-    Self {
-      depth_passes_stencil_fails: StencilOp::Keep,
-      depth_fails_stencil_passes: StencilOp::Keep,
-      depth_stencil_pass: StencilOp::Keep,
-    }
-  }
+/// If you disable depth test, fragments will always be blended, whatever the order in which they are written.
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
+pub enum StencilTest {
+  /// Stencil test is disabled.
+  Off,
+
+  /// Stencil test is enabled
+  On {
+    /// Comparison to apply to make a fragment pass the test.
+    comparison: Comparison,
+
+    /// Reference value for the comparison.
+    reference: u8,
+
+    /// The mask to apply on the fragment stencil value.
+    mask: u8,
+
+    /// Action to take when the depth test passes but not the stencil test.
+    depth_passes_stencil_fails: StencilOp,
+
+    /// Action to take when the stencil test passes but not the depth test.
+    depth_fails_stencil_passes: StencilOp,
+
+    /// Action to take when both the depth and stencil tests pass.
+    depth_stencil_pass: StencilOp,
+  },
 }
 
 /// Possible stencil operations.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub enum StencilOp {
   /// Keep the current value.
   Keep,

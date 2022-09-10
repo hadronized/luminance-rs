@@ -5,7 +5,7 @@
 //! [`Tess`]: crate::tess::Tess
 
 use crate::backend::tess_gate::TessGate as TessGateBackend;
-use crate::tess::{TessIndex, TessVertexData, TessView};
+use crate::vertex_entity::{TessIndex, TessVertexData, TessView};
 
 /// Tessellation gate.
 pub struct TessGate<'a, B>

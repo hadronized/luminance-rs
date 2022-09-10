@@ -3,27 +3,27 @@
 
 /// Face culling setup.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct FaceCulling {
-  /// Face culling order.
-  pub order: FaceCullingOrder,
-  /// Face culling mode.
-  pub mode: FaceCullingMode,
-}
+pub enum FaceCulling {
+  Off,
 
-impl FaceCulling {
-  /// Create a new [`FaceCulling`].
-  pub fn new(order: FaceCullingOrder, mode: FaceCullingMode) -> Self {
-    FaceCulling { order, mode }
-  }
+  On {
+    /// Face culling order.
+    order: FaceCullingOrder,
+    /// Face culling mode.
+    face: FaceCullingFace,
+  },
 }
 
 /// Default implementation of [`FaceCulling`].
 ///
 /// - Order is [`FaceCullingOrder::CCW`].
-/// - Mode is [`FaceCullingMode::Back`].
+/// - Face is [`FaceCullingFace::Back`].
 impl Default for FaceCulling {
   fn default() -> Self {
-    FaceCulling::new(FaceCullingOrder::CCW, FaceCullingMode::Back)
+    FaceCulling::On {
+      order: FaceCullingOrder::CCW,
+      face: FaceCullingFace::Back,
+    }
   }
 }
 
@@ -42,7 +42,7 @@ pub enum FaceCullingOrder {
 
 /// Side to show and side to cull.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum FaceCullingMode {
+pub enum FaceCullingFace {
   /// Cull the front side only.
   Front,
   /// Cull the back side only.

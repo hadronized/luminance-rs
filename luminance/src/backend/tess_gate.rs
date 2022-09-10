@@ -4,8 +4,8 @@
 //!
 //! A tessellation gate allows to render [`Tess`] objects.
 
-use crate::backend::tess::Tess;
-use crate::tess::{TessIndex, TessVertexData};
+use crate::backend::vertex_entity::Tess;
+use crate::vertex_entity::{TessIndex, TessVertexData};
 
 /// Trait to implement to be able to render [`Tess`] objects.
 ///

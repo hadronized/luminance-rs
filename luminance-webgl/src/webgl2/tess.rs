@@ -1,10 +1,10 @@
 //! WebGL2 tessellation implementation.
 
-use luminance::backend::tess::{
+use luminance::backend::vertex_entity::{
   IndexSlice as IndexSliceBackend, InstanceSlice as InstanceSliceBackend, Tess as TessBackend,
   VertexSlice as VertexSliceBackend,
 };
-use luminance::tess::{
+use luminance::vertex_entity::{
   Deinterleaved, DeinterleavedData, Interleaved, Mode, TessError, TessIndex, TessIndexType,
   TessMapError, TessVertexData,
 };

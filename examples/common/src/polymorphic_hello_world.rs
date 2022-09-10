@@ -14,14 +14,14 @@ use crate::{Example, InputAction, LoopFeedback, PlatformServices};
 use luminance::{
   backend::{
     framebuffer::FramebufferBackBuffer, pipeline::Pipeline, render_gate::RenderGate,
-    tess::Tess as TessBackend, tess_gate::TessGate,
+    vertex_entity::Tess as TessBackend, tess_gate::TessGate,
   },
   context::GraphicsContext,
   framebuffer::Framebuffer,
   pipeline::PipelineState,
   render_state::RenderState,
   shader::Program,
-  tess::{Deinterleaved, Interleaved, Mode, Tess},
+  vertex_entity::{Deinterleaved, Interleaved, Mode, Tess},
   texture::Dim2,
   Semantics, Vertex,
 };

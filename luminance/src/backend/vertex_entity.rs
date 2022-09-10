@@ -1,45 +1,7 @@
-//! Tessellation backend interface.
-//!
-//! This interface defines the low-level backends must implement to be usable.
-//!
-//! Tessellations are the way to gather _vertices_ and other various kind of information to draw shapes in framebuffers.
-//! They come with several concepts that are important to understand:
-//!
-//! - Memory layout: either [`Interleaved`] or [`Deinterleaved`].
-//! - Vertices. Vertices are passed to tessellations in a different way depending on the memory layout. Basically, for
-//!   the [`Interleaved`] memory layout, a single slice of vertices is needed. With [`Deinterleaved`], data must be
-//!   provided via different slices (one for each attribute).
-//! - Indices, which allow to index vertices, reducing the amount of data to send and prevent duplicates.
-//! - Primitive modes which connect vertices in specific ways (lines, line strips, triangles, etc.).
-//! - Instance data, which is vertex data associated with the tessellation but available only to specific instances.
-//!
-//! [`Interleaved`]: crate::tess::Interleaved
-//! [`Deinterleaved`]: crate::tess::Deinterleaved
-
 use std::ops::{Deref, DerefMut};
 
-use crate::tess::{Mode, TessError, TessIndex, TessMapError, TessVertexData};
+use crate::vertex_entity::{Mode, TessError, TessIndex, TessMapError, TessVertexData};
 
-/// Tessellation support on the backend.
-///
-/// This trait is a bit complex at first glance because of the number of type variables.
-///
-/// - `V` is the type of vertex, and requires the [`TessVertexData`] trait to be implemented with `S`. More on this
-///   below.
-/// - `I` is the type of index, and requires the [`TessIndex`] trait to be implemented.
-/// - `W` is the type of instance and also requires [`TessVertexData`]:
-/// - `S` is the storage type and acts as a marker for backends.
-///
-/// `S` is an important type variable here, because it gives the [`Tess`] its memory storage layout. You can use any
-/// type you want here but as a backend, you will want to implement [`Tess`] for `S` with the [`Interleaved`] and
-/// [`Deinterleaved`] types. Those two types are the ones used in the API, so the backends are expected to implement
-/// them.
-///
-/// You will want to have a look at [`TessVertexData`] and [`TessIndex`] to know how to make your vertex and index types
-/// compatible with [`Tess`].
-///
-/// [`Interleaved`]: crate::tess::Interleaved
-/// [`Deinterleaved`]: crate::tess::Deinterleaved
 pub unsafe trait Tess<V, I, W, S>
 where
   V: TessVertexData<S>,
