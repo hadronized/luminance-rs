@@ -1,7 +1,7 @@
 //! Implementation of the derive proc-macro for `RenderSlots`.
 
 use proc_macro::{Diagnostic, Level};
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{DeriveInput, Ident};
 
@@ -29,30 +29,30 @@ pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
         .fields
         .iter()
         .map(|field| {
-          let field_ident = field.ident.as_ref().expect("ident name").to_string();
+          let field_ident = field.ident.as_ref().expect("field ident");
+          let field_name = field_ident.to_string();
           let field_ty = &field.ty;
 
           let render_channel = quote! {
             luminance::render_channel::RenderChannel {
-              index: <#namespace as luminance::named_index::NamedIndex<#field_ident>>::INDEX,
-              name: #field_ident,
+              index: <#namespace as luminance::named_index::NamedIndex<#field_name>>::INDEX,
+              name: #field_name,
               ty: <#field_ty as luminance::render_channel::IsRenderChannelType>::CHANNEL_TY,
-              dim: <#field_ty as luminance::render_channel::IsRenderChannelType>::CHANNEL_DIM,
             }
           };
 
           let impl_has_field = quote! {
-            luminance::has_field::HasField<#field_ident> {
+            impl luminance::has_field::HasField<#field_name> for #type_ident {
               type FieldType = #field_ty;
             }
           };
 
           let has_field_trait_bound = quote! {
-            luminance::has_field::HasField<#field_ident, FieldType = #field_ty>
+            luminance::has_field::HasField<#field_name, FieldType = #field_ty>
           };
 
           let render_layer_field = quote! {
-            #field_ident: luminance::render_slots::RenderLayer<#field_ty>
+            pub #field_ident: luminance::render_slots::RenderLayer<#field_ty>
           };
 
           (
@@ -71,7 +71,7 @@ pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
       let field_idents = per_channel.iter().map(|f| &f.4);
 
       let channels_count = data.fields.len();
-      let render_layers_ty = format!("{}RenderLayers", type_ident);
+      let render_layers_ty = Ident::new(&format!("{}RenderLayers", type_ident), Span::call_site());
 
       quote! {
         // implement HasField for all the fields
@@ -99,15 +99,19 @@ pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
             #channels_count
           }
 
-          unsafe fn new_render_layers<B, D>(backend: &mut B, size: D::Size) -> Result<Self::RenderLayers, B::Err>
+          unsafe fn new_render_layers<B, D>(
+            backend: &mut B,
+            size: D::Size
+          ) -> Result<Self::RenderLayers, B::Err>
           where
-            B: Backend,
-            D: Dimensionable,
+            B: luminance::backend::Backend,
+            D: luminance::dim::Dimensionable,
           {
-            let layers =
+            Ok(
               #render_layers_ty {
-                #( #field_idents: backend.new_render_layer(size) ),*
-              };
+                #( #field_idents: backend.new_render_layer::<D, _>(size)? ),*
+              }
+            )
           }
         }
       }

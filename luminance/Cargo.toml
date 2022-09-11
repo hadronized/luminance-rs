@@ -23,3 +23,6 @@ derive = ["luminance-derive"]
 [dependencies]
 luminance-derive = { version = "0.11.0-dev", path = "../luminance-derive", optional = true }
 mint = { version = "0.5.9", optional = true }
+
+[dev-dependencies]
+mint = "0.5.9"

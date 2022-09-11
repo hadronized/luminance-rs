@@ -4,7 +4,7 @@
 use luminance::{
   has_field::HasField,
   namespace,
-  vertex::{CompatibleVertex, Vertex as _, VertexAttrib, VertexInstancing},
+  vertex::{CompatibleVertex, Vertex as _, VertexAttrib, VertexBufferDesc, VertexInstancing},
   Vertex,
 };
 
@@ -30,13 +30,13 @@ fn vertex_desc() {
       VertexInstancing::Off,
       <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_DESC,
     ),
-    VertexComponent::new(
+    VertexBufferDesc::new(
       1,
       "nor",
       VertexInstancing::Off,
       <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_DESC,
     ),
-    VertexComponent::new(
+    VertexBufferDesc::new(
       2,
       "col",
       VertexInstancing::Off,

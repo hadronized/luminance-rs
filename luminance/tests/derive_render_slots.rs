@@ -1,3 +1,4 @@
+#![cfg(all(feature = "derive", feature = "mint"))]
 #![allow(incomplete_features)]
 #![feature(adt_const_params)]
 
@@ -12,6 +13,7 @@ use luminance::{
 namespace! {
   Namespace = { "_diffuse", "_normal", "_test" }
 }
+
 #[derive(RenderSlots)]
 #[slot(namespace = "Namespace")]
 struct Slots {
@@ -21,6 +23,7 @@ struct Slots {
 }
 
 #[derive(RenderSlots)]
+#[slot(namespace = "Namespace")]
 struct Slots1 {
   _diffuse: mint::Vector3<f32>,
 }
@@ -32,16 +35,19 @@ fn render_slots_channels() {
     &[
       RenderChannel {
         index: 0,
-        name: "_color",
-        ty: RenderChannelType::Floating,
-        dim: RenderChannelDim::Dim3
+        name: "_diffuse",
+        ty: RenderChannelType::Floating(RenderChannelDim::Dim3),
       },
       RenderChannel {
         index: 1,
+        name: "_normal",
+        ty: RenderChannelType::Floating(RenderChannelDim::Dim3),
+      },
+      RenderChannel {
+        index: 2,
         name: "_test",
-        ty: RenderChannelType::Floating,
-        dim: RenderChannelDim::Dim1
-      }
+        ty: RenderChannelType::Floating(RenderChannelDim::Dim1),
+      },
     ]
   );
 }
