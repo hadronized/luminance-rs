@@ -1,6 +1,10 @@
 use std::marker::PhantomData;
 
-use crate::{backend::Backend, dim::Dimensionable, render_channel::RenderChannel};
+use crate::{
+  backend::Backend,
+  dim::Dimensionable,
+  render_channel::{DepthChannelType, IsDepthChannelType, RenderChannel},
+};
 
 /// Render slots.
 ///
@@ -61,5 +65,56 @@ impl<RC> RenderLayer<RC> {
 
   pub fn handle(&self) -> usize {
     self.handle
+  }
+}
+
+pub trait DepthRenderSlot {
+  type DepthRenderLayer;
+
+  const DEPTH_CHANNEL_TY: Option<DepthChannelType>;
+
+  unsafe fn new_depth_render_layer<B, D>(
+    backend: &mut B,
+    size: D::Size,
+  ) -> Result<Self::DepthRenderLayer, B::Err>
+  where
+    B: Backend,
+    D: Dimensionable;
+}
+
+impl DepthRenderSlot for () {
+  type DepthRenderLayer = ();
+
+  const DEPTH_CHANNEL_TY: Option<DepthChannelType> = None;
+
+  unsafe fn new_depth_render_layer<B, D>(
+    _: &mut B,
+    _: D::Size,
+  ) -> Result<Self::DepthRenderLayer, B::Err>
+  where
+    B: Backend,
+    D: Dimensionable,
+  {
+    Ok(())
+  }
+}
+
+impl<RC> DepthRenderSlot for RC
+where
+  RC: IsDepthChannelType,
+{
+  type DepthRenderLayer = RenderLayer<RC>;
+
+  const DEPTH_CHANNEL_TY: Option<DepthChannelType> = Some(RC::CHANNEL_TY);
+
+  unsafe fn new_depth_render_layer<B, D>(
+    backend: &mut B,
+    size: D::Size,
+  ) -> Result<Self::DepthRenderLayer, B::Err>
+  where
+    B: Backend,
+    D: Dimensionable,
+  {
+    Ok(backend.new_depth_render_layer::<D, _>(size)?)
   }
 }

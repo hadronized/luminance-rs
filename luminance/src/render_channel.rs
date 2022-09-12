@@ -59,20 +59,6 @@ impl_IsRenderChannelType!(mint::Vector4<f32>, Floating, Dim4);
 #[cfg(feature = "mint")]
 impl_IsRenderChannelType!(mint::Vector4<bool>, Boolean, Dim4);
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub struct Depth32F;
-
-impl IsRenderChannelType for Depth32F {
-  const CHANNEL_TY: RenderChannelType = RenderChannelType::Depth(DepthChannelDim::Depth32F);
-}
-
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub struct Depth24FStencil8;
-
-impl IsRenderChannelType for Depth24FStencil8 {
-  const CHANNEL_TY: RenderChannelType = RenderChannelType::Depth(DepthChannelDim::Depth24FStencil8);
-}
-
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum RenderChannelType {
   /// An integral type.
@@ -90,15 +76,10 @@ pub enum RenderChannelType {
 
   /// A boolean integral type.
   Boolean(RenderChannelDim),
-
-  /// A depth/stencil type.
-  Depth(DepthChannelDim),
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum DepthChannelDim {
-  Depth32F,
-  Depth24FStencil8,
+pub trait IsDepthChannelType {
+  const CHANNEL_TY: DepthChannelType;
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -107,4 +88,24 @@ pub enum RenderChannelDim {
   Dim2,
   Dim3,
   Dim4,
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum DepthChannelType {
+  Depth32F,
+  Depth24FStencil8,
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct Depth32F;
+
+impl IsDepthChannelType for Depth32F {
+  const CHANNEL_TY: DepthChannelType = DepthChannelType::Depth32F;
+}
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct Depth24FStencil8;
+
+impl IsDepthChannelType for Depth24FStencil8 {
+  const CHANNEL_TY: DepthChannelType = DepthChannelType::Depth24FStencil8;
 }

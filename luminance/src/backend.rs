@@ -3,8 +3,8 @@
 use crate::{
   dim::Dimensionable,
   framebuffer::Framebuffer,
-  render_channel::IsRenderChannelType,
-  render_slots::{RenderLayer, RenderSlots},
+  render_channel::{IsDepthChannelType, IsRenderChannelType},
+  render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
   vertex::Vertex,
   vertex_entity::{Indices, VertexEntity, Vertices},
   vertex_storage::VertexStorage,
@@ -82,11 +82,20 @@ pub unsafe trait Backend {
     D: Dimensionable,
     RC: IsRenderChannelType;
 
-  unsafe fn new_framebuffer<D, RS>(
+  unsafe fn new_depth_render_layer<D, DC>(
     &mut self,
     size: D::Size,
-  ) -> Result<Framebuffer<D, RS>, Self::Err>
+  ) -> Result<RenderLayer<DC>, Self::Err>
   where
     D: Dimensionable,
-    RS: RenderSlots;
+    DC: IsDepthChannelType;
+
+  unsafe fn new_framebuffer<D, RS, DS>(
+    &mut self,
+    size: D::Size,
+  ) -> Result<Framebuffer<D, RS, DS>, Self::Err>
+  where
+    D: Dimensionable,
+    RS: RenderSlots,
+    DS: DepthRenderSlot;
 }
