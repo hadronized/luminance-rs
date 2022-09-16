@@ -25,7 +25,7 @@ pub mod pixel;
 pub mod dim;
 pub mod render_state;
 pub mod scissor;
-// pub mod shader;
+pub mod shader;
 // pub mod shading_gate;
 // pub mod tess_gate;
 // pub mod texture;

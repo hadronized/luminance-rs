@@ -1,5 +1,10 @@
 use crate::{
   backend::Backend,
+  dim::Dimensionable,
+  framebuffer::Framebuffer,
+  primitive::Primitive,
+  render_slots::{DepthRenderSlot, RenderSlots},
+  shader::{FromEnv, Program, ProgramBuilder, ProgramUpdate},
   vertex::Vertex,
   vertex_entity::{Indices, VertexEntity, Vertices},
   vertex_storage::VertexStorage,
@@ -84,5 +89,39 @@ where
     DS: DepthRenderSlot,
   {
     unsafe { self.backend.new_framebuffer(size) }
+  }
+
+  pub fn new_program<V, W, P, Q, S, E>(
+    &mut self,
+    builder: ProgramBuilder<V, W, P, Q, S, E>,
+  ) -> Result<Program<V, P, S, E>, B::Err>
+  where
+    V: Vertex,
+    W: Vertex,
+    P: Primitive<Vertex = W>,
+    Q: Primitive,
+    S: RenderSlots,
+    E: FromEnv,
+  {
+    unsafe {
+      self.backend.new_program(
+        builder.vertex_code,
+        builder.primitive_code,
+        builder.shading_code,
+      )
+    }
+  }
+
+  pub fn update_program<'a, V, P, S, E>(
+    &'a mut self,
+    program: &Program<V, P, S, E>,
+    updater: impl FnOnce(ProgramUpdate<'a, B>, &E) -> Result<(), B::Err>,
+  ) -> Result<(), B::Err> {
+    let program_update = ProgramUpdate {
+      backend: &mut self.backend,
+      program_handle: program.handle(),
+    };
+
+    updater(program_update, &program.environment)
   }
 }

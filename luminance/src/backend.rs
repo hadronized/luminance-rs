@@ -3,21 +3,14 @@
 use crate::{
   dim::Dimensionable,
   framebuffer::Framebuffer,
+  primitive::Primitive,
   render_channel::{IsDepthChannelType, IsRenderChannelType},
   render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
+  shader::{Env, FromEnv, IsEnv, IsSharedEnv, Program, SharedEnv},
   vertex::Vertex,
   vertex_entity::{Indices, VertexEntity, Vertices},
   vertex_storage::VertexStorage,
 };
-
-// pub mod framebuffer;
-// pub mod pipeline;
-// pub mod query;
-// pub mod render_gate;
-// pub mod shader;
-// pub mod shading_gate;
-// pub mod tess_gate;
-// pub mod texture;
 
 pub unsafe trait Backend {
   type Err;
@@ -98,4 +91,41 @@ pub unsafe trait Backend {
     D: Dimensionable,
     RS: RenderSlots,
     DS: DepthRenderSlot;
+
+  unsafe fn new_program<V, P, S, E>(
+    &mut self,
+    vertex_code: String,
+    primitive_code: String,
+    shading_code: String,
+  ) -> Result<Program<V, P, S, E>, Self::Err>
+  where
+    V: Vertex,
+    P: Primitive,
+    S: RenderSlots,
+    E: FromEnv;
+
+  unsafe fn new_shader_env<T>(
+    &mut self,
+    program_handle: usize,
+    name: &str,
+  ) -> Result<Env<T>, Self::Err>
+  where
+    T: IsEnv;
+
+  unsafe fn set_program_env<T>(
+    &mut self,
+    program_handle: usize,
+    env_handle: usize,
+    value: T,
+  ) -> Result<(), Self::Err>
+  where
+    T: IsEnv;
+
+  unsafe fn new_shader_shared_env<T>(
+    &mut self,
+    program_handle: usize,
+    name: &str,
+  ) -> Result<SharedEnv<T>, Self::Err>
+  where
+    T: IsSharedEnv;
 }
