@@ -73,4 +73,16 @@ where
   {
     unsafe { self.backend.vertex_entity_update_indices(entity, indices) }
   }
+
+  pub fn new_framebuffer<D, RS, DS>(
+    &mut self,
+    size: D::Size,
+  ) -> Result<Framebuffer<D, RS, DS>, B::Err>
+  where
+    D: Dimensionable,
+    RS: RenderSlots,
+    DS: DepthRenderSlot,
+  {
+    unsafe { self.backend.new_framebuffer(size) }
+  }
 }
