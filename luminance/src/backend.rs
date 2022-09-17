@@ -12,9 +12,15 @@ use crate::{
   vertex_storage::VertexStorage,
 };
 
-pub unsafe trait Backend {
-  type Err;
+pub trait Backend: BackendErr + VertexEntityBackend + FramebufferBackend + ShaderBackend {}
 
+impl<B> Backend for B where B: BackendErr + VertexEntityBackend + FramebufferBackend + ShaderBackend {}
+
+pub unsafe trait BackendErr {
+  type Err;
+}
+
+pub unsafe trait VertexEntityBackend: BackendErr {
   unsafe fn new_vertex_entity<V, S, I>(
     &mut self,
     storage: S,
@@ -69,7 +75,9 @@ pub unsafe trait Backend {
   where
     V: Vertex,
     S: VertexStorage<V>;
+}
 
+pub unsafe trait FramebufferBackend: BackendErr {
   unsafe fn new_render_layer<D, RC>(&mut self, size: D::Size) -> Result<RenderLayer<RC>, Self::Err>
   where
     D: Dimensionable,
@@ -91,7 +99,9 @@ pub unsafe trait Backend {
     D: Dimensionable,
     RS: RenderSlots,
     DS: DepthRenderSlot;
+}
 
+pub unsafe trait ShaderBackend: BackendErr {
   unsafe fn new_program<V, P, S, E>(
     &mut self,
     vertex_code: String,
