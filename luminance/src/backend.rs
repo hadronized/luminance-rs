@@ -14,9 +14,15 @@ use crate::{
   vertex_storage::VertexStorage,
 };
 
-pub trait Backend: BackendErr + VertexEntityBackend + FramebufferBackend + ShaderBackend {}
+pub trait Backend:
+  BackendErr + VertexEntityBackend + FramebufferBackend + ShaderBackend + PipelineBackend
+{
+}
 
-impl<B> Backend for B where B: BackendErr + VertexEntityBackend + FramebufferBackend + ShaderBackend {}
+impl<B> Backend for B where
+  B: BackendErr + VertexEntityBackend + FramebufferBackend + ShaderBackend + PipelineBackend
+{
+}
 
 pub unsafe trait BackendErr {
   type Err;

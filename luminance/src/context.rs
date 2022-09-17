@@ -2,6 +2,7 @@ use crate::{
   backend::Backend,
   dim::Dimensionable,
   framebuffer::Framebuffer,
+  pipeline::{PipelineState, WithFramebuffer},
   primitive::Primitive,
   render_slots::{DepthRenderSlot, RenderSlots},
   shader::{FromEnv, Program, ProgramBuilder, ProgramUpdate},
@@ -123,5 +124,20 @@ where
     };
 
     updater(program_update, &program.environment)
+  }
+
+  pub fn with_framebuffer<'a, D, CS, DS, Err>(
+    &'a mut self,
+    framebuffer: &Framebuffer<D, CS, DS>,
+    state: &PipelineState,
+    f: impl FnOnce(WithFramebuffer<'a, B, CS>) -> Result<(), Err>,
+  ) -> Result<(), B::Err>
+  where
+    D: Dimensionable,
+    CS: RenderSlots,
+    DS: DepthRenderSlot,
+    Err: From<B::Err>,
+  {
+    unsafe { self.backend.with_framebuffer(framebuffer, state, f) }
   }
 }
