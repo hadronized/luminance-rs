@@ -3,12 +3,14 @@
 use crate::{
   dim::Dimensionable,
   framebuffer::Framebuffer,
+  pipeline::{PipelineState, WithFramebuffer, WithProgram, WithRenderState},
   primitive::Primitive,
   render_channel::{IsDepthChannelType, IsRenderChannelType},
   render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
+  render_state::RenderState,
   shader::{Env, FromEnv, IsEnv, IsSharedEnv, Program, SharedEnv},
   vertex::Vertex,
-  vertex_entity::{Indices, VertexEntity, Vertices},
+  vertex_entity::{Indices, VertexEntity, VertexEntityView, Vertices},
   vertex_storage::VertexStorage,
 };
 
@@ -138,4 +140,43 @@ pub unsafe trait ShaderBackend: BackendErr {
   ) -> Result<SharedEnv<T>, Self::Err>
   where
     T: IsSharedEnv;
+}
+
+pub unsafe trait PipelineBackend: BackendErr {
+  unsafe fn with_framebuffer<'a, D, CS, DS, Err>(
+    &'a mut self,
+    framebuffer: &Framebuffer<D, CS, DS>,
+    state: &PipelineState,
+    f: impl FnOnce(WithFramebuffer<'a, Self, CS>) -> Result<(), Err>,
+  ) -> Result<(), Self::Err>
+  where
+    D: Dimensionable,
+    CS: RenderSlots,
+    DS: DepthRenderSlot,
+    Err: From<Self::Err>;
+
+  unsafe fn with_program<'a, V, P, S, E, Err>(
+    &'a mut self,
+    program: &Program<V, P, S, E>,
+    f: impl FnOnce(WithProgram<'a, Self, V, P, S, E>) -> Result<(), Err>,
+  ) -> Result<(), Self::Err>
+  where
+    V: Vertex,
+    P: Primitive,
+    S: RenderSlots,
+    E: FromEnv,
+    Err: From<Self::Err>;
+
+  unsafe fn with_render_state<'a, V, Err>(
+    &'a mut self,
+    render_state: &RenderState,
+    f: impl FnOnce(WithRenderState<'a, Self, V>) -> Result<(), Err>,
+  ) -> Result<(), Self::Err>
+  where
+    V: Vertex,
+    Err: From<Self::Err>;
+
+  unsafe fn render_vertex_entity<V>(&mut self, view: VertexEntityView<V>) -> Result<(), Self::Err>
+  where
+    V: Vertex;
 }

@@ -83,3 +83,49 @@ impl<'a> DerefMut for Indices<'a> {
     self.indices
   }
 }
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct VertexEntityView<V> {
+  vertex_entity_handle: usize,
+
+  /// First vertex to start rendering from.
+  start_vertex: usize,
+
+  /// How many vertices to render.
+  vertex_count: usize,
+
+  /// How many instances to render.
+  instance_count: usize,
+
+  _phantom: PhantomData<*const V>,
+}
+
+impl<V> VertexEntityView<V> {
+  pub fn new<S>(entity: &VertexEntity<V, S>) -> Self {
+    let vertex_entity_handle = entity.handle;
+    let vertex_count = entity.vertex_count;
+    let instance_count = entity.instance_count;
+
+    Self {
+      vertex_entity_handle,
+      start_vertex: 0,
+      vertex_count,
+      instance_count,
+      _phantom: PhantomData,
+    }
+  }
+  pub fn start_vertex(mut self, start_vertex: usize) -> Self {
+    self.start_vertex = start_vertex;
+    self
+  }
+
+  pub fn vertex_count(mut self, count: usize) -> Self {
+    self.vertex_count = count;
+    self
+  }
+
+  pub fn instance_count(mut self, count: usize) -> Self {
+    self.instance_count = count;
+    self
+  }
+}
