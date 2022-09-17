@@ -251,10 +251,17 @@ macro_rules! impl_vertex_attribute {
 
   ($t:ty, $attr_ty:expr) => {
     impl_vertex_attribute!($t, $t, $attr_ty, VertexAttribDim::Dim1);
-    impl_vertex_attribute!([$t; 1], $t, $attr_ty, VertexAttribDim::Dim1);
+
     impl_vertex_attribute!([$t; 2], $t, $attr_ty, VertexAttribDim::Dim2);
     impl_vertex_attribute!([$t; 3], $t, $attr_ty, VertexAttribDim::Dim3);
     impl_vertex_attribute!([$t; 4], $t, $attr_ty, VertexAttribDim::Dim4);
+
+    #[cfg(feature = "mint")]
+    impl_vertex_attribute!(mint::Vector2<$t>, $t, $attr_ty, VertexAttribDim::Dim2);
+    #[cfg(feature = "mint")]
+    impl_vertex_attribute!(mint::Vector3<$t>, $t, $attr_ty, VertexAttribDim::Dim3);
+    #[cfg(feature = "mint")]
+    impl_vertex_attribute!(mint::Vector4<$t>, $t, $attr_ty, VertexAttribDim::Dim4);
   };
 }
 

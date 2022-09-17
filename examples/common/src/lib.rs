@@ -21,35 +21,33 @@
 //! - If you want to write solid and smart Rust code, you want to handle errors, not rely on panics.
 //! - This is example code, so don’t blindly copy it, try to understand it first.
 
+use luminance::{
+  backend::Backend, context::Context, dim::Dim2, framebuffer::Framebuffer,
+  render_slots::RenderSlots,
+};
 use std::error::Error;
 
-use luminance::{
-  backend::framebuffer::FramebufferBackBuffer, context::GraphicsContext, framebuffer::Framebuffer,
-  texture::Dim2,
-};
-use luminance_front::Backend;
-
 // examples
-pub mod attributeless;
-pub mod displacement_map;
-pub mod dynamic_uniform_interface;
+// pub mod attributeless;
+// pub mod displacement_map;
+// pub mod dynamic_uniform_interface;
 pub mod hello_world;
-pub mod interactive_triangle;
-pub mod mrt;
-pub mod offscreen;
-pub mod polymorphic_hello_world;
-pub mod query_info;
-pub mod query_texture_texels;
-pub mod render_state;
-pub mod shader_data;
-pub mod shader_uniform_adapt;
-pub mod shader_uniforms;
+// pub mod interactive_triangle;
+// pub mod mrt;
+// pub mod offscreen;
+// pub mod polymorphic_hello_world;
+// pub mod query_info;
+// pub mod query_texture_texels;
+// pub mod render_state;
+// pub mod shader_data;
+// pub mod shader_uniform_adapt;
+// pub mod shader_uniforms;
 pub mod shared;
-pub mod skybox;
-pub mod sliced_tess;
-pub mod stencil;
-pub mod texture;
-pub mod vertex_instancing;
+// pub mod skybox;
+// pub mod sliced_tess;
+// pub mod stencil;
+// pub mod texture;
+// pub mod vertex_instancing;
 
 // functional tests
 #[cfg(feature = "funtest")]
@@ -68,24 +66,28 @@ pub mod funtest_scissor_test;
 pub mod funtest_tess_no_data;
 
 /// Example interface.
-pub trait Example<B = Backend>: Sized
-where
-  B: FramebufferBackBuffer,
-{
+pub trait Example: Sized {
+  type Err;
+
   /// Bootstrap the example.
-  fn bootstrap(
+  fn bootstrap<B>(
     platform: &mut impl PlatformServices,
-    context: &mut impl GraphicsContext<Backend = B>,
-  ) -> Self;
+    context: &mut Context<B>,
+  ) -> Result<Self, Self::Err>
+  where
+    B: Backend,
+    Self::Err: From<B::Err>;
 
   /// Render a frame of the example.
-  fn render_frame(
+  fn render_frame<B>(
     self,
     time: f32,
-    back_buffer: Framebuffer<B, Dim2, (), ()>,
     actions: impl Iterator<Item = InputAction>,
-    context: &mut impl GraphicsContext<Backend = B>,
-  ) -> LoopFeedback<Self>;
+    context: &mut Context<B>,
+  ) -> LoopFeedback<Self, Self::Err>
+  where
+    B: Backend,
+    Self::Err: From<B::Err>;
 }
 
 /// A type used to pass “inputs” to examples.
@@ -138,9 +140,10 @@ pub enum InputAction {
 }
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
-pub enum LoopFeedback<T> {
+pub enum LoopFeedback<T, E> {
   Continue(T),
   Exit,
+  ExitWithError(E),
 }
 
 /// Various services provided by the platform.

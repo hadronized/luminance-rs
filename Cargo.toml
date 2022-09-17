@@ -1,7 +1,7 @@
 [workspace]
 
 members = [
-  # "examples/common",
+  "examples/common",
   # "examples/desktop",
   # "examples/web",
   "luminance",
@@ -17,7 +17,7 @@ members = [
 ]
 
 default-members = [
-  # "examples/common",
+  "examples/common",
   # "examples/desktop",
   "luminance",
   "luminance-derive",

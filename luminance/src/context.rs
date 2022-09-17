@@ -92,6 +92,15 @@ where
     unsafe { self.backend.new_framebuffer(size) }
   }
 
+  pub fn back_buffer<D, RS, DS>(&mut self, size: D::Size) -> Result<Framebuffer<D, RS, DS>, B::Err>
+  where
+    D: Dimensionable,
+    RS: RenderSlots,
+    DS: DepthRenderSlot,
+  {
+    unsafe { self.backend.back_buffer(size) }
+  }
+
   pub fn new_program<V, W, P, Q, S, E>(
     &mut self,
     builder: ProgramBuilder<V, W, P, Q, S, E>,

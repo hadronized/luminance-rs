@@ -43,6 +43,10 @@ impl<V, S> VertexEntity<V, S> {
   pub fn instance_count(&self) -> usize {
     self.instance_count
   }
+
+  pub fn view(&self) -> VertexEntityView<V> {
+    VertexEntityView::new(self)
+  }
 }
 
 #[derive(Debug)]

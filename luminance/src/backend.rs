@@ -107,6 +107,15 @@ pub unsafe trait FramebufferBackend: BackendErr {
     D: Dimensionable,
     RS: RenderSlots,
     DS: DepthRenderSlot;
+
+  unsafe fn back_buffer<D, RS, DS>(
+    &mut self,
+    size: D::Size,
+  ) -> Result<Framebuffer<D, RS, DS>, Self::Err>
+  where
+    D: Dimensionable,
+    RS: RenderSlots,
+    DS: DepthRenderSlot;
 }
 
 pub unsafe trait ShaderBackend: BackendErr {

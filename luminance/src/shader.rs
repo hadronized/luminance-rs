@@ -49,6 +49,18 @@ impl<V, W, S, E> ProgramBuilder<V, W, (), (), S, E> {
       _phantom: PhantomData,
     }
   }
+
+  pub fn no_primitive_stage<P>(self) -> ProgramBuilder<V, W, P, P, S, E>
+  where
+    P: Primitive<Vertex = W>,
+  {
+    ProgramBuilder {
+      vertex_code: self.vertex_code,
+      primitive_code: String::new(),
+      shading_code: self.shading_code,
+      _phantom: PhantomData,
+    }
+  }
 }
 
 impl<V, W, P, Q, E> ProgramBuilder<V, W, P, Q, (), E> {
@@ -233,6 +245,15 @@ pub trait FromEnv: Sized {
   fn from_env<B>(backend: &mut B, program_handle: usize) -> Result<Self, B::Err>
   where
     B: Backend;
+}
+
+impl FromEnv for () {
+  fn from_env<B>(_: &mut B, _: usize) -> Result<Self, B::Err>
+  where
+    B: Backend,
+  {
+    Ok(())
+  }
 }
 
 pub struct SharedEnv<T> {

@@ -6,6 +6,15 @@ pub trait NamedIndex<const NAME: &'static str> {
 
 #[macro_export]
 macro_rules! namespace {
+  ($namespace:ident = { $first:literal }) => {
+    #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+    pub struct $namespace;
+
+    impl $crate::named_index::NamedIndex<$first> for $namespace {
+      const INDEX: usize = 0;
+    }
+  };
+
   ($namespace:ident = { $first:literal, $($rest:tt)* }) => {
     #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     pub struct $namespace;
