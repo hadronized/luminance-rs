@@ -102,7 +102,7 @@ pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
           unsafe fn new_render_layers<B, D>(
             backend: &mut B,
             size: D::Size
-          ) -> Result<Self::RenderLayers, B::Err>
+          ) -> Result<Self::RenderLayers, luminance::backend::FramebufferError>
           where
             B: luminance::backend::Backend,
             D: luminance::dim::Dimensionable,

@@ -16,7 +16,6 @@ use luminance::{
   namespace,
   pipeline::PipelineState,
   primitive::Triangle,
-  render_slots::RenderSlots,
   render_state::RenderState,
   shader::{Program, ProgramBuilder, Stage},
   vertex_entity::VertexEntity,
@@ -58,43 +57,82 @@ struct Vertex {
 }
 
 impl Vertex {
-  fn new(pos: impl Into<mint::Vector2<f32>>, rgb: impl Into<mint::Vector3<u8>>) -> Self {
-    Self {
-      pos: pos.into(),
-      rgb: rgb.into(),
-    }
+  const fn new(pos: mint::Vector2<f32>, rgb: mint::Vector3<u8>) -> Self {
+    Self { pos, rgb }
   }
 }
 
 // The vertices. We define two triangles.
 const TRI_VERTICES: [Vertex; 6] = [
   // First triangle – an RGB one.
-  Vertex::new([0.5, -0.5], [0, 255, 0]),
-  Vertex::new([0.0, 0.5], [0, 0, 255]),
-  Vertex::new([-0.5, -0.5], [255, 0, 0]),
+  Vertex::new(
+    mint::Vector2 { x: 0.5, y: -0.5 },
+    mint::Vector3 { x: 0, y: 255, z: 0 },
+  ),
+  Vertex::new(
+    mint::Vector2 { x: 0.0, y: 0.5 },
+    mint::Vector3 { x: 0, y: 0, z: 255 },
+  ),
+  Vertex::new(
+    mint::Vector2 { x: -0.5, y: -0.5 },
+    mint::Vector3 { x: 255, y: 0, z: 0 },
+  ),
   // Second triangle, a purple one, positioned differently.
-  Vertex::new([-0.5, 0.5], [255, 51, 255]),
-  Vertex::new([0.0, -0.5], [51, 255, 255]),
-  Vertex::new([0.5, 0.5], [51, 51, 255]),
+  Vertex::new(
+    mint::Vector2 { x: -0.5, y: 0.5 },
+    mint::Vector3 {
+      x: 255,
+      y: 51,
+      z: 255,
+    },
+  ),
+  Vertex::new(
+    mint::Vector2 { x: 0.0, y: -0.5 },
+    mint::Vector3 {
+      x: 51,
+      y: 255,
+      z: 255,
+    },
+  ),
+  Vertex::new(
+    mint::Vector2 { x: 0.5, y: 0.5 },
+    mint::Vector3 {
+      x: 51,
+      y: 51,
+      z: 255,
+    },
+  ),
 ];
 
 // The vertices, deinterleaved versions. We still define two triangles.
 const TRI_DEINT_POS_VERTICES: &[mint::Vector2<f32>] = &[
-  [0.5, -0.5].into(),
-  [0.0, 0.5].into(),
-  [-0.5, -0.5].into(),
-  [-0.5, 0.5].into(),
-  [0.0, -0.5].into(),
-  [0.5, 0.5].into(),
+  mint::Vector2 { x: 0.5, y: -0.5 },
+  mint::Vector2 { x: 0.0, y: 0.5 },
+  mint::Vector2 { x: -0.5, y: -0.5 },
+  mint::Vector2 { x: -0.5, y: 0.5 },
+  mint::Vector2 { x: 0.0, y: -0.5 },
+  mint::Vector2 { x: 0.5, y: 0.5 },
 ];
 
 const TRI_DEINT_COLOR_VERTICES: &[mint::Vector3<u8>] = &[
-  [0, 255, 0].into(),
-  [0, 0, 255].into(),
-  [255, 0, 0].into(),
-  [255, 51, 255].into(),
-  [51, 255, 255].into(),
-  [51, 51, 255].into(),
+  mint::Vector3 { x: 0, y: 255, z: 0 },
+  mint::Vector3 { x: 0, y: 0, z: 255 },
+  mint::Vector3 { x: 255, y: 0, z: 0 },
+  mint::Vector3 {
+    x: 255,
+    y: 51,
+    z: 255,
+  },
+  mint::Vector3 {
+    x: 51,
+    y: 255,
+    z: 255,
+  },
+  mint::Vector3 {
+    x: 51,
+    y: 51,
+    z: 255,
+  },
 ];
 
 // Indices into TRI_VERTICES to use to build up the triangles.
@@ -153,12 +191,14 @@ pub struct LocalExample {
 }
 
 impl Example for LocalExample {
-  type Err = ();
+  type Err = luminance::backend::Error;
 
-  fn bootstrap<B>(_platform: &mut impl PlatformServices, context: &mut Context<E>) -> Self
+  fn bootstrap(
+    _platform: &mut impl PlatformServices,
+    context: &mut Context<impl Backend>,
+  ) -> Result<Self, Self::Err>
   where
-    B: Backend,
-    Self::Err: From<B::Err>,
+    Self::Err: From<luminance::backend::Error>,
   {
     // We need a program to “shade” our triangles
     let program = context
@@ -181,7 +221,7 @@ impl Example for LocalExample {
     // vertices on more complex objects than just two triangles).
     let indexed_triangles = context
       .new_vertex_entity(
-        Interleaved::new().set_vertices(&TRI_VERTICES),
+        Interleaved::new().set_vertices(&TRI_VERTICES[..]),
         &TRI_INDICES[..],
       )
       .unwrap();
@@ -211,7 +251,7 @@ impl Example for LocalExample {
 
     let back_buffer = context.back_buffer(Size2::new(800, 600)).unwrap();
 
-    Self {
+    Ok(Self {
       back_buffer,
       program,
       direct_triangles,
@@ -219,7 +259,7 @@ impl Example for LocalExample {
       direct_deinterleaved_triangles,
       indexed_deinterleaved_triangles,
       method,
-    }
+    })
   }
 
   fn render_frame(
@@ -227,10 +267,10 @@ impl Example for LocalExample {
     _time_ms: f32,
     actions: impl Iterator<Item = InputAction>,
     context: &mut Context<impl Backend>,
-  ) -> LoopFeedback<Self> {
+  ) -> Result<LoopFeedback<Self>, Self::Err> {
     for action in actions {
       match action {
-        InputAction::Quit => return LoopFeedback::Exit,
+        InputAction::Quit => return Ok(LoopFeedback::Exit),
 
         InputAction::MainToggle => {
           self.method = self.method.toggle();
@@ -241,28 +281,34 @@ impl Example for LocalExample {
       }
     }
 
-    let rendered =
-      context.with_framebuffer(&self.back_buffer, &PipelineState::default(), |pipeline| {
-        pipeline.with_program(&self.program, |pipeline| {
-          pipeline.with_render_state(&RenderState::default(), |pipeline| match self.method {
-            Method::Direct => pipeline.render_vertex_entity(self.direct_triangles.view()),
-            Method::Indexed => pipeline.render_vertex_entity(self.indexed_triangles.view()),
-            Method::DirectDeinterleaved => {
-              pipeline.render_vertex_entity(self.direct_deinterleaved_triangles.view())
-            }
-            Method::IndexedDeinterleaved => {
-              pipeline.render_vertex_entity(self.indexed_deinterleaved_triangles.view())
-            }
-          })
+    context.with_framebuffer(
+      &self.back_buffer,
+      &PipelineState::default(),
+      |mut with_framebuffer| {
+        with_framebuffer.with_program(&self.program, |mut with_program| {
+          with_program.with_render_state(
+            &RenderState::default(),
+            |mut with_render_state| match self.method {
+              Method::Direct => {
+                with_render_state.render_vertex_entity(self.direct_triangles.view())
+              }
+              Method::Indexed => {
+                with_render_state.render_vertex_entity(self.indexed_triangles.view())
+              }
+              Method::DirectDeinterleaved => {
+                with_render_state.render_vertex_entity(self.direct_deinterleaved_triangles.view())
+              }
+              Method::IndexedDeinterleaved => {
+                with_render_state.render_vertex_entity(self.indexed_deinterleaved_triangles.view())
+              }
+            },
+          )
         })
-      });
+      },
+    )?;
 
     // Finally, swap the backbuffer with the frontbuffer in order to render our triangles onto your
     // screen.
-    if rendered.is_ok() {
-      LoopFeedback::Continue(self)
-    } else {
-      LoopFeedback::Exit
-    }
+    Ok(LoopFeedback::Continue(self))
   }
 }

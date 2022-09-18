@@ -21,10 +21,7 @@
 //! - If you want to write solid and smart Rust code, you want to handle errors, not rely on panics.
 //! - This is example code, so don’t blindly copy it, try to understand it first.
 
-use luminance::{
-  backend::Backend, context::Context, dim::Dim2, framebuffer::Framebuffer,
-  render_slots::RenderSlots,
-};
+use luminance::{backend::Backend, context::Context};
 use std::error::Error;
 
 // examples
@@ -70,24 +67,22 @@ pub trait Example: Sized {
   type Err;
 
   /// Bootstrap the example.
-  fn bootstrap<B>(
+  fn bootstrap(
     platform: &mut impl PlatformServices,
-    context: &mut Context<B>,
+    context: &mut Context<impl Backend>,
   ) -> Result<Self, Self::Err>
   where
-    B: Backend,
-    Self::Err: From<B::Err>;
+    Self::Err: From<luminance::backend::Error>;
 
   /// Render a frame of the example.
-  fn render_frame<B>(
+  fn render_frame(
     self,
     time: f32,
     actions: impl Iterator<Item = InputAction>,
-    context: &mut Context<B>,
-  ) -> LoopFeedback<Self, Self::Err>
+    context: &mut Context<impl Backend>,
+  ) -> Result<LoopFeedback<Self>, Self::Err>
   where
-    B: Backend,
-    Self::Err: From<B::Err>;
+    Self::Err: From<luminance::backend::Error>;
 }
 
 /// A type used to pass “inputs” to examples.
@@ -140,10 +135,9 @@ pub enum InputAction {
 }
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
-pub enum LoopFeedback<T, E> {
+pub enum LoopFeedback<T> {
   Continue(T),
   Exit,
-  ExitWithError(E),
 }
 
 /// Various services provided by the platform.

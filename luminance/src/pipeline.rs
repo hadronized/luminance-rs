@@ -180,7 +180,7 @@ impl PipelineState {
 #[derive(Debug)]
 pub struct WithFramebuffer<'a, B, S>
 where
-  B: ?Sized,
+  B: 'a + ?Sized,
 {
   backend: &'a mut B,
   _phantom: PhantomData<*const S>,
@@ -188,7 +188,7 @@ where
 
 impl<'a, B, S> WithFramebuffer<'a, B, S>
 where
-  B: PipelineBackend,
+  B: 'a + PipelineBackend,
 {
   pub unsafe fn new(backend: &'a mut B) -> Self {
     Self {
@@ -198,7 +198,7 @@ where
   }
 
   pub fn with_program<V, P, T, E, Err>(
-    &'a mut self,
+    &mut self,
     program: &Program<V, P, T, E>,
     f: impl FnOnce(WithProgram<'a, B, V, P, T, E>) -> Result<(), Err>,
   ) -> Result<(), Err>
@@ -217,7 +217,7 @@ where
 #[derive(Debug)]
 pub struct WithProgram<'a, B, V, P, S, E>
 where
-  B: ?Sized,
+  B: 'a + ?Sized,
 {
   backend: &'a mut B,
   _phantom: PhantomData<*const (V, P, S, E)>,
@@ -225,7 +225,7 @@ where
 
 impl<'a, B, V, P, S, E> WithProgram<'a, B, V, P, S, E>
 where
-  B: PipelineBackend,
+  B: 'a + PipelineBackend,
 {
   pub unsafe fn new(backend: &'a mut B) -> Self {
     Self {
@@ -235,7 +235,7 @@ where
   }
 
   pub fn with_render_state<Err>(
-    &'a mut self,
+    &mut self,
     render_state: &RenderState,
     f: impl FnOnce(WithRenderState<'a, B, V>) -> Result<(), Err>,
   ) -> Result<(), Err>
@@ -250,7 +250,7 @@ where
 #[derive(Debug)]
 pub struct WithRenderState<'a, B, V>
 where
-  B: ?Sized,
+  B: 'a + ?Sized,
 {
   backend: &'a mut B,
   _phantom: PhantomData<*const V>,
@@ -258,7 +258,7 @@ where
 
 impl<'a, B, V> WithRenderState<'a, B, V>
 where
-  B: PipelineBackend,
+  B: 'a + PipelineBackend,
 {
   pub unsafe fn new(backend: &'a mut B) -> Self {
     Self {

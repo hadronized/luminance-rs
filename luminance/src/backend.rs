@@ -265,23 +265,25 @@ pub unsafe trait ShaderBackend {
 
 pub unsafe trait PipelineBackend {
   unsafe fn with_framebuffer<'a, D, CS, DS, Err>(
-    &'a mut self,
+    &mut self,
     framebuffer: &Framebuffer<D, CS, DS>,
     state: &PipelineState,
     f: impl FnOnce(WithFramebuffer<'a, Self, CS>) -> Result<(), Err>,
   ) -> Result<(), Err>
   where
+    Self: 'a,
     D: Dimensionable,
     CS: RenderSlots,
     DS: DepthRenderSlot,
     Err: From<PipelineError>;
 
   unsafe fn with_program<'a, V, P, S, E, Err>(
-    &'a mut self,
+    &mut self,
     program: &Program<V, P, S, E>,
     f: impl FnOnce(WithProgram<'a, Self, V, P, S, E>) -> Result<(), Err>,
   ) -> Result<(), Err>
   where
+    Self: 'a,
     V: Vertex,
     P: Primitive,
     S: RenderSlots,
@@ -289,11 +291,12 @@ pub unsafe trait PipelineBackend {
     Err: From<PipelineError>;
 
   unsafe fn with_render_state<'a, V, Err>(
-    &'a mut self,
+    &mut self,
     render_state: &RenderState,
     f: impl FnOnce(WithRenderState<'a, Self, V>) -> Result<(), Err>,
   ) -> Result<(), Err>
   where
+    Self: 'a,
     V: Vertex,
     Err: From<PipelineError>;
 

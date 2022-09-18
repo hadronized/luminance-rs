@@ -6,17 +6,6 @@ use crate::{
 };
 use std::{marker::PhantomData, mem};
 
-pub trait VertexStorage<V>
-where
-  V: Vertex,
-{
-  fn inspect_vertex_storage(
-    &mut self,
-    on_interleaved: impl FnMut(Interleaved<V>),
-    on_deinterleaved: impl FnMut(Deinterleaved<V>),
-  );
-}
-
 /// Store vertices as an interleaved array.
 #[derive(Debug)]
 pub struct Interleaved<V> {
@@ -89,5 +78,42 @@ where
   /// Get all components
   pub fn components_list(&self) -> &Vec<Vec<u8>> {
     &self.components_list
+  }
+}
+
+pub trait VertexStorage<V>
+where
+  V: Vertex,
+{
+  fn inspect_vertex_storage(
+    &mut self,
+    on_interleaved: impl FnMut(&mut Interleaved<V>),
+    on_deinterleaved: impl FnMut(&mut Deinterleaved<V>),
+  );
+}
+
+impl<V> VertexStorage<V> for Interleaved<V>
+where
+  V: Vertex,
+{
+  fn inspect_vertex_storage(
+    &mut self,
+    mut on_interleaved: impl FnMut(&mut Interleaved<V>),
+    _: impl FnMut(&mut Deinterleaved<V>),
+  ) {
+    on_interleaved(self)
+  }
+}
+
+impl<V> VertexStorage<V> for Deinterleaved<V>
+where
+  V: Vertex,
+{
+  fn inspect_vertex_storage(
+    &mut self,
+    _: impl FnMut(&mut Interleaved<V>),
+    mut on_deinterleaved: impl FnMut(&mut Deinterleaved<V>),
+  ) {
+    on_deinterleaved(self)
   }
 }

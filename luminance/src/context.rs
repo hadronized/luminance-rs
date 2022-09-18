@@ -142,12 +142,13 @@ where
   }
 
   pub fn with_framebuffer<'a, D, CS, DS, Err>(
-    &'a mut self,
+    &mut self,
     framebuffer: &Framebuffer<D, CS, DS>,
     state: &PipelineState,
     f: impl FnOnce(WithFramebuffer<'a, B, CS>) -> Result<(), Err>,
   ) -> Result<(), Err>
   where
+    B: 'a,
     D: Dimensionable,
     CS: RenderSlots,
     DS: DepthRenderSlot,
