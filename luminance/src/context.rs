@@ -1,5 +1,5 @@
 use crate::{
-  backend::Backend,
+  backend::{Backend, FramebufferError, PipelineError, ShaderError, VertexEntityError},
   dim::Dimensionable,
   framebuffer::Framebuffer,
   pipeline::{PipelineState, WithFramebuffer},
@@ -28,7 +28,7 @@ where
     &mut self,
     storage: S,
     indices: I,
-  ) -> Result<VertexEntity<V, S>, B::Err>
+  ) -> Result<VertexEntity<V, S>, VertexEntityError>
   where
     V: Vertex,
     S: VertexStorage<V>,
@@ -40,7 +40,7 @@ where
   pub fn vertices<'a, V, S>(
     &'a mut self,
     entity: &VertexEntity<V, S>,
-  ) -> Result<Vertices<'a, V, S>, B::Err>
+  ) -> Result<Vertices<'a, V, S>, VertexEntityError>
   where
     V: Vertex,
     S: VertexStorage<V>,
@@ -52,7 +52,7 @@ where
     &'a mut self,
     entity: &VertexEntity<V, S>,
     vertices: Vertices<'a, V, S>,
-  ) -> Result<(), B::Err>
+  ) -> Result<(), VertexEntityError>
   where
     V: Vertex,
     S: VertexStorage<V>,
@@ -60,7 +60,10 @@ where
     unsafe { self.backend.vertex_entity_update_vertices(entity, vertices) }
   }
 
-  pub fn indices<'a, V, S>(&'a mut self, entity: &VertexEntity<V, S>) -> Result<Indices<'a>, B::Err>
+  pub fn indices<'a, V, S>(
+    &'a mut self,
+    entity: &VertexEntity<V, S>,
+  ) -> Result<Indices<'a>, VertexEntityError>
   where
     V: Vertex,
     S: VertexStorage<V>,
@@ -72,7 +75,7 @@ where
     &'a mut self,
     entity: &VertexEntity<V, S>,
     indices: Indices<'a>,
-  ) -> Result<(), B::Err>
+  ) -> Result<(), VertexEntityError>
   where
     V: Vertex,
     S: VertexStorage<V>,
@@ -83,7 +86,7 @@ where
   pub fn new_framebuffer<D, RS, DS>(
     &mut self,
     size: D::Size,
-  ) -> Result<Framebuffer<D, RS, DS>, B::Err>
+  ) -> Result<Framebuffer<D, RS, DS>, FramebufferError>
   where
     D: Dimensionable,
     RS: RenderSlots,
@@ -92,7 +95,10 @@ where
     unsafe { self.backend.new_framebuffer(size) }
   }
 
-  pub fn back_buffer<D, RS, DS>(&mut self, size: D::Size) -> Result<Framebuffer<D, RS, DS>, B::Err>
+  pub fn back_buffer<D, RS, DS>(
+    &mut self,
+    size: D::Size,
+  ) -> Result<Framebuffer<D, RS, DS>, FramebufferError>
   where
     D: Dimensionable,
     RS: RenderSlots,
@@ -104,7 +110,7 @@ where
   pub fn new_program<V, W, P, Q, S, E>(
     &mut self,
     builder: ProgramBuilder<V, W, P, Q, S, E>,
-  ) -> Result<Program<V, P, S, E>, B::Err>
+  ) -> Result<Program<V, P, S, E>, ShaderError>
   where
     V: Vertex,
     W: Vertex,
@@ -125,8 +131,8 @@ where
   pub fn update_program<'a, V, P, S, E>(
     &'a mut self,
     program: &Program<V, P, S, E>,
-    updater: impl FnOnce(ProgramUpdate<'a, B>, &E) -> Result<(), B::Err>,
-  ) -> Result<(), B::Err> {
+    updater: impl FnOnce(ProgramUpdate<'a, B>, &E) -> Result<(), ShaderError>,
+  ) -> Result<(), ShaderError> {
     let program_update = ProgramUpdate {
       backend: &mut self.backend,
       program_handle: program.handle(),
@@ -140,12 +146,12 @@ where
     framebuffer: &Framebuffer<D, CS, DS>,
     state: &PipelineState,
     f: impl FnOnce(WithFramebuffer<'a, B, CS>) -> Result<(), Err>,
-  ) -> Result<(), B::Err>
+  ) -> Result<(), Err>
   where
     D: Dimensionable,
     CS: RenderSlots,
     DS: DepthRenderSlot,
-    Err: From<B::Err>,
+    Err: From<PipelineError>,
   {
     unsafe { self.backend.with_framebuffer(framebuffer, state, f) }
   }

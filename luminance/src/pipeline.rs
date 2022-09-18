@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-  backend::PipelineBackend,
+  backend::{PipelineBackend, PipelineError},
   primitive::Primitive,
   render_slots::RenderSlots,
   render_state::RenderState,
@@ -202,12 +202,12 @@ where
     &'a mut self,
     program: &Program<V, P, S, E>,
     f: impl FnOnce(WithProgram<'a, B, V, P, S, E>) -> Result<(), Err>,
-  ) -> Result<(), B::Err>
+  ) -> Result<(), Err>
   where
     V: Vertex,
     P: Primitive,
     E: FromEnv,
-    Err: From<B::Err>,
+    Err: From<PipelineError>,
   {
     unsafe { self.backend.with_program(program, f) }
   }
@@ -237,10 +237,10 @@ where
     &'a mut self,
     render_state: &RenderState,
     f: impl FnOnce(WithRenderState<'a, B, V>) -> Result<(), Err>,
-  ) -> Result<(), B::Err>
+  ) -> Result<(), Err>
   where
     V: Vertex,
-    Err: From<B::Err>,
+    Err: From<PipelineError>,
   {
     unsafe { self.backend.with_render_state(render_state, f) }
   }
@@ -266,7 +266,7 @@ where
     }
   }
 
-  pub fn render_vertex_entity(&mut self, view: VertexEntityView<V>) -> Result<(), B::Err>
+  pub fn render_vertex_entity(&mut self, view: VertexEntityView<V>) -> Result<(), PipelineError>
   where
     V: Vertex,
   {

@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::{
-  backend::Backend,
+  backend::{Backend, FramebufferError},
   dim::Dimensionable,
   render_channel::{DepthChannelType, IsDepthChannelType, RenderChannel},
 };
@@ -23,7 +23,7 @@ pub trait RenderSlots {
   unsafe fn new_render_layers<B, D>(
     backend: &mut B,
     size: D::Size,
-  ) -> Result<Self::RenderLayers, B::Err>
+  ) -> Result<Self::RenderLayers, FramebufferError>
   where
     B: Backend,
     D: Dimensionable;
@@ -38,7 +38,10 @@ impl RenderSlots for () {
     0
   }
 
-  unsafe fn new_render_layers<B, D>(_: &mut B, _: D::Size) -> Result<Self::RenderLayers, B::Err>
+  unsafe fn new_render_layers<B, D>(
+    _: &mut B,
+    _: D::Size,
+  ) -> Result<Self::RenderLayers, FramebufferError>
   where
     B: Backend,
     D: Dimensionable,
@@ -76,7 +79,7 @@ pub trait DepthRenderSlot {
   unsafe fn new_depth_render_layer<B, D>(
     backend: &mut B,
     size: D::Size,
-  ) -> Result<Self::DepthRenderLayer, B::Err>
+  ) -> Result<Self::DepthRenderLayer, FramebufferError>
   where
     B: Backend,
     D: Dimensionable;
@@ -90,7 +93,7 @@ impl DepthRenderSlot for () {
   unsafe fn new_depth_render_layer<B, D>(
     _: &mut B,
     _: D::Size,
-  ) -> Result<Self::DepthRenderLayer, B::Err>
+  ) -> Result<Self::DepthRenderLayer, FramebufferError>
   where
     B: Backend,
     D: Dimensionable,
@@ -110,7 +113,7 @@ where
   unsafe fn new_depth_render_layer<B, D>(
     backend: &mut B,
     size: D::Size,
-  ) -> Result<Self::DepthRenderLayer, B::Err>
+  ) -> Result<Self::DepthRenderLayer, FramebufferError>
   where
     B: Backend,
     D: Dimensionable,

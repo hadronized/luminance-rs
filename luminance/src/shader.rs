@@ -1,6 +1,11 @@
 pub mod types;
 
-use crate::{backend::Backend, primitive::Primitive, render_slots::RenderSlots, vertex::Vertex};
+use crate::{
+  backend::{Backend, ShaderError},
+  primitive::Primitive,
+  render_slots::RenderSlots,
+  vertex::Vertex,
+};
 use std::marker::PhantomData;
 
 pub struct ProgramBuilder<V, W, P, Q, S, E> {
@@ -242,13 +247,13 @@ impl_IsEnv!(mint::ColumnMatrix4<f32>, Matrix, EnvMatDim::Mat44);
 // TODO: samplers
 
 pub trait FromEnv: Sized {
-  fn from_env<B>(backend: &mut B, program_handle: usize) -> Result<Self, B::Err>
+  fn from_env<B>(backend: &mut B, program_handle: usize) -> Result<Self, ShaderError>
   where
     B: Backend;
 }
 
 impl FromEnv for () {
-  fn from_env<B>(_: &mut B, _: usize) -> Result<Self, B::Err>
+  fn from_env<B>(_: &mut B, _: usize) -> Result<Self, ShaderError>
   where
     B: Backend,
   {
@@ -286,7 +291,7 @@ impl<'a, B> ProgramUpdate<'a, B>
 where
   B: Backend,
 {
-  pub fn set<T>(&mut self, env: &Env<T>, value: T) -> Result<(), B::Err>
+  pub fn set<T>(&mut self, env: &Env<T>, value: T) -> Result<(), ShaderError>
   where
     T: IsEnv,
   {
