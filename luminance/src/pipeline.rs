@@ -3,11 +3,11 @@ use std::marker::PhantomData;
 use crate::{
   backend::{PipelineBackend, PipelineError},
   primitive::Primitive,
-  render_slots::RenderSlots,
+  render_slots::{CompatibleRenderSlots, RenderSlots},
   render_state::RenderState,
   scissor::Scissor,
   shader::{FromEnv, Program},
-  vertex::Vertex,
+  vertex::{CompatibleVertex, Vertex},
   vertex_entity::VertexEntityView,
 };
 
@@ -189,7 +189,6 @@ where
 impl<'a, B, S> WithFramebuffer<'a, B, S>
 where
   B: PipelineBackend,
-  S: 'a + RenderSlots,
 {
   pub unsafe fn new(backend: &'a mut B) -> Self {
     Self {
@@ -198,14 +197,16 @@ where
     }
   }
 
-  pub fn with_program<V, P, E, Err>(
+  pub fn with_program<V, P, T, E, Err>(
     &'a mut self,
-    program: &Program<V, P, S, E>,
-    f: impl FnOnce(WithProgram<'a, B, V, P, S, E>) -> Result<(), Err>,
+    program: &Program<V, P, T, E>,
+    f: impl FnOnce(WithProgram<'a, B, V, P, T, E>) -> Result<(), Err>,
   ) -> Result<(), Err>
   where
     V: Vertex,
     P: Primitive,
+    S: CompatibleRenderSlots<T>,
+    T: RenderSlots,
     E: FromEnv,
     Err: From<PipelineError>,
   {
@@ -266,9 +267,10 @@ where
     }
   }
 
-  pub fn render_vertex_entity(&mut self, view: VertexEntityView<V>) -> Result<(), PipelineError>
+  pub fn render_vertex_entity<W>(&mut self, view: VertexEntityView<W>) -> Result<(), PipelineError>
   where
-    V: Vertex,
+    V: CompatibleVertex<W>,
+    W: Vertex,
   {
     unsafe { self.backend.render_vertex_entity(view) }
   }
