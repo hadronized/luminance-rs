@@ -1,6 +1,7 @@
 //! Vertex storage containers.
 
 use crate::{
+  backend::VertexEntityError,
   has_field::HasField,
   vertex::{Deinterleave, Vertex},
 };
@@ -81,27 +82,84 @@ where
   }
 }
 
+pub trait VertexStorageVisitor<'a, V>
+where
+  V: Vertex,
+{
+  fn visit_interleaved(&mut self, _: &'a mut Interleaved<V>) -> Result<(), VertexEntityError> {
+    Ok(())
+  }
+
+  fn visit_deinterleaved(&mut self, _: &'a mut Deinterleaved<V>) -> Result<(), VertexEntityError> {
+    Ok(())
+  }
+}
+
+pub struct InterleavedVisitor<F> {
+  f: F,
+}
+
+impl<F> InterleavedVisitor<F> {
+  pub fn new(f: F) -> Self {
+    Self { f }
+  }
+}
+
+impl<'a, F, V> VertexStorageVisitor<'a, V> for InterleavedVisitor<F>
+where
+  F: FnMut(&'a mut Interleaved<V>) -> Result<(), VertexEntityError>,
+  V: 'a + Vertex,
+{
+  fn visit_interleaved(
+    &mut self,
+    storage: &'a mut Interleaved<V>,
+  ) -> Result<(), VertexEntityError> {
+    (self.f)(storage)
+  }
+}
+
+pub struct DeinterleavedVisitor<F> {
+  f: F,
+}
+
+impl<F> DeinterleavedVisitor<F> {
+  pub fn new(f: F) -> Self {
+    Self { f }
+  }
+}
+
+impl<'a, F, V> VertexStorageVisitor<'a, V> for DeinterleavedVisitor<F>
+where
+  F: FnMut(&'a mut Deinterleaved<V>) -> Result<(), VertexEntityError>,
+  V: 'a + Vertex,
+{
+  fn visit_deinterleaved(
+    &mut self,
+    storage: &'a mut Deinterleaved<V>,
+  ) -> Result<(), VertexEntityError> {
+    (self.f)(storage)
+  }
+}
+
 pub trait VertexStorage<V>
 where
   V: Vertex,
 {
-  fn inspect_vertex_storage(
-    &mut self,
-    on_interleaved: impl FnMut(&mut Interleaved<V>),
-    on_deinterleaved: impl FnMut(&mut Deinterleaved<V>),
-  );
+  fn visit<'a>(
+    &'a mut self,
+    visitor: &mut impl VertexStorageVisitor<'a, V>,
+  ) -> Result<(), VertexEntityError>;
 }
 
 impl<V> VertexStorage<V> for Interleaved<V>
 where
   V: Vertex,
 {
-  fn inspect_vertex_storage(
-    &mut self,
-    mut on_interleaved: impl FnMut(&mut Interleaved<V>),
-    _: impl FnMut(&mut Deinterleaved<V>),
-  ) {
-    on_interleaved(self)
+  fn visit<'a>(
+    &'a mut self,
+    visitor: &mut impl VertexStorageVisitor<'a, V>,
+  ) -> Result<(), VertexEntityError> {
+    visitor.visit_interleaved(self)
   }
 }
 
@@ -109,11 +167,10 @@ impl<V> VertexStorage<V> for Deinterleaved<V>
 where
   V: Vertex,
 {
-  fn inspect_vertex_storage(
-    &mut self,
-    _: impl FnMut(&mut Interleaved<V>),
-    mut on_deinterleaved: impl FnMut(&mut Deinterleaved<V>),
-  ) {
-    on_deinterleaved(self)
+  fn visit<'a>(
+    &'a mut self,
+    visitor: &mut impl VertexStorageVisitor<'a, V>,
+  ) -> Result<(), VertexEntityError> {
+    visitor.visit_deinterleaved(self)
   }
 }
