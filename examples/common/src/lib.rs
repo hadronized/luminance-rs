@@ -29,6 +29,7 @@ use std::error::Error;
 // pub mod displacement_map;
 // pub mod dynamic_uniform_interface;
 pub mod hello_world;
+pub mod hello_world_more;
 // pub mod interactive_triangle;
 // pub mod mrt;
 // pub mod offscreen;

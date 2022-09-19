@@ -18,7 +18,7 @@ have a look at [the book] first.
 
 * [Prologue: architecture](#prologue-architecture)
 * [01 – Hello World](#01--hello-world)
-* [01a — Polymorphic Hello World](#01a--polymorphic-hello-world)
+* [01a — Hello World, more](#01a--polymorphic-hello-world)
 * [02 – Render State](#02--render-state)
 * [03 – Sliced Tessellation](#03--sliced-tessellation)
 * [04 – Shader Uniforms](#04--shader-uniforms)
@@ -56,17 +56,16 @@ defined in [lib.rs](./src/lib.rs) file via several concepts:
 
 ## [01 – Hello World](./src/hello_world.rs)
 
-Learn how to draw two colored triangles by using vertex colors (comes in *direct* and *indexed*
-geometry versions). This first example is really important as it shows off lots of features that
-are necessary to wrap your fingers around, especially _vertex semantics_, _buffer formats_, _derive
-procedural macros_, _graphics pipelines_, etc. etc.
+Learn how to draw two colored triangles by using vertex colors. This first example is really important as it shows off
+lots of features that are necessary to wrap your fingers around, especially _namespaces, _vertex type declaration,
+_derive procedural macros_, _graphics pipelines_, etc. etc. All in all, everything is easy to grasp, yet very important.
 
 ![](../../docs/imgs/01-screenshot.png)
 
-## [01a – Polymorphic Hello World](./polymorphic_hello_world.rs)
+## [01a – Polymorphic Hello World](./src/hello_world_more.rs)
 
-A variant of [01 – Hello World](#01--hello-world) that doesn’t use [luminance-front] and shows how to use the
-polymorphic interface instead.
+A variant of [01 – Hello World](#01--hello-world) that shows more options for the vertex entities. It will teach you how
+to use interleaved, deinterleaved and indexed vertex entities (and mix of those!).
 
 ## [02 – Render State](./src/render_state.rs)
 
