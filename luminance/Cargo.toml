@@ -17,8 +17,7 @@ rust-version = "1.56.0"
 maintenance = { status = "actively-developed" }
 
 [features]
-default = ["derive"]
-derive = ["luminance-derive"]
+default = ["luminance-derive"]
 
 [dependencies]
 luminance-derive = { version = "0.11.0-dev", path = "../luminance-derive", optional = true }

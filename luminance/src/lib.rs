@@ -4,7 +4,7 @@
 #![allow(incomplete_features)]
 #![feature(adt_const_params)]
 
-#[cfg(feature = "derive")]
+#[cfg(feature = "luminance-derive")]
 pub use luminance_derive::*;
 
 pub mod backend;
