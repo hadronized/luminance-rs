@@ -1,5 +1,3 @@
-#![allow(missing_docs)]
-
 use crate::{
   dim::Dimensionable,
   framebuffer::Framebuffer,
