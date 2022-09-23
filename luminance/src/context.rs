@@ -5,7 +5,7 @@ use crate::{
   pipeline::{PipelineState, WithFramebuffer},
   primitive::Primitive,
   render_slots::{DepthRenderSlot, RenderSlots},
-  shader::{FromEnv, Program, ProgramBuilder, ProgramUpdate},
+  shader::{FromUni, Program, ProgramBuilder, ProgramUpdate},
   vertex::Vertex,
   vertex_entity::{Indices, VertexEntity, Vertices},
   vertex_storage::VertexStorage,
@@ -117,7 +117,7 @@ where
     P: Primitive<Vertex = W>,
     Q: Primitive,
     S: RenderSlots,
-    E: FromEnv,
+    E: FromUni,
   {
     unsafe {
       self.backend.new_program(

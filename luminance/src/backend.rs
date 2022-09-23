@@ -6,37 +6,134 @@ use crate::{
   render_channel::{IsDepthChannelType, IsRenderChannelType},
   render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
   render_state::RenderState,
-  shader::{Env, FromEnv, IsEnv, IsSharedEnv, Program, SharedEnv},
+  shader::{FromEnv, IsUniBuffer, Program, Uni, UniBuffer, Uniform},
   vertex::Vertex,
   vertex_entity::{Indices, VertexEntity, VertexEntityView, Vertices},
   vertex_storage::VertexStorage,
 };
-use std::error::Error as ErrorTrait;
+use std::{error::Error as ErrorTrait, fmt};
+
+pub mod state;
 
 #[derive(Debug)]
 pub enum VertexEntityError {
   Creation { cause: Option<Box<dyn ErrorTrait>> },
-
   Render { cause: Option<Box<dyn ErrorTrait>> },
-
   RetrieveVertexStorage { cause: Option<Box<dyn ErrorTrait>> },
-
   UpdateVertexStorage { cause: Option<Box<dyn ErrorTrait>> },
-
   RetrieveIndices { cause: Option<Box<dyn ErrorTrait>> },
-
   UpdateIndices { cause: Option<Box<dyn ErrorTrait>> },
+}
+
+impl fmt::Display for VertexEntityError {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match self {
+      VertexEntityError::Creation { cause } => write!(
+        f,
+        "cannot create vertex entity: {}",
+        cause
+          .as_ref()
+          .map(|cause| cause.to_string())
+          .unwrap_or_else(|| "unknown cause".to_string())
+      ),
+
+      VertexEntityError::Render { cause } => write!(
+        f,
+        "cannot render vertex entity: {}",
+        cause
+          .as_ref()
+          .map(|cause| cause.to_string())
+          .unwrap_or_else(|| "unknown cause".to_string())
+      ),
+      VertexEntityError::RetrieveVertexStorage { cause } => write!(
+        f,
+        "cannot retrieve vertex storage: {}",
+        cause
+          .as_ref()
+          .map(|cause| cause.to_string())
+          .unwrap_or_else(|| "unknown cause".to_string())
+      ),
+
+      VertexEntityError::UpdateVertexStorage { cause } => {
+        write!(
+          f,
+          "cannot update vertex storage: {}",
+          cause
+            .as_ref()
+            .map(|cause| cause.to_string())
+            .unwrap_or_else(|| "unknown cause".to_string())
+        )
+      }
+
+      VertexEntityError::RetrieveIndices { cause } => write!(
+        f,
+        "cannot retrieve indices: {}",
+        cause
+          .as_ref()
+          .map(|cause| cause.to_string())
+          .unwrap_or_else(|| "unknown cause".to_string())
+      ),
+
+      VertexEntityError::UpdateIndices { cause } => write!(
+        f,
+        "cannot update indices: {}",
+        cause
+          .as_ref()
+          .map(|cause| cause.to_string())
+          .unwrap_or_else(|| "unknown cause".to_string())
+      ),
+    }
+  }
 }
 
 #[derive(Debug)]
 pub enum FramebufferError {
   Creation { cause: Option<Box<dyn ErrorTrait>> },
-
   RenderLayerCreation { cause: Option<Box<dyn ErrorTrait>> },
-
   DepthRenderLayerCreation { cause: Option<Box<dyn ErrorTrait>> },
-
   RetrieveBackBuffer { cause: Option<Box<dyn ErrorTrait>> },
+}
+
+impl fmt::Display for FramebufferError {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match self {
+      FramebufferError::Creation { cause } => write!(
+        f,
+        "cannot create framebuffer: {}",
+        cause
+          .as_ref()
+          .map(|cause| cause.to_string())
+          .unwrap_or_else(|| "unknown cause".to_string())
+      ),
+
+      FramebufferError::RenderLayerCreation { cause } => write!(
+        f,
+        "cannot create render layer: {}",
+        cause
+          .as_ref()
+          .map(|cause| cause.to_string())
+          .unwrap_or_else(|| "unknown cause".to_string())
+      ),
+
+      FramebufferError::DepthRenderLayerCreation { cause } => write!(
+        f,
+        "cannot create depth render layer: {}",
+        cause
+          .as_ref()
+          .map(|cause| cause.to_string())
+          .unwrap_or_else(|| "unknown cause".to_string())
+      ),
+
+      FramebufferError::RetrieveBackBuffer { cause } => write!(
+        f,
+        "cannot retrieve back buffer {}",
+        cause
+          .as_ref()
+          .map(|cause| cause.to_string())
+          .unwrap_or_else(|| "unknown cause".to_string())
+      ),
+    }
+  }
 }
 
 #[derive(Debug)]
@@ -63,6 +160,60 @@ pub enum ShaderError {
   },
 }
 
+impl fmt::Display for ShaderError {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match self {
+      ShaderError::Creation {
+        vertex_code,
+        primitive_code,
+        shading_code,
+        cause,
+      } => {
+        writeln!(
+          f,
+          "cannot create shader program: {}",
+          cause
+            .as_ref()
+            .map(|cause| cause.to_string())
+            .unwrap_or_else(|| "unknown cause".to_string())
+        )?;
+        writeln!(f, "vertex stage:\n{}", vertex_code)?;
+        writeln!(f, "primitive stage:\n{}", primitive_code)?;
+        writeln!(f, "shading stage:\n{}", shading_code)
+      }
+
+      ShaderError::UniCreation { name, cause } => write!(
+        f,
+        "cannot create uniform variable (\"{}\"): {}",
+        name,
+        cause
+          .as_ref()
+          .map(|cause| cause.to_string())
+          .unwrap_or_else(|| "unknown cause".to_string())
+      ),
+
+      ShaderError::UniSet { cause } => write!(
+        f,
+        "cannot set uniform variable: {}",
+        cause
+          .as_ref()
+          .map(|cause| cause.to_string())
+          .unwrap_or_else(|| "unknown cause".to_string())
+      ),
+
+      ShaderError::UniBufferCreation { name, cause } => write!(
+        f,
+        "cannot create uniform buffer (\"{}\"): {}",
+        name,
+        cause
+          .as_ref()
+          .map(|cause| cause.to_string())
+          .unwrap_or_else(|| "unknown cause".to_string())
+      ),
+    }
+  }
+}
+
 #[derive(Debug)]
 pub enum PipelineError {
   WithFramebuffer {
@@ -87,12 +238,93 @@ pub enum PipelineError {
   },
 }
 
+impl fmt::Display for PipelineError {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match self {
+      PipelineError::WithFramebuffer {
+        pipeline_state,
+        cause,
+      } => write!(
+         f,
+        "error in framebuffer pipeline: {}; state:\n{:#?}",
+        cause
+          .as_ref()
+          .map(|cause| cause.to_string())
+          .unwrap_or_else(|| "unknown cause".to_string()),
+        pipeline_state
+      ),
+
+      PipelineError::WithProgram { cause } => write!(
+        f,
+        "error in shader program pipeline: {}",
+        cause
+          .as_ref()
+          .map(|cause| cause.to_string())
+          .unwrap_or_else(|| "unknown cause".to_string())
+      ),
+
+      PipelineError::WithRenderState {
+        render_state,
+        cause,
+      } => write!(
+        f,
+        "error in render state pipeline: {}; state:\n{:#?}",
+        cause
+          .as_ref()
+          .map(|cause| cause.to_string())
+          .unwrap_or_else(|| "unknown cause".to_string()),
+        render_state
+      ),
+
+      PipelineError::RenderVertexEntity {
+        start_vertex,
+        vertex_count,
+        instance_count,
+        cause,
+       } => write!(
+      f,
+        "error in render vertex entity pipeline: {}; start_vertex={}, vertex_count={}, instance_count={}",
+         cause.as_ref().map(|cause| cause.to_string()).unwrap_or_else(|| "unknown cause".to_string()),
+        start_vertex, vertex_count, instance_count,
+    )
+    }
+  }
+}
+
+/// Query error.
 #[derive(Debug)]
+pub enum QueryError {
+  NoBackendAuthor,
+  NoBackendName,
+  NoBackendVersion,
+  NoBackendShadingLanguageVersion,
+  NoMaxTextureArrayElements,
+}
+
+impl fmt::Display for QueryError {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    match self {
+      QueryError::NoBackendAuthor => f.write_str("no backend author available"),
+      QueryError::NoBackendName => f.write_str("no backend name available"),
+      QueryError::NoBackendVersion => f.write_str("no backend version available"),
+      QueryError::NoBackendShadingLanguageVersion => {
+        f.write_str("no backend shading language version available")
+      }
+      QueryError::NoMaxTextureArrayElements => {
+        f.write_str("no maximum number of elements for texture arrays available")
+      }
+    }
+  }
+}
+
+#[derive(Debug)]
+#[non_exhaustive]
 pub enum Error {
   VertexEntity(VertexEntityError),
   Framebuffer(FramebufferError),
   Shader(ShaderError),
   Pipeline(PipelineError),
+  Query(QueryError),
 }
 
 impl From<VertexEntityError> for Error {
@@ -120,12 +352,12 @@ impl From<PipelineError> for Error {
 }
 
 pub trait Backend:
-  VertexEntityBackend + FramebufferBackend + ShaderBackend + PipelineBackend
+  VertexEntityBackend + FramebufferBackend + ShaderBackend + PipelineBackend + QueryBackend
 {
 }
 
 impl<B> Backend for B where
-  B: VertexEntityBackend + FramebufferBackend + ShaderBackend + PipelineBackend
+  B: VertexEntityBackend + FramebufferBackend + ShaderBackend + PipelineBackend + QueryBackend
 {
 }
 
@@ -235,13 +467,13 @@ pub unsafe trait ShaderBackend {
     S: RenderSlots,
     E: FromEnv;
 
-  unsafe fn new_shader_env<T>(
+  unsafe fn new_shader_uni<T>(
     &mut self,
     program_handle: usize,
     name: &str,
-  ) -> Result<Env<T>, ShaderError>
+  ) -> Result<Uni<T>, ShaderError>
   where
-    T: IsEnv;
+    T: Uniform;
 
   unsafe fn set_program_env<T>(
     &mut self,
@@ -250,15 +482,15 @@ pub unsafe trait ShaderBackend {
     value: T,
   ) -> Result<(), ShaderError>
   where
-    T: IsEnv;
+    T: Uniform;
 
-  unsafe fn new_shader_shared_env<T>(
+  unsafe fn new_shader_uni_buffer<T>(
     &mut self,
     program_handle: usize,
     name: &str,
-  ) -> Result<SharedEnv<T>, ShaderError>
+  ) -> Result<UniBuffer<T>, ShaderError>
   where
-    T: IsSharedEnv;
+    T: IsUniBuffer;
 }
 
 pub unsafe trait PipelineBackend {
@@ -304,4 +536,16 @@ pub unsafe trait PipelineBackend {
   ) -> Result<(), PipelineError>
   where
     V: Vertex;
+}
+
+pub unsafe trait QueryBackend {
+  fn backend_author(&self) -> Result<String, QueryError>;
+
+  fn backend_name(&self) -> Result<String, QueryError>;
+
+  fn backend_version(&self) -> Result<String, QueryError>;
+
+  fn backend_shading_lang_version(&self) -> Result<String, QueryError>;
+
+  fn max_texture_array_elements(&self) -> Result<usize, QueryError>;
 }

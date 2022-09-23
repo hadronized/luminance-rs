@@ -127,12 +127,12 @@ impl<V, P, S, E> Program<V, P, S, E> {
 }
 
 #[derive(Debug)]
-pub struct Env<T> {
+pub struct Uni<T> {
   handle: usize,
   _phantom: PhantomData<T>,
 }
 
-impl<T> Env<T> {
+impl<T> Uni<T> {
   pub unsafe fn new(handle: usize) -> Self {
     Self {
       handle,
@@ -146,22 +146,22 @@ impl<T> Env<T> {
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum EnvType {
-  Integral(EnvDim),
+pub enum UniType {
+  Integral(UniDim),
 
-  Unsigned(EnvDim),
+  Unsigned(UniDim),
 
-  Floating(EnvDim),
+  Floating(UniDim),
 
-  Boolean(EnvDim),
+  Boolean(UniDim),
 
-  Matrix(EnvMatDim),
+  Matrix(UniMatDim),
 
-  IntegralSampler(EnvSamplerDim),
+  IntegralSampler(UniSamplerDim),
 
-  UnsignedSampler(EnvSamplerDim),
+  UnsignedSampler(UniSamplerDim),
 
-  FloatingSampler(EnvSamplerDim),
+  FloatingSampler(UniSamplerDim),
 
   IntegralCubemapSampler,
 
@@ -171,7 +171,7 @@ pub enum EnvType {
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum EnvDim {
+pub enum UniDim {
   Dim1,
   Dim2,
   Dim3,
@@ -179,14 +179,14 @@ pub enum EnvDim {
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum EnvMatDim {
+pub enum UniMatDim {
   Mat22,
   Mat33,
   Mat44,
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum EnvSamplerDim {
+pub enum UniSamplerDim {
   Dim1,
   Dim2,
   Dim3,
@@ -194,65 +194,65 @@ pub enum EnvSamplerDim {
   Dim2Array,
 }
 
-pub trait IsEnv {
-  const ENV_TY: EnvType;
+pub trait Uniform {
+  const UNI_TY: UniType;
 }
 
-macro_rules! impl_IsEnv {
+macro_rules! impl_Uniform {
   // scalar / vectors / matrices
   ($t:ty, $v:ident $(, $dim:path)?) => {
-    impl IsEnv for $t {
-      const ENV_TY: EnvType = EnvType::$v $(($dim))?;
+    impl Uniform for $t {
+      const UNI_TY: UniType = UniType::$v $(($dim))?;
     }
   }
 }
 
-impl_IsEnv!(i32, Integral, EnvDim::Dim1);
-impl_IsEnv!(u32, Unsigned, EnvDim::Dim1);
-impl_IsEnv!(f32, Floating, EnvDim::Dim1);
-impl_IsEnv!(bool, Boolean, EnvDim::Dim1);
+impl_Uniform!(i32, Integral, UniDim::Dim1);
+impl_Uniform!(u32, Unsigned, UniDim::Dim1);
+impl_Uniform!(f32, Floating, UniDim::Dim1);
+impl_Uniform!(bool, Boolean, UniDim::Dim1);
 
 #[cfg(feature = "mint")]
-impl_IsEnv!(mint::Vector2<i32>, Integral, EnvDim::Dim2);
+impl_Uniform!(mint::Vector2<i32>, Integral, UniDim::Dim2);
 #[cfg(feature = "mint")]
-impl_IsEnv!(mint::Vector2<u32>, Unsigned, EnvDim::Dim2);
+impl_Uniform!(mint::Vector2<u32>, Unsigned, UniDim::Dim2);
 #[cfg(feature = "mint")]
-impl_IsEnv!(mint::Vector2<f32>, Floating, EnvDim::Dim2);
+impl_Uniform!(mint::Vector2<f32>, Floating, UniDim::Dim2);
 #[cfg(feature = "mint")]
-impl_IsEnv!(mint::Vector2<bool>, Boolean, EnvDim::Dim2);
+impl_Uniform!(mint::Vector2<bool>, Boolean, UniDim::Dim2);
 #[cfg(feature = "mint")]
-impl_IsEnv!(mint::Vector3<i32>, Integral, EnvDim::Dim3);
+impl_Uniform!(mint::Vector3<i32>, Integral, UniDim::Dim3);
 #[cfg(feature = "mint")]
-impl_IsEnv!(mint::Vector3<u32>, Unsigned, EnvDim::Dim3);
+impl_Uniform!(mint::Vector3<u32>, Unsigned, UniDim::Dim3);
 #[cfg(feature = "mint")]
-impl_IsEnv!(mint::Vector3<f32>, Floating, EnvDim::Dim3);
+impl_Uniform!(mint::Vector3<f32>, Floating, UniDim::Dim3);
 #[cfg(feature = "mint")]
-impl_IsEnv!(mint::Vector3<bool>, Boolean, EnvDim::Dim3);
+impl_Uniform!(mint::Vector3<bool>, Boolean, UniDim::Dim3);
 #[cfg(feature = "mint")]
-impl_IsEnv!(mint::Vector4<i32>, Integral, EnvDim::Dim4);
+impl_Uniform!(mint::Vector4<i32>, Integral, UniDim::Dim4);
 #[cfg(feature = "mint")]
-impl_IsEnv!(mint::Vector4<u32>, Unsigned, EnvDim::Dim4);
+impl_Uniform!(mint::Vector4<u32>, Unsigned, UniDim::Dim4);
 #[cfg(feature = "mint")]
-impl_IsEnv!(mint::Vector4<f32>, Floating, EnvDim::Dim4);
+impl_Uniform!(mint::Vector4<f32>, Floating, UniDim::Dim4);
 #[cfg(feature = "mint")]
-impl_IsEnv!(mint::Vector4<bool>, Boolean, EnvDim::Dim4);
+impl_Uniform!(mint::Vector4<bool>, Boolean, UniDim::Dim4);
 
 #[cfg(feature = "mint")]
-impl_IsEnv!(mint::ColumnMatrix2<f32>, Matrix, EnvMatDim::Mat22);
+impl_Uniform!(mint::ColumnMatrix2<f32>, Matrix, UniMatDim::Mat22);
 #[cfg(feature = "mint")]
-impl_IsEnv!(mint::ColumnMatrix3<f32>, Matrix, EnvMatDim::Mat33);
+impl_Uniform!(mint::ColumnMatrix3<f32>, Matrix, UniMatDim::Mat33);
 #[cfg(feature = "mint")]
-impl_IsEnv!(mint::ColumnMatrix4<f32>, Matrix, EnvMatDim::Mat44);
+impl_Uniform!(mint::ColumnMatrix4<f32>, Matrix, UniMatDim::Mat44);
 
 // TODO: samplers
 
-pub trait FromEnv: Sized {
+pub trait FromUni: Sized {
   fn from_env<B>(backend: &mut B, program_handle: usize) -> Result<Self, ShaderError>
   where
     B: Backend;
 }
 
-impl FromEnv for () {
+impl FromUni for () {
   fn from_env<B>(_: &mut B, _: usize) -> Result<Self, ShaderError>
   where
     B: Backend,
@@ -261,12 +261,12 @@ impl FromEnv for () {
   }
 }
 
-pub struct SharedEnv<T> {
+pub struct UniBuffer<T> {
   handle: usize,
   _phantom: PhantomData<*const T>,
 }
 
-impl<T> SharedEnv<T> {
+impl<T> UniBuffer<T> {
   pub unsafe fn new(handle: usize) -> Self {
     Self {
       handle,
@@ -279,7 +279,7 @@ impl<T> SharedEnv<T> {
   }
 }
 
-pub trait IsSharedEnv {}
+pub trait IsUniBuffer {}
 
 #[derive(Debug)]
 pub struct ProgramUpdate<'a, B> {
@@ -291,9 +291,9 @@ impl<'a, B> ProgramUpdate<'a, B>
 where
   B: Backend,
 {
-  pub fn set<T>(&mut self, env: &Env<T>, value: T) -> Result<(), ShaderError>
+  pub fn set<T>(&mut self, env: &Uni<T>, value: T) -> Result<(), ShaderError>
   where
-    T: IsEnv,
+    T: Uniform,
   {
     unsafe {
       self
