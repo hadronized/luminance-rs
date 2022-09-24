@@ -5,7 +5,6 @@ use crate::{
 };
 use std::{
   cell::RefCell,
-  collections::HashSet,
   marker::PhantomData,
   ops::{Deref, DerefMut},
   rc::Rc,
@@ -62,20 +61,14 @@ where
 ///
 /// This is a cache representation of the GPU global state.
 #[derive(Debug)]
-pub struct State {
+pub struct State<T> {
   _phantom: PhantomData<*const ()>, // !Send and !Sync
 
   // whether the associated context is still active
   pub context_active: bool,
 
-  // living resources
-  pub vertex_entities: HashSet<usize>,
-  pub render_layers: HashSet<usize>,
-  pub depth_render_layers: HashSet<usize>,
-  pub framebuffers: HashSet<usize>,
-  pub shader_programs: HashSet<usize>,
-  pub shader_unis: HashSet<usize>,
-  pub shade_uni_buffers: HashSet<usize>,
+  // backend-specific resources
+  pub spec: T,
 
   // binding points
   pub next_texture_unit: u32,
@@ -183,28 +176,21 @@ pub struct State {
 // TLS synchronization barrier for `GLState`.
 thread_local!(static TLS_ACQUIRE_GFX_STATE: RefCell<Option<()>> = RefCell::new(Some(())));
 
-impl State {
+impl<T> State<T> {
   /// Create a new [`State`]
-  pub(crate) fn new() -> Option<Self> {
+  pub(crate) fn new(spec: T) -> Option<Self> {
     TLS_ACQUIRE_GFX_STATE.with(|rc| {
       let mut inner = rc.borrow_mut();
 
       inner.map(|_| {
         inner.take();
-        Self::build()
+        Self::build(spec)
       })
     })
   }
 
-  fn build() -> Self {
+  fn build(spec: T) -> Self {
     let context_active = true;
-    let vertex_entities = HashSet::new();
-    let render_layers = HashSet::new();
-    let depth_render_layers = HashSet::new();
-    let framebuffers = HashSet::new();
-    let shader_programs = HashSet::new();
-    let shader_unis = HashSet::new();
-    let shade_uni_buffers = HashSet::new();
     let next_texture_unit = 0;
     let free_texture_units = Vec::new();
     let next_uni_buffer = 0;
@@ -260,13 +246,7 @@ impl State {
       _phantom: PhantomData,
 
       context_active,
-      vertex_entities,
-      render_layers,
-      depth_render_layers,
-      framebuffers,
-      shader_programs,
-      shader_unis,
-      shade_uni_buffers,
+      spec,
       next_texture_unit,
       free_texture_units,
       next_uni_buffer,
@@ -321,24 +301,30 @@ impl State {
   }
 }
 
-#[derive(Clone, Debug)]
-pub struct StateRef(Rc<RefCell<State>>);
+#[derive(Debug)]
+pub struct StateRef<T>(Rc<RefCell<State<T>>>);
 
-impl StateRef {
-  pub fn new() -> Option<Self> {
-    Some(StateRef(Rc::new(RefCell::new(State::new()?))))
+impl<T> Clone for StateRef<T> {
+  fn clone(&self) -> Self {
+    StateRef(self.0.clone())
   }
 }
 
-impl Deref for StateRef {
-  type Target = Rc<RefCell<State>>;
+impl<T> StateRef<T> {
+  pub fn new(spec: T) -> Option<Self> {
+    Some(StateRef(Rc::new(RefCell::new(State::new(spec)?))))
+  }
+}
+
+impl<T> Deref for StateRef<T> {
+  type Target = Rc<RefCell<State<T>>>;
 
   fn deref(&self) -> &Self::Target {
     &self.0
   }
 }
 
-impl DerefMut for StateRef {
+impl<T> DerefMut for StateRef<T> {
   fn deref_mut(&mut self) -> &mut Self::Target {
     &mut self.0
   }

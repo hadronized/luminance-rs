@@ -27,6 +27,11 @@ impl<V> Interleaved<V> {
     self
   }
 
+  /// Gett acces to the vertices.
+  pub fn vertices(&self) -> &Vec<V> {
+    &self.vertices
+  }
+
   /// Get access to the vertices as bytes.
   pub fn vertices_as_bytes(&self) -> &[u8] {
     let data = self.vertices.as_ptr();
@@ -86,58 +91,48 @@ pub trait VertexStorageVisitor<'a, V>
 where
   V: Vertex,
 {
-  fn visit_interleaved(&mut self, _: &'a mut Interleaved<V>) -> Result<(), VertexEntityError> {
-    Ok(())
-  }
+  fn visit_interleaved(&mut self, storage: &'a mut Interleaved<V>)
+    -> Result<(), VertexEntityError>;
 
-  fn visit_deinterleaved(&mut self, _: &'a mut Deinterleaved<V>) -> Result<(), VertexEntityError> {
-    Ok(())
+  fn visit_deinterleaved(
+    &mut self,
+    storage: &'a mut Deinterleaved<V>,
+  ) -> Result<(), VertexEntityError>;
+}
+
+pub struct Visitor<WithInterleaved, WithDeinterleaved> {
+  with_interleaved: WithInterleaved,
+  with_deinterleaved: WithDeinterleaved,
+}
+
+impl<WithInterleaved, WithDeinterleaved> Visitor<WithInterleaved, WithDeinterleaved> {
+  pub fn new(with_interleaved: WithInterleaved, with_deinterleaved: WithDeinterleaved) -> Self {
+    Self {
+      with_interleaved,
+      with_deinterleaved,
+    }
   }
 }
 
-pub struct InterleavedVisitor<F> {
-  f: F,
-}
-
-impl<F> InterleavedVisitor<F> {
-  pub fn new(f: F) -> Self {
-    Self { f }
-  }
-}
-
-impl<'a, F, V> VertexStorageVisitor<'a, V> for InterleavedVisitor<F>
+impl<'a, WithInterleaved, WithDeinterleaved, V> VertexStorageVisitor<'a, V>
+  for Visitor<WithInterleaved, WithDeinterleaved>
 where
-  F: FnMut(&'a mut Interleaved<V>) -> Result<(), VertexEntityError>,
+  WithInterleaved: FnMut(&'a mut Interleaved<V>) -> Result<(), VertexEntityError>,
+  WithDeinterleaved: FnMut(&'a mut Deinterleaved<V>) -> Result<(), VertexEntityError>,
   V: 'a + Vertex,
 {
   fn visit_interleaved(
     &mut self,
     storage: &'a mut Interleaved<V>,
   ) -> Result<(), VertexEntityError> {
-    (self.f)(storage)
+    (self.with_interleaved)(storage)
   }
-}
 
-pub struct DeinterleavedVisitor<F> {
-  f: F,
-}
-
-impl<F> DeinterleavedVisitor<F> {
-  pub fn new(f: F) -> Self {
-    Self { f }
-  }
-}
-
-impl<'a, F, V> VertexStorageVisitor<'a, V> for DeinterleavedVisitor<F>
-where
-  F: FnMut(&'a mut Deinterleaved<V>) -> Result<(), VertexEntityError>,
-  V: 'a + Vertex,
-{
   fn visit_deinterleaved(
     &mut self,
     storage: &'a mut Deinterleaved<V>,
   ) -> Result<(), VertexEntityError> {
-    (self.f)(storage)
+    (self.with_deinterleaved)(storage)
   }
 }
 
