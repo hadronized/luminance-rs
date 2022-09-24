@@ -6,7 +6,7 @@ use crate::{
   render_channel::{IsDepthChannelType, IsRenderChannelType},
   render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
   render_state::RenderState,
-  shader::{FromEnv, IsUniBuffer, Program, Uni, UniBuffer, Uniform},
+  shader::{FromUni, IsUniBuffer, Program, Uni, UniBuffer, Uniform},
   vertex::Vertex,
   vertex_entity::{Indices, VertexEntity, VertexEntityView, Vertices},
   vertex_storage::VertexStorage,
@@ -465,7 +465,7 @@ pub unsafe trait ShaderBackend {
     V: Vertex,
     P: Primitive,
     S: RenderSlots,
-    E: FromEnv;
+    E: FromUni;
 
   unsafe fn new_shader_uni<T>(
     &mut self,
@@ -517,7 +517,7 @@ pub unsafe trait PipelineBackend {
     V: Vertex,
     P: Primitive,
     S: RenderSlots,
-    E: FromEnv,
+    E: FromUni,
     Err: From<PipelineError>;
 
   unsafe fn with_render_state<'a, V, Err>(

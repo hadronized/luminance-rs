@@ -1,5 +1,7 @@
 use crate::{
-  backend::{Backend, FramebufferError, PipelineError, ShaderError, VertexEntityError},
+  backend::{
+    state::StateRef, Backend, FramebufferError, PipelineError, ShaderError, VertexEntityError,
+  },
   dim::Dimensionable,
   framebuffer::Framebuffer,
   pipeline::{PipelineState, WithFramebuffer},
@@ -14,14 +16,17 @@ use crate::{
 #[derive(Debug)]
 pub struct Context<B> {
   backend: B,
+  state: StateRef,
 }
 
 impl<B> Context<B>
 where
   B: Backend,
 {
-  pub unsafe fn new(backend: B) -> Self {
-    Self { backend }
+  pub unsafe fn new(builder: impl FnOnce(StateRef) -> B) -> Option<Self> {
+    let state = StateRef::new()?;
+    let backend = builder(state.clone());
+    Some(Self { backend, state })
   }
 
   pub fn new_vertex_entity<V, S, I>(
@@ -155,5 +160,11 @@ where
     Err: From<PipelineError>,
   {
     unsafe { self.backend.with_framebuffer(framebuffer, state, f) }
+  }
+}
+
+impl<B> Drop for Context<B> {
+  fn drop(&mut self) {
+    self.state.borrow_mut().context_active = false;
   }
 }
