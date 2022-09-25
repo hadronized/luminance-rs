@@ -370,7 +370,7 @@ pub unsafe trait VertexEntityBackend {
     S: VertexStorage<V>,
     I: Into<Vec<u32>>;
 
-  unsafe fn vertex_entity_render<V, S>(
+  unsafe fn vertex_entity_render<V, P, S>(
     &self,
     entity: &VertexEntity<V, S>,
     start_index: usize,
@@ -379,6 +379,7 @@ pub unsafe trait VertexEntityBackend {
   ) -> Result<(), VertexEntityError>
   where
     V: Vertex,
+    P: Primitive,
     S: VertexStorage<V>;
 
   unsafe fn vertex_entity_vertices<'a, V, S>(

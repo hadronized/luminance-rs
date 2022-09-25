@@ -8,7 +8,7 @@ pub struct VertexEntity<V, S> {
   handle: usize,
   vertex_count: usize,
   index_count: usize,
-  instance_count: usize,
+  primitive_restart: bool,
   _phantom: PhantomData<*const (V, S)>,
 }
 
@@ -17,13 +17,13 @@ impl<V, S> VertexEntity<V, S> {
     handle: usize,
     vertex_count: usize,
     index_count: usize,
-    instance_count: usize,
+    primitive_restart: bool,
   ) -> Self {
     Self {
       handle,
       vertex_count,
       index_count,
-      instance_count,
+      primitive_restart,
       _phantom: PhantomData,
     }
   }
@@ -40,8 +40,8 @@ impl<V, S> VertexEntity<V, S> {
     self.index_count
   }
 
-  pub fn instance_count(&self) -> usize {
-    self.instance_count
+  pub fn primitive_restart(&self) -> bool {
+    self.primitive_restart
   }
 
   pub fn view(&self) -> VertexEntityView<V> {
@@ -108,13 +108,12 @@ impl<V> VertexEntityView<V> {
   pub fn new<S>(entity: &VertexEntity<V, S>) -> Self {
     let vertex_entity_handle = entity.handle;
     let vertex_count = entity.vertex_count;
-    let instance_count = entity.instance_count;
 
     Self {
       vertex_entity_handle,
       start_vertex: 0,
       vertex_count,
-      instance_count,
+      instance_count: 1,
       _phantom: PhantomData,
     }
   }

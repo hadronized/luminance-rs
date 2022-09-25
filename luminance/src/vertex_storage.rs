@@ -11,6 +11,7 @@ use std::{marker::PhantomData, mem};
 #[derive(Debug)]
 pub struct Interleaved<V> {
   vertices: Vec<V>,
+  primitive_restart: bool,
 }
 
 impl<V> Interleaved<V> {
@@ -18,6 +19,7 @@ impl<V> Interleaved<V> {
   pub fn new() -> Self {
     Self {
       vertices: Vec::new(),
+      primitive_restart: false,
     }
   }
 
@@ -39,12 +41,22 @@ impl<V> Interleaved<V> {
 
     unsafe { std::slice::from_raw_parts(data as _, len * mem::size_of::<V>()) }
   }
+
+  pub fn primitive_restart(&self) -> bool {
+    self.primitive_restart
+  }
+
+  pub fn set_primitive_restart(mut self, primitive_restart: bool) -> Self {
+    self.primitive_restart = primitive_restart;
+    self
+  }
 }
 
 /// Store vertices as deinterleaved arrays.
 #[derive(Debug)]
 pub struct Deinterleaved<V> {
   components_list: Vec<Vec<u8>>,
+  primitive_restart: bool,
   _phantom: PhantomData<V>,
 }
 
@@ -58,6 +70,7 @@ where
 
     Self {
       components_list: vec![Vec::new(); components_count],
+      primitive_restart: false,
       _phantom: PhantomData,
     }
   }
@@ -85,55 +98,25 @@ where
   pub fn components_list(&self) -> &Vec<Vec<u8>> {
     &self.components_list
   }
+
+  pub fn primitive_restart(&self) -> bool {
+    self.primitive_restart
+  }
+
+  pub fn set_primitive_restart(mut self, primitive_restart: bool) -> Self {
+    self.primitive_restart = primitive_restart;
+    self
+  }
 }
 
 pub trait VertexStorageVisitor<'a, V>
 where
   V: Vertex,
 {
-  fn visit_interleaved(&mut self, storage: &'a mut Interleaved<V>)
+  fn visit_interleaved(&mut self, storage: &'a Interleaved<V>) -> Result<(), VertexEntityError>;
+
+  fn visit_deinterleaved(&mut self, storage: &'a Deinterleaved<V>)
     -> Result<(), VertexEntityError>;
-
-  fn visit_deinterleaved(
-    &mut self,
-    storage: &'a mut Deinterleaved<V>,
-  ) -> Result<(), VertexEntityError>;
-}
-
-pub struct Visitor<WithInterleaved, WithDeinterleaved> {
-  with_interleaved: WithInterleaved,
-  with_deinterleaved: WithDeinterleaved,
-}
-
-impl<WithInterleaved, WithDeinterleaved> Visitor<WithInterleaved, WithDeinterleaved> {
-  pub fn new(with_interleaved: WithInterleaved, with_deinterleaved: WithDeinterleaved) -> Self {
-    Self {
-      with_interleaved,
-      with_deinterleaved,
-    }
-  }
-}
-
-impl<'a, WithInterleaved, WithDeinterleaved, V> VertexStorageVisitor<'a, V>
-  for Visitor<WithInterleaved, WithDeinterleaved>
-where
-  WithInterleaved: FnMut(&'a mut Interleaved<V>) -> Result<(), VertexEntityError>,
-  WithDeinterleaved: FnMut(&'a mut Deinterleaved<V>) -> Result<(), VertexEntityError>,
-  V: 'a + Vertex,
-{
-  fn visit_interleaved(
-    &mut self,
-    storage: &'a mut Interleaved<V>,
-  ) -> Result<(), VertexEntityError> {
-    (self.with_interleaved)(storage)
-  }
-
-  fn visit_deinterleaved(
-    &mut self,
-    storage: &'a mut Deinterleaved<V>,
-  ) -> Result<(), VertexEntityError> {
-    (self.with_deinterleaved)(storage)
-  }
 }
 
 pub trait VertexStorage<V>
@@ -141,7 +124,7 @@ where
   V: Vertex,
 {
   fn visit<'a>(
-    &'a mut self,
+    &'a self,
     visitor: &mut impl VertexStorageVisitor<'a, V>,
   ) -> Result<(), VertexEntityError>;
 }
@@ -151,7 +134,7 @@ where
   V: Vertex,
 {
   fn visit<'a>(
-    &'a mut self,
+    &'a self,
     visitor: &mut impl VertexStorageVisitor<'a, V>,
   ) -> Result<(), VertexEntityError> {
     visitor.visit_interleaved(self)
@@ -163,7 +146,7 @@ where
   V: Vertex,
 {
   fn visit<'a>(
-    &'a mut self,
+    &'a self,
     visitor: &mut impl VertexStorageVisitor<'a, V>,
   ) -> Result<(), VertexEntityError> {
     visitor.visit_deinterleaved(self)
