@@ -13,8 +13,6 @@ use crate::{
 };
 use std::{error::Error as ErrorTrait, fmt};
 
-pub mod state;
-
 #[derive(Debug)]
 pub enum VertexEntityError {
   Creation { cause: Option<Box<dyn ErrorTrait>> },

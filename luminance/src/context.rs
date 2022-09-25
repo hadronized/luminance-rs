@@ -1,7 +1,7 @@
+use std::{cell::RefCell, rc::Rc};
+
 use crate::{
-  backend::{
-    state::StateRef, Backend, FramebufferError, PipelineError, ShaderError, VertexEntityError,
-  },
+  backend::{Backend, FramebufferError, PipelineError, ShaderError, VertexEntityError},
   dim::Dimensionable,
   framebuffer::Framebuffer,
   pipeline::{PipelineState, WithFramebuffer},
@@ -13,20 +13,36 @@ use crate::{
   vertex_storage::VertexStorage,
 };
 
+#[derive(Clone, Debug)]
+pub struct ContextActive(Rc<RefCell<bool>>);
+
+impl ContextActive {
+  pub fn new() -> Self {
+    Self(Rc::new(RefCell::new(true)))
+  }
+
+  pub fn is_active(&self) -> bool {
+    *self.0.borrow()
+  }
+}
+
 #[derive(Debug)]
 pub struct Context<B> {
   backend: B,
-  state: StateRef,
+  context_active: ContextActive,
 }
 
 impl<B> Context<B>
 where
   B: Backend,
 {
-  pub unsafe fn new(builder: impl FnOnce(StateRef) -> B) -> Option<Self> {
-    let state = StateRef::new()?;
-    let backend = builder(state.clone());
-    Some(Self { backend, state })
+  pub unsafe fn new(builder: impl FnOnce(ContextActive) -> B) -> Option<Self> {
+    let context_active = ContextActive::new();
+    let backend = builder(context_active.clone());
+    Some(Self {
+      backend,
+      context_active,
+    })
   }
 
   pub fn new_vertex_entity<V, S, I>(
@@ -165,6 +181,6 @@ where
 
 impl<B> Drop for Context<B> {
   fn drop(&mut self) {
-    self.state.borrow_mut().context_active = false;
+    *self.context_active.0.borrow_mut() = false;
   }
 }
