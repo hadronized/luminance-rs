@@ -298,7 +298,7 @@ where
     unsafe {
       self
         .backend
-        .set_program_env(self.program_handle, env.handle(), value)
+        .set_shader_uni(self.program_handle, env.handle(), value)
     }
   }
 }

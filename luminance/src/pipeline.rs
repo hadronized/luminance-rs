@@ -267,7 +267,10 @@ where
     }
   }
 
-  pub fn render_vertex_entity<W>(&mut self, view: VertexEntityView<W>) -> Result<(), PipelineError>
+  pub fn render_vertex_entity<W, Q, S>(
+    &mut self,
+    view: VertexEntityView<B, W, Q, S>,
+  ) -> Result<(), PipelineError>
   where
     V: CompatibleVertex<W>,
     W: Vertex,

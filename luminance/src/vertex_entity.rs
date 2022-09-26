@@ -1,31 +1,27 @@
-use std::{
-  marker::PhantomData,
-  ops::{Deref, DerefMut},
+use crate::{
+  backend::{VertexEntityBackend, VertexEntityError},
+  primitive::Primitive,
+  vertex::Vertex,
+  vertex_storage::VertexStorage,
 };
 
 #[derive(Debug)]
-pub struct VertexEntity<V, S> {
-  handle: usize,
-  vertex_count: usize,
-  index_count: usize,
-  primitive_restart: bool,
-  _phantom: PhantomData<*const (V, S)>,
+pub struct VertexEntity<B, V, P, S>
+where
+  B: VertexEntityBackend,
+{
+  repr: B::VertexEntityRepr<V, P, S>,
 }
 
-impl<V, S> VertexEntity<V, S> {
-  pub unsafe fn new(
-    handle: usize,
-    vertex_count: usize,
-    index_count: usize,
-    primitive_restart: bool,
-  ) -> Self {
-    Self {
-      handle,
-      vertex_count,
-      index_count,
-      primitive_restart,
-      _phantom: PhantomData,
-    }
+impl<B, V, P, S> VertexEntity<B, V, P, S>
+where
+  B: VertexEntityBackend,
+  V: Vertex,
+  P: Primitive,
+  S: Into<VertexStorage<V>>,
+{
+  pub unsafe fn new(repr: B::VertexEntityRepr<V, P, S>) -> Self {
+    Self { repr }
   }
 
   pub fn handle(&self) -> usize {
@@ -33,64 +29,105 @@ impl<V, S> VertexEntity<V, S> {
   }
 
   pub fn vertex_count(&self) -> usize {
-    self.vertex_count
+    unsafe { B::vertex_entity_vertex_count(&self.repr) }
   }
 
   pub fn index_count(&self) -> usize {
-    self.index_count
+    unsafe { B::vertex_entity_index_count(&self.repr) }
   }
 
   pub fn primitive_restart(&self) -> bool {
-    self.primitive_restart
+    unsafe { B::vertex_entity_primitive_restart(&self.repr) }
   }
 
-  pub fn view(&self) -> VertexEntityView<V> {
+  pub fn view(&self) -> VertexEntityView<B, V, P, S> {
     VertexEntityView::new(self)
   }
-}
 
-#[derive(Debug)]
-pub struct Vertices<'a, V, S> {
-  storage: &'a mut S,
-  _phantom: PhantomData<*const V>,
-}
-
-impl<'a, V, S> Deref for Vertices<'a, V, S> {
-  type Target = S;
-
-  fn deref(&self) -> &Self::Target {
-    self.storage
-  }
-}
-
-impl<'a, V, S> DerefMut for Vertices<'a, V, S> {
-  fn deref_mut(&mut self) -> &mut Self::Target {
-    self.storage
+  pub fn vertices(&self) -> Result<Vertices<B, V>, VertexEntityError> {
+    unsafe { B::vertex_entity_vertices(&self.repr).map(|repr| Vertices::new(repr)) }
   }
 }
 
 #[derive(Debug)]
-pub struct Indices<'a> {
-  indices: &'a mut Vec<u32>,
+pub struct Vertices<'a, B, V>
+where
+  B: VertexEntityBackend,
+{
+  repr: B::VerticesRepr<'a, V>,
 }
 
-impl<'a> Deref for Indices<'a> {
-  type Target = Vec<u32>;
-
-  fn deref(&self) -> &Self::Target {
-    self.indices
+impl<'a, B, V> Vertices<'a, B, V>
+where
+  B: VertexEntityBackend,
+{
+  pub unsafe fn new(repr: B::VerticesRepr<'a, V>) -> Self {
+    Self { repr }
   }
 }
 
-impl<'a> DerefMut for Indices<'a> {
-  fn deref_mut(&mut self) -> &mut Self::Target {
-    self.indices
+impl<'a, B, V> Drop for Vertices<'a, B, V>
+where
+  B: VertexEntityBackend,
+  V: Vertex,
+{
+  fn drop(&mut self) {
+    #[cfg(not(feature = "log"))]
+    unsafe {
+      let _ = B::vertex_entity_update_vertices(&self.repr);
+    }
+
+    #[cfg(feature = "log")]
+    unsafe {
+      if let Err(err) = B::vertex_entity_update_vertices(&self.repr) {
+        log::err!("error while dropping Vertices: {}", e);
+      }
+    }
+  }
+}
+
+#[derive(Debug)]
+pub struct Indices<'a, B>
+where
+  B: VertexEntityBackend,
+{
+  repr: B::IndicesRepr<'a>,
+}
+
+impl<'a, B> Indices<'a, B>
+where
+  B: VertexEntityBackend,
+{
+  pub unsafe fn new(repr: B::IndicesRepr<'a>) -> Self {
+    Self { repr }
+  }
+}
+
+impl<'a, B> Drop for Indices<'a, B>
+where
+  B: VertexEntityBackend,
+{
+  fn drop(&mut self) {
+    #[cfg(not(feature = "log"))]
+    unsafe {
+      let _ = B::vertex_entity_update_indices(&self.repr);
+    }
+
+    #[cfg(feature = "log")]
+    unsafe {
+      if let Err(err) = B::vvrtex_entity_update_indices(&self.repr) {
+        log::err!("error while dropping Indices: {}", e);
+      }
+    }
   }
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct VertexEntityView<V> {
-  vertex_entity_handle: usize,
+pub struct VertexEntityView<'a, B, V, P, S>
+where
+  B: VertexEntityBackend,
+{
+  vertex_entity: &'a VertexEntity<B, V, P, S>,
 
   /// First vertex to start rendering from.
   start_vertex: usize,
@@ -100,23 +137,20 @@ pub struct VertexEntityView<V> {
 
   /// How many instances to render.
   instance_count: usize,
-
-  _phantom: PhantomData<*const V>,
 }
 
-impl<V> VertexEntityView<V> {
-  pub fn new<S>(entity: &VertexEntity<V, S>) -> Self {
-    let vertex_entity_handle = entity.handle;
-    let vertex_count = entity.vertex_count;
+impl<'a, B, V, P, S> VertexEntityView<'a, B, V, P, S> {
+  pub fn new(vertex_entity: &'a VertexEntity<B, V, P, S>) -> Self {
+    let vertex_count = vertex_entity.vertex_count;
 
     Self {
-      vertex_entity_handle,
+      vertex_entity,
       start_vertex: 0,
       vertex_count,
       instance_count: 1,
-      _phantom: PhantomData,
     }
   }
+
   pub fn start_vertex(mut self, start_vertex: usize) -> Self {
     self.start_vertex = start_vertex;
     self

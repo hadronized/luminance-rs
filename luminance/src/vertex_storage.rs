@@ -1,11 +1,16 @@
 //! Vertex storage containers.
 
 use crate::{
-  backend::VertexEntityError,
   has_field::HasField,
   vertex::{Deinterleave, Vertex},
 };
 use std::{marker::PhantomData, mem};
+
+#[derive(Debug)]
+pub enum VertexStorage<V> {
+  Interleaved(Interleaved<V>),
+  Deinterleaved(Deinterleaved<V>),
+}
 
 /// Store vertices as an interleaved array.
 #[derive(Debug)]
@@ -106,49 +111,5 @@ where
   pub fn set_primitive_restart(mut self, primitive_restart: bool) -> Self {
     self.primitive_restart = primitive_restart;
     self
-  }
-}
-
-pub trait VertexStorageVisitor<'a, V>
-where
-  V: Vertex,
-{
-  fn visit_interleaved(&mut self, storage: &'a Interleaved<V>) -> Result<(), VertexEntityError>;
-
-  fn visit_deinterleaved(&mut self, storage: &'a Deinterleaved<V>)
-    -> Result<(), VertexEntityError>;
-}
-
-pub trait VertexStorage<V>
-where
-  V: Vertex,
-{
-  fn visit<'a>(
-    &'a self,
-    visitor: &mut impl VertexStorageVisitor<'a, V>,
-  ) -> Result<(), VertexEntityError>;
-}
-
-impl<V> VertexStorage<V> for Interleaved<V>
-where
-  V: Vertex,
-{
-  fn visit<'a>(
-    &'a self,
-    visitor: &mut impl VertexStorageVisitor<'a, V>,
-  ) -> Result<(), VertexEntityError> {
-    visitor.visit_interleaved(self)
-  }
-}
-
-impl<V> VertexStorage<V> for Deinterleaved<V>
-where
-  V: Vertex,
-{
-  fn visit<'a>(
-    &'a self,
-    visitor: &mut impl VertexStorageVisitor<'a, V>,
-  ) -> Result<(), VertexEntityError> {
-    visitor.visit_deinterleaved(self)
   }
 }

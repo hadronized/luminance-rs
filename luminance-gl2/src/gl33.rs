@@ -736,7 +736,7 @@ unsafe impl VertexEntityBackend for GL33 {
   ) -> Result<VertexEntity<V, S>, VertexEntityError>
   where
     V: Vertex,
-    S: VertexStorage<V>,
+    S: Into<VertexStorage<V>>,
     I: Into<Vec<u32>>,
   {
     let indices = indices.into();
@@ -787,7 +787,7 @@ unsafe impl VertexEntityBackend for GL33 {
   where
     V: Vertex,
     P: Primitive,
-    S: VertexStorage<V>,
+    S: Into<VertexStorage<V>>,
   {
     // early return if we want zero instance
     if inst_count == 0 {
@@ -863,7 +863,7 @@ unsafe impl VertexEntityBackend for GL33 {
   ) -> Result<Vertices<'a, V, S>, VertexEntityError>
   where
     V: Vertex,
-    S: VertexStorage<V>,
+    S: Into<VertexStorage<V>>,
   {
     todo!()
   }
@@ -875,7 +875,7 @@ unsafe impl VertexEntityBackend for GL33 {
   ) -> Result<(), VertexEntityError>
   where
     V: Vertex,
-    S: VertexStorage<V>,
+    S: Into<VertexStorage<V>>,
   {
     todo!()
   }
@@ -886,7 +886,7 @@ unsafe impl VertexEntityBackend for GL33 {
   ) -> Result<Indices<'a>, VertexEntityError>
   where
     V: Vertex,
-    S: VertexStorage<V>,
+    S: Into<VertexStorage<V>>,
   {
     todo!()
   }
@@ -898,7 +898,7 @@ unsafe impl VertexEntityBackend for GL33 {
   ) -> Result<(), VertexEntityError>
   where
     V: Vertex,
-    S: VertexStorage<V>,
+    S: Into<VertexStorage<V>>,
   {
     todo!()
   }
