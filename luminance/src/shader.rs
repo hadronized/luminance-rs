@@ -1,7 +1,7 @@
 pub mod types;
 
 use crate::{
-  backend::{Backend, ShaderError},
+  backend::{Backend, ShaderBackend, ShaderError},
   primitive::Primitive,
   render_slots::RenderSlots,
   vertex::Vertex,
@@ -105,24 +105,36 @@ impl<I, O, E> Stage<I, O, E> {
   }
 }
 
-#[derive(Debug)]
 pub struct Program<V, P, S, E> {
   handle: usize,
   pub(crate) environment: E,
+  dropper: Box<dyn FnMut(usize)>,
   _phantom: PhantomData<*const (V, P, S, E)>,
 }
 
-impl<V, P, S, E> Program<V, P, S, E> {
-  pub unsafe fn new(handle: usize, environment: E) -> Self {
+impl<V, P, S, E> Program<V, P, S, E>
+where
+  V: Vertex,
+  P: Primitive,
+  S: RenderSlots,
+{
+  pub unsafe fn new(handle: usize, environment: E, dropper: Box<dyn FnMut(usize)>) -> Self {
     Self {
       handle,
       environment,
+      dropper,
       _phantom: PhantomData,
     }
   }
 
   pub fn handle(&self) -> usize {
     self.handle
+  }
+}
+
+impl<V, P, S, E> Drop for Program<V, P, S, E> {
+  fn drop(&mut self) {
+    (self.dropper)(self.handle);
   }
 }
 
@@ -289,16 +301,12 @@ pub struct ProgramUpdate<'a, B> {
 
 impl<'a, B> ProgramUpdate<'a, B>
 where
-  B: Backend,
+  B: ShaderBackend,
 {
-  pub fn set<T>(&mut self, env: &Uni<T>, value: T) -> Result<(), ShaderError>
+  pub fn set<T>(&mut self, uni: &Uni<T>, value: T) -> Result<(), ShaderError>
   where
     T: Uniform,
   {
-    unsafe {
-      self
-        .backend
-        .set_shader_uni(self.program_handle, env.handle(), value)
-    }
+    unsafe { self.backend.set_shader_uni(self.program_handle, uni, value) }
   }
 }

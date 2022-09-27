@@ -226,6 +226,8 @@ where
 impl<'a, B, V, P, S, E> WithProgram<'a, B, V, P, S, E>
 where
   B: 'a + PipelineBackend,
+  V: Vertex,
+  P: Primitive,
 {
   pub unsafe fn new(backend: &'a mut B) -> Self {
     Self {
@@ -237,10 +239,9 @@ where
   pub fn with_render_state<Err>(
     &mut self,
     render_state: &RenderState,
-    f: impl FnOnce(WithRenderState<'a, B, V>) -> Result<(), Err>,
+    f: impl FnOnce(WithRenderState<'a, B, V, P>) -> Result<(), Err>,
   ) -> Result<(), Err>
   where
-    V: Vertex,
     Err: From<PipelineError>,
   {
     unsafe { self.backend.with_render_state(render_state, f) }
@@ -248,17 +249,19 @@ where
 }
 
 #[derive(Debug)]
-pub struct WithRenderState<'a, B, V>
+pub struct WithRenderState<'a, B, V, P>
 where
   B: 'a + ?Sized,
 {
   backend: &'a mut B,
-  _phantom: PhantomData<*const V>,
+  _phantom: PhantomData<*const (V, P)>,
 }
 
-impl<'a, B, V> WithRenderState<'a, B, V>
+impl<'a, B, V, P> WithRenderState<'a, B, V, P>
 where
   B: 'a + PipelineBackend,
+  V: Vertex,
+  P: Primitive,
 {
   pub unsafe fn new(backend: &'a mut B) -> Self {
     Self {
@@ -267,9 +270,9 @@ where
     }
   }
 
-  pub fn render_vertex_entity<W, Q, S>(
+  pub fn render_vertex_entity<W>(
     &mut self,
-    view: VertexEntityView<B, W, Q, S>,
+    view: VertexEntityView<W, P>,
   ) -> Result<(), PipelineError>
   where
     V: CompatibleVertex<W>,

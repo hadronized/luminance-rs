@@ -3,7 +3,6 @@ use crate::{
   render_slots::{DepthRenderSlot, RenderSlots},
 };
 
-#[derive(Debug)]
 pub struct Framebuffer<D, RS, DS>
 where
   D: Dimensionable,
@@ -14,6 +13,7 @@ where
   size: D::Size,
   layers: RS::RenderLayers,
   depth_layer: DS::DepthRenderLayer,
+  dropper: Box<dyn FnMut(usize)>,
 }
 
 impl<D, RS, DS> Framebuffer<D, RS, DS>
@@ -27,12 +27,14 @@ where
     size: D::Size,
     layers: RS::RenderLayers,
     depth_layer: DS::DepthRenderLayer,
+    dropper: Box<dyn FnMut(usize)>,
   ) -> Self {
     Self {
       handle,
       size,
       layers,
       depth_layer,
+      dropper,
     }
   }
 
@@ -50,5 +52,16 @@ where
 
   pub fn depth_layer(&self) -> &DS::DepthRenderLayer {
     &self.depth_layer
+  }
+}
+
+impl<D, RS, DS> Drop for Framebuffer<D, RS, DS>
+where
+  D: Dimensionable,
+  RS: RenderSlots,
+  DS: DepthRenderSlot,
+{
+  fn drop(&mut self) {
+    (self.dropper)(self.handle);
   }
 }

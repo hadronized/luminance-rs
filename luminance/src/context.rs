@@ -9,8 +9,8 @@ use crate::{
   render_slots::{DepthRenderSlot, RenderSlots},
   shader::{FromUni, Program, ProgramBuilder, ProgramUpdate},
   vertex::Vertex,
-  vertex_entity::{Indices, VertexEntity, Vertices},
-  vertex_storage::VertexStorage,
+  vertex_entity::VertexEntity,
+  vertex_storage::AsVertexStorage,
 };
 
 #[derive(Clone, Debug)]
@@ -49,38 +49,46 @@ where
     &mut self,
     storage: S,
     indices: I,
-  ) -> Result<VertexEntity<B, V, P, S>, VertexEntityError>
+  ) -> Result<VertexEntity<V, P, S>, VertexEntityError>
   where
     V: Vertex,
     P: Primitive,
-    S: Into<VertexStorage<V>>,
+    S: AsVertexStorage<V>,
     I: Into<Vec<u32>>,
   {
     unsafe { self.backend.new_vertex_entity(storage, indices) }
   }
 
-  pub fn vertices<'a, V, P, S>(
+  pub fn update_vertices<V, P, S>(
     &mut self,
-    entity: &'a VertexEntity<B, V, P, S>,
-  ) -> Result<Vertices<'a, V, S>, VertexEntityError>
+    entity: &mut VertexEntity<V, P, S>,
+  ) -> Result<(), VertexEntityError>
   where
     V: Vertex,
     P: Primitive,
-    S: Into<VertexStorage<V>>,
+    S: AsVertexStorage<V>,
   {
-    unsafe { self.backend.vertex_entity_vertices(entity) }
+    unsafe {
+      self
+        .backend
+        .vertex_entity_update_vertices(entity.handle(), entity.storage())
+    }
   }
 
-  pub fn indices<'a, V, P, S>(
-    &'a mut self,
-    entity: &VertexEntity<B, V, P, S>,
-  ) -> Result<Indices<'a, B>, VertexEntityError>
+  pub fn update_indices<V, P, S>(
+    &mut self,
+    entity: &mut VertexEntity<V, P, S>,
+  ) -> Result<(), VertexEntityError>
   where
     V: Vertex,
     P: Primitive,
-    S: Into<VertexStorage<V>>,
+    S: AsVertexStorage<V>,
   {
-    unsafe { self.backend.vertex_entity_indices(entity) }
+    unsafe {
+      self
+        .backend
+        .vertex_entity_update_indices(entity.handle(), entity.indices())
+    }
   }
 
   pub fn new_framebuffer<D, RS, DS>(
@@ -132,7 +140,12 @@ where
     &'a mut self,
     program: &Program<V, P, S, E>,
     updater: impl FnOnce(ProgramUpdate<'a, B>, &E) -> Result<(), ShaderError>,
-  ) -> Result<(), ShaderError> {
+  ) -> Result<(), ShaderError>
+  where
+    V: Vertex,
+    P: Primitive,
+    S: RenderSlots,
+  {
     let program_update = ProgramUpdate {
       backend: &mut self.backend,
       program_handle: program.handle(),

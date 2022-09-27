@@ -1,14 +1,15 @@
 use crate::{
   dim::Dimensionable,
+  framebuffer::Framebuffer,
   pipeline::{PipelineState, WithFramebuffer, WithProgram, WithRenderState},
   primitive::Primitive,
   render_channel::{IsDepthChannelType, IsRenderChannelType},
-  render_slots::{DepthRenderSlot, RenderSlots},
+  render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
   render_state::RenderState,
-  shader::{FromUni, IsUniBuffer, Uni, UniBuffer, Uniform},
+  shader::{FromUni, IsUniBuffer, Program, Uni, UniBuffer, Uniform},
   vertex::Vertex,
   vertex_entity::{VertexEntity, VertexEntityView},
-  vertex_storage::VertexStorage,
+  vertex_storage::AsVertexStorage,
 };
 use std::{error::Error as ErrorTrait, fmt};
 
@@ -16,9 +17,7 @@ use std::{error::Error as ErrorTrait, fmt};
 pub enum VertexEntityError {
   Creation { cause: Option<Box<dyn ErrorTrait>> },
   Render { cause: Option<Box<dyn ErrorTrait>> },
-  RetrieveVertexStorage { cause: Option<Box<dyn ErrorTrait>> },
   UpdateVertexStorage { cause: Option<Box<dyn ErrorTrait>> },
-  RetrieveIndices { cause: Option<Box<dyn ErrorTrait>> },
   UpdateIndices { cause: Option<Box<dyn ErrorTrait>> },
 }
 
@@ -42,15 +41,6 @@ impl fmt::Display for VertexEntityError {
           .map(|cause| cause.to_string())
           .unwrap_or_else(|| "unknown cause".to_string())
       ),
-      VertexEntityError::RetrieveVertexStorage { cause } => write!(
-        f,
-        "cannot retrieve vertex storage: {}",
-        cause
-          .as_ref()
-          .map(|cause| cause.to_string())
-          .unwrap_or_else(|| "unknown cause".to_string())
-      ),
-
       VertexEntityError::UpdateVertexStorage { cause } => {
         write!(
           f,
@@ -61,15 +51,6 @@ impl fmt::Display for VertexEntityError {
             .unwrap_or_else(|| "unknown cause".to_string())
         )
       }
-
-      VertexEntityError::RetrieveIndices { cause } => write!(
-        f,
-        "cannot retrieve indices: {}",
-        cause
-          .as_ref()
-          .map(|cause| cause.to_string())
-          .unwrap_or_else(|| "unknown cause".to_string())
-      ),
 
       VertexEntityError::UpdateIndices { cause } => write!(
         f,
@@ -359,78 +340,51 @@ impl<B> Backend for B where
 }
 
 pub unsafe trait VertexEntityBackend {
-  type VertexEntityRepr<V, P, S>;
-
-  type VerticesRepr<'a, V>;
-
-  type IndicesRepr<'a>;
-
   unsafe fn new_vertex_entity<V, P, S, I>(
     &mut self,
     storage: S,
     indices: I,
-  ) -> Result<VertexEntity<Self, V, P, S>, VertexEntityError>
+  ) -> Result<VertexEntity<V, P, S>, VertexEntityError>
   where
     V: Vertex,
-    S: Into<VertexStorage<V>>,
+    P: Primitive,
+    S: AsVertexStorage<V>,
     I: Into<Vec<u32>>;
-
-  unsafe fn vertex_entity_start_index<V, P, S>(entity: &Self::VertexEntityRepr<V, P, S>) -> usize;
-
-  unsafe fn vertex_entity_vertex_count<V, P, S>(entity: &Self::VertexEntityRepr<V, P, S>) -> usize;
-
-  unsafe fn vertex_entity_index_count<V, P, S>(entity: &Self::VertexEntityRepr<V, P, S>) -> usize;
-
-  unsafe fn vertex_entity_primitive_restart<V, P, S>(
-    entity: &Self::VertexEntityRepr<V, P, S>,
-  ) -> bool;
 
   unsafe fn vertex_entity_render<V, P, S>(
     &self,
-    entity: &Self::VertexEntityRepr<V, P, S>,
+    handle: usize,
     start_index: usize,
     vert_count: usize,
     inst_count: usize,
+    primitive_restart: bool,
   ) -> Result<(), VertexEntityError>
   where
     V: Vertex,
     P: Primitive,
-    S: Into<VertexStorage<V>>;
+    S: AsVertexStorage<V>;
 
-  unsafe fn vertex_entity_vertices<'a, V, P, S>(
-    entity: &'a Self::VertexEntityRepr<V, P, S>,
-  ) -> Result<Self::VerticesRepr<'a, V>, VertexEntityError>
-  where
-    V: Vertex,
-    S: Into<VertexStorage<V>>;
-
-  unsafe fn vertex_entity_update_vertices<V>(
-    vertices: Self::VerticesRepr<'_, V>,
+  unsafe fn vertex_entity_update_vertices<V, S>(
+    &mut self,
+    handle: usize,
+    storage: &mut S,
   ) -> Result<(), VertexEntityError>
   where
-    V: Vertex;
-
-  unsafe fn vertex_entity_indices<'a, V, P, S>(
-    entity: &'a Self::VertexEntityRepr<V, P, S>,
-  ) -> Result<Self::IndicesRepr<'a>, VertexEntityError>
-  where
     V: Vertex,
-    S: Into<VertexStorage<V>>;
+    S: AsVertexStorage<V>;
 
   unsafe fn vertex_entity_update_indices(
-    indices: Self::IndicesRepr<'_>,
+    &mut self,
+    handle: usize,
+    indices: &mut Vec<u32>,
   ) -> Result<(), VertexEntityError>;
 }
 
 pub unsafe trait FramebufferBackend {
-  type FramebufferRepr<D, RS, DS>;
-
-  type RenderLayerRepr<RC>;
-
   unsafe fn new_render_layer<D, RC>(
     &mut self,
     size: D::Size,
-  ) -> Result<Self::RenderLayerRepr<RC>, FramebufferError>
+  ) -> Result<RenderLayer<RC>, FramebufferError>
   where
     D: Dimensionable,
     RC: IsRenderChannelType;
@@ -438,7 +392,7 @@ pub unsafe trait FramebufferBackend {
   unsafe fn new_depth_render_layer<D, DC>(
     &mut self,
     size: D::Size,
-  ) -> Result<Self::RenderLayerRepr<DC>, FramebufferError>
+  ) -> Result<RenderLayer<DC>, FramebufferError>
   where
     D: Dimensionable,
     DC: IsDepthChannelType;
@@ -446,7 +400,7 @@ pub unsafe trait FramebufferBackend {
   unsafe fn new_framebuffer<D, RS, DS>(
     &mut self,
     size: D::Size,
-  ) -> Result<Self::FramebufferRepr<D, RS, DS>, FramebufferError>
+  ) -> Result<Framebuffer<D, RS, DS>, FramebufferError>
   where
     D: Dimensionable,
     RS: RenderSlots,
@@ -455,7 +409,7 @@ pub unsafe trait FramebufferBackend {
   unsafe fn back_buffer<D, RS, DS>(
     &mut self,
     size: D::Size,
-  ) -> Result<Self::FramebufferRepr<D, RS, DS>, FramebufferError>
+  ) -> Result<Framebuffer<D, RS, DS>, FramebufferError>
   where
     D: Dimensionable,
     RS: RenderSlots,
@@ -463,40 +417,34 @@ pub unsafe trait FramebufferBackend {
 }
 
 pub unsafe trait ShaderBackend {
-  type ProgramRepr<V, P, S, E>;
-
   unsafe fn new_program<V, P, S, E>(
     &mut self,
     vertex_code: String,
     primitive_code: String,
     shading_code: String,
-  ) -> Result<Self::ProgramRepr<V, P, S, E>, ShaderError>
+  ) -> Result<Program<V, P, S, E>, ShaderError>
   where
     V: Vertex,
     P: Primitive,
     S: RenderSlots,
     E: FromUni;
 
-  unsafe fn new_shader_uni<V, P, S, E, T>(
-    &mut self,
-    program: &Self::ProgramRepr<V, P, S, E>,
-    name: &str,
-  ) -> Result<Uni<T>, ShaderError>
+  unsafe fn new_shader_uni<T>(&mut self, handle: usize, name: &str) -> Result<Uni<T>, ShaderError>
   where
     T: Uniform;
 
-  unsafe fn set_shader_uni<V, P, S, E, T>(
+  unsafe fn set_shader_uni<T>(
     &mut self,
-    program: &Self::ProgramRepr<V, P, S, E>,
+    handle: usize,
     uni: &Uni<T>,
     value: T,
   ) -> Result<(), ShaderError>
   where
     T: Uniform;
 
-  unsafe fn new_shader_uni_buffer<V, P, S, E, T>(
+  unsafe fn new_shader_uni_buffer<T>(
     &mut self,
-    program: &Self::ProgramRepr<V, P, S, E>,
+    handle: usize,
     name: &str,
   ) -> Result<UniBuffer<T>, ShaderError>
   where
@@ -508,7 +456,7 @@ pub unsafe trait PipelineBackend:
 {
   unsafe fn with_framebuffer<'a, D, CS, DS, Err>(
     &mut self,
-    framebuffer: &Self::FramebufferRepr<D, CS, DS>,
+    framebuffer: &Framebuffer<D, CS, DS>,
     state: &PipelineState,
     f: impl FnOnce(WithFramebuffer<'a, Self, CS>) -> Result<(), Err>,
   ) -> Result<(), Err>
@@ -521,7 +469,7 @@ pub unsafe trait PipelineBackend:
 
   unsafe fn with_program<'a, V, P, S, E, Err>(
     &mut self,
-    program: &Self::ProgramRepr<V, P, S, E>,
+    program: &Program<V, P, S, E>,
     f: impl FnOnce(WithProgram<'a, Self, V, P, S, E>) -> Result<(), Err>,
   ) -> Result<(), Err>
   where
@@ -532,24 +480,24 @@ pub unsafe trait PipelineBackend:
     E: FromUni,
     Err: From<PipelineError>;
 
-  unsafe fn with_render_state<'a, V, Err>(
+  unsafe fn with_render_state<'a, V, P, Err>(
     &mut self,
     render_state: &RenderState,
-    f: impl FnOnce(WithRenderState<'a, Self, V>) -> Result<(), Err>,
+    f: impl FnOnce(WithRenderState<'a, Self, V, P>) -> Result<(), Err>,
   ) -> Result<(), Err>
   where
     Self: 'a,
     V: Vertex,
+    P: Primitive,
     Err: From<PipelineError>;
 
-  unsafe fn render_vertex_entity<V, P, S>(
+  unsafe fn render_vertex_entity<V, P>(
     &mut self,
-    view: VertexEntityView<'_, Self, V, P, S>,
+    view: VertexEntityView<V, P>,
   ) -> Result<(), PipelineError>
   where
     V: Vertex,
-    P: Primitive,
-    S: Into<VertexStorage<V>>;
+    P: Primitive;
 }
 
 pub unsafe trait QueryBackend {

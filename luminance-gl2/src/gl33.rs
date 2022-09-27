@@ -10,8 +10,8 @@ use luminance::{
     Normalized, Vertex, VertexAttribDesc, VertexAttribDim, VertexAttribType, VertexBufferDesc,
     VertexInstancing,
   },
-  vertex_entity::{Indices, VertexEntity, Vertices},
-  vertex_storage::{self, Deinterleaved, Interleaved, VertexStorage, VertexStorageVisitor},
+  vertex_entity::VertexEntity,
+  vertex_storage::{AsVertexStorage, Deinterleaved, Interleaved, VertexStorage},
 };
 use std::{
   cell::RefCell,
@@ -35,9 +35,7 @@ use std::{
 /// This optimization has limits and sometimes, because of side-effects, it is not possible to cache
 /// something correctly.
 #[derive(Debug)]
-pub struct Cached<T>(Option<T>)
-where
-  T: PartialEq;
+pub struct Cached<T>(Option<T>);
 
 impl<T> Cached<T>
 where
@@ -62,12 +60,12 @@ where
   // Set the value if invalid or never set (and call the function).
   //
   // If the value was still valid, returns `true`.
-  pub fn set_if_invalid(&mut self, value: &T, f: impl FnOnce()) -> bool {
+  pub fn set_if_invalid(&mut self, value: T, f: impl FnOnce()) -> bool {
     match self.0 {
-      Some(ref x) if x == value => false,
+      Some(ref x) if x == &value => false,
 
       _ => {
-        self.0 = Some(*value);
+        self.0 = Some(value);
         f();
         true
       }
@@ -98,7 +96,6 @@ pub struct State {
 
   // backend-specific resources
   buffers: HashSet<GLuint>,
-  vertex_storage_data: HashMap<usize, VertexStorageData>,
   vertex_entities: HashMap<usize, VertexEntityData>,
 
   // binding points
@@ -222,7 +219,6 @@ impl State {
 
   fn build(context_active: ContextActive) -> Self {
     let buffers = HashSet::new();
-    let vertex_storage_data = HashMap::new();
     let vertex_entities = HashMap::new();
     let next_texture_unit = 0;
     let free_texture_units = Vec::new();
@@ -279,7 +275,6 @@ impl State {
       _phantom: PhantomData,
 
       buffers,
-      vertex_storage_data,
       vertex_entities,
       context_active,
       next_texture_unit,
@@ -334,6 +329,26 @@ impl State {
       max_texture_array_elements,
     }
   }
+
+  fn is_context_active(&self) -> bool {
+    self.context_active.is_active()
+  }
+
+  fn drop_buffer(&mut self, handle: usize) {
+    let handle = handle as GLuint;
+    unsafe {
+      gl::DeleteBuffers(1, &handle);
+    }
+    self.buffers.remove(&handle);
+  }
+
+  fn drop_vertex_entity(&mut self, handle: usize) {
+    let vao = handle as GLuint;
+    unsafe {
+      gl::DeleteVertexArrays(1, &vao);
+    }
+    self.vertex_entities.remove(&handle);
+  }
 }
 
 #[derive(Debug)]
@@ -373,7 +388,7 @@ struct Buffer {
 
 impl Drop for Buffer {
   fn drop(&mut self) {
-    if self.state.borrow().context_active.is_active() {
+    if self.state.borrow().is_context_active() {
       unsafe { gl::DeleteBuffers(1, &self.handle) };
       self.state.borrow_mut().buffers.remove(&self.handle);
     }
@@ -414,11 +429,6 @@ impl Buffer {
 }
 
 #[derive(Debug)]
-pub struct GL33 {
-  state: StateRef,
-}
-
-#[derive(Debug)]
 enum VertexEntityBuffers {
   Interleaved(Buffer),
   Deinterleaved(Vec<Buffer>),
@@ -431,52 +441,47 @@ struct VertexEntityData {
   index_buffer: Option<Buffer>,
 }
 
-#[derive(Debug)]
-struct VertexStorageData {
-  ptr: *mut u8,
-}
-
-impl VertexStorageData {
-  fn new<S>(storage: S) -> Self {
-    let boxed = Box::new(storage);
-    let ptr = Box::leak(boxed) as *mut S as *mut u8;
-
-    VertexStorageData { ptr }
-  }
-
-  unsafe fn into<S>(self) -> S {
-    let boxed = Box::from_raw(self.ptr as *mut S);
-    *boxed
-  }
-}
-
-struct BuiltVertexBuffers<'a> {
-  state: &'a StateRef,
+struct BuiltVertexBuffers {
   buffers: Option<VertexEntityBuffers>,
   len: usize,
   primitive_restart: bool,
 }
 
-impl<'a, 'b, V> VertexStorageVisitor<'a, V> for BuiltVertexBuffers<'b>
-where
-  V: Vertex,
-{
-  fn visit_interleaved(&mut self, storage: &'a Interleaved<V>) -> Result<(), VertexEntityError> {
+#[derive(Debug)]
+pub struct GL33 {
+  state: StateRef,
+}
+
+impl GL33 {
+  pub fn new(state: StateRef) -> Self {
+    Self { state }
+  }
+
+  fn build_interleaved_buffer<V>(
+    &self,
+    storage: &Interleaved<V>,
+  ) -> Result<BuiltVertexBuffers, VertexEntityError>
+  where
+    V: Vertex,
+  {
     let vertices = storage.vertices();
     let len = vertices.len();
 
     if vertices.is_empty() {
       // no need do create a vertex buffer
-      return Ok(());
+      return Ok(BuiltVertexBuffers {
+        buffers: None,
+        len: 0,
+        primitive_restart: false,
+      });
     }
 
-    let buffer = Buffer::from_vec(self.state, storage.vertices());
+    let buffer = Buffer::from_vec(&self.state, storage.vertices());
 
     // force binding as it’s meaningful when a vao is bound
     unsafe {
       gl::BindBuffer(gl::ARRAY_BUFFER, buffer.handle);
     }
-
     self
       .state
       .borrow_mut()
@@ -484,17 +489,21 @@ where
       .set(buffer.handle);
 
     GL33::set_vertex_pointers(&V::vertex_desc());
-    self.buffers = Some(VertexEntityBuffers::Interleaved(buffer));
-    self.len = len;
-    self.primitive_restart = storage.primitive_restart();
 
-    Ok(())
+    Ok(BuiltVertexBuffers {
+      buffers: Some(VertexEntityBuffers::Interleaved(buffer)),
+      len,
+      primitive_restart: storage.primitive_restart(),
+    })
   }
 
-  fn visit_deinterleaved(
-    &mut self,
-    storage: &'a Deinterleaved<V>,
-  ) -> Result<(), VertexEntityError> {
+  fn build_deinterleaved_buffers<V>(
+    &self,
+    storage: &Deinterleaved<V>,
+  ) -> Result<BuiltVertexBuffers, VertexEntityError>
+  where
+    V: Vertex,
+  {
     let mut len = 0;
     let buffers = storage
       .components_list()
@@ -526,35 +535,24 @@ where
       })
       .collect::<Result<_, _>>()?;
 
-    self.buffers = Some(VertexEntityBuffers::Deinterleaved(buffers));
-    self.len = len;
-    self.primitive_restart = storage.primitive_restart();
-
-    Ok(())
-  }
-}
-
-impl GL33 {
-  pub fn new(state: StateRef) -> Self {
-    Self { state }
+    Ok(BuiltVertexBuffers {
+      buffers: Some(VertexEntityBuffers::Deinterleaved(buffers)),
+      len,
+      primitive_restart: storage.primitive_restart(),
+    })
   }
 
   fn build_vertex_buffers<V>(
     &self,
-    storage: &impl VertexStorage<V>,
+    storage: &mut impl AsVertexStorage<V>,
   ) -> Result<BuiltVertexBuffers, VertexEntityError>
   where
     V: Vertex,
   {
-    let mut built = BuiltVertexBuffers {
-      state: &self.state,
-      buffers: None,
-      len: 0,
-      primitive_restart: false,
-    };
-
-    storage.visit(&mut built)?;
-    Ok(built)
+    match storage.as_vertex_storage() {
+      VertexStorage::Interleaved(storage) => self.build_interleaved_buffer(storage),
+      VertexStorage::Deinterleaved(storage) => self.build_deinterleaved_buffers(storage),
+    }
   }
 
   fn build_index_buffer(&mut self, indices: &Vec<u32>) -> Option<Buffer> {
@@ -729,14 +727,15 @@ impl GL33 {
 }
 
 unsafe impl VertexEntityBackend for GL33 {
-  unsafe fn new_vertex_entity<V, S, I>(
+  unsafe fn new_vertex_entity<V, P, S, I>(
     &mut self,
-    storage: S,
+    mut storage: S,
     indices: I,
-  ) -> Result<VertexEntity<V, S>, VertexEntityError>
+  ) -> Result<VertexEntity<V, P, S>, VertexEntityError>
   where
     V: Vertex,
-    S: Into<VertexStorage<V>>,
+    P: Primitive,
+    S: AsVertexStorage<V>,
     I: Into<Vec<u32>>,
   {
     let indices = indices.into();
@@ -747,11 +746,10 @@ unsafe impl VertexEntityBackend for GL33 {
     gl::BindVertexArray(vao);
     self.state.borrow_mut().bound_vertex_array.set(vao);
 
-    let built_vertex_buffers = self.build_vertex_buffers(&storage)?;
+    let built_vertex_buffers = self.build_vertex_buffers(&mut storage)?;
     let vertex_buffers = built_vertex_buffers.buffers;
     let vertex_count = built_vertex_buffers.len;
-    let primite_restart = built_vertex_buffers.primitive_restart;
-
+    let primitive_restart = built_vertex_buffers.primitive_restart;
     let index_buffer = self.build_index_buffer(&indices);
 
     let data = VertexEntityData {
@@ -761,63 +759,77 @@ unsafe impl VertexEntityBackend for GL33 {
     };
 
     let vao = vao as usize;
-
     let mut st = self.state.borrow_mut();
     st.vertex_entities.insert(vao, data);
 
-    // store the storage so that we can hand it back if the user wants to map vertices again
-    st.vertex_storage_data
-      .insert(vao, VertexStorageData::new(storage));
+    let state = self.state.clone();
+    let dropper = Box::new(move |vao| {
+      if state.borrow().is_context_active() {
+        unsafe {
+          gl::DeleteVertexArrays(1, &(vao as GLuint));
+        }
+      }
+    });
 
     Ok(VertexEntity::new(
       vao,
+      storage,
+      indices,
       vertex_count,
-      indices.len(),
-      primite_restart,
+      primitive_restart,
+      dropper,
     ))
   }
 
   unsafe fn vertex_entity_render<V, P, S>(
     &self,
-    entity: &VertexEntity<V, S>,
+    handle: usize,
     start_index: usize,
     vert_count: usize,
     inst_count: usize,
+    primitive_restart: bool,
   ) -> Result<(), VertexEntityError>
   where
     V: Vertex,
     P: Primitive,
-    S: Into<VertexStorage<V>>,
+    S: AsVertexStorage<V>,
   {
     // early return if we want zero instance
     if inst_count == 0 {
       return Ok(());
     }
 
+    let vao = handle as GLuint;
+
+    self
+      .state
+      .borrow_mut()
+      .bound_vertex_array
+      .set_if_invalid(vao, || {
+        gl::BindVertexArray(vao);
+      });
+
     let st = self.state.borrow();
-    let vao = entity.handle();
     let data = st
       .vertex_entities
-      .get(&vao)
+      .get(&handle)
       .ok_or_else(|| VertexEntityError::Render { cause: None })?;
 
-    let vao = entity.handle() as GLuint;
-    st.bound_vertex_array.set_if_invalid(&vao, || {
-      gl::BindVertexArray(vao);
-    });
-
-    if let Some(index_buffer) = data.index_buffer {
+    if data.index_buffer.is_some() {
       // indexed render
       let first = (mem::size_of::<u32>() * start_index) as *const c_void;
 
-      let primitive_restart = entity.primitive_restart();
-      st.primitive_restart.set_if_invalid(&primitive_restart, || {
-        if primitive_restart {
-          gl::Enable(gl::PRIMITIVE_RESTART);
-        } else {
-          gl::Disable(gl::PRIMITIVE_RESTART);
-        }
-      });
+      self
+        .state
+        .borrow_mut()
+        .primitive_restart
+        .set_if_invalid(primitive_restart, || {
+          if primitive_restart {
+            gl::Enable(gl::PRIMITIVE_RESTART);
+          } else {
+            gl::Disable(gl::PRIMITIVE_RESTART);
+          }
+        });
 
       if inst_count == 1 {
         gl::DrawElements(
@@ -857,49 +869,23 @@ unsafe impl VertexEntityBackend for GL33 {
     Ok(())
   }
 
-  unsafe fn vertex_entity_vertices<'a, V, S>(
-    &'a mut self,
-    entity: &VertexEntity<V, S>,
-  ) -> Result<Vertices<'a, V, S>, VertexEntityError>
-  where
-    V: Vertex,
-    S: Into<VertexStorage<V>>,
-  {
-    todo!()
-  }
-
-  unsafe fn vertex_entity_update_vertices<'a, V, S>(
-    &'a mut self,
-    entity: &VertexEntity<V, S>,
-    vertices: Vertices<'a, V, S>,
+  unsafe fn vertex_entity_update_vertices<V, S>(
+    &mut self,
+    handle: usize,
+    storage: &mut S,
   ) -> Result<(), VertexEntityError>
   where
     V: Vertex,
-    S: Into<VertexStorage<V>>,
+    S: AsVertexStorage<V>,
   {
     todo!()
   }
 
-  unsafe fn vertex_entity_indices<'a, V, S>(
-    &'a mut self,
-    entity: &VertexEntity<V, S>,
-  ) -> Result<Indices<'a>, VertexEntityError>
-  where
-    V: Vertex,
-    S: Into<VertexStorage<V>>,
-  {
-    todo!()
-  }
-
-  unsafe fn vertex_entity_update_indices<'a, V, S>(
-    &'a mut self,
-    entity: &VertexEntity<V, S>,
-    indices: Indices<'a>,
-  ) -> Result<(), VertexEntityError>
-  where
-    V: Vertex,
-    S: Into<VertexStorage<V>>,
-  {
+  unsafe fn vertex_entity_update_indices(
+    &mut self,
+    handle: usize,
+    indices: &mut Vec<u32>,
+  ) -> Result<(), VertexEntityError> {
     todo!()
   }
 }

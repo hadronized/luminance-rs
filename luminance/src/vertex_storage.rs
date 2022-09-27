@@ -7,9 +7,25 @@ use crate::{
 use std::{marker::PhantomData, mem};
 
 #[derive(Debug)]
-pub enum VertexStorage<V> {
-  Interleaved(Interleaved<V>),
-  Deinterleaved(Deinterleaved<V>),
+pub enum VertexStorage<'a, V> {
+  Interleaved(&'a mut Interleaved<V>),
+  Deinterleaved(&'a mut Deinterleaved<V>),
+}
+
+pub trait AsVertexStorage<V> {
+  fn as_vertex_storage(&mut self) -> VertexStorage<V>;
+}
+
+impl<V> AsVertexStorage<V> for Interleaved<V> {
+  fn as_vertex_storage(&mut self) -> VertexStorage<V> {
+    VertexStorage::Interleaved(self)
+  }
+}
+
+impl<V> AsVertexStorage<V> for Deinterleaved<V> {
+  fn as_vertex_storage(&mut self) -> VertexStorage<V> {
+    VertexStorage::Deinterleaved(self)
+  }
 }
 
 /// Store vertices as an interleaved array.
