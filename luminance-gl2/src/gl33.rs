@@ -1,12 +1,20 @@
 use core::fmt;
 use gl::types::{GLboolean, GLenum, GLfloat, GLint, GLsizei, GLubyte, GLuint};
 use luminance::{
-  backend::{VertexEntityBackend, VertexEntityError},
+  backend::{
+    FramebufferBackend, FramebufferError, TextureError, VertexEntityBackend, VertexEntityError,
+  },
   blending::{Equation, Factor},
   context::ContextActive,
   depth_stencil::{Comparison, StencilOp},
+  dim::{Dim, Dimensionable},
   face_culling::{FaceCullingFace, FaceCullingOrder},
+  framebuffer::Framebuffer,
+  pixel::{Format, Pixel, PixelFormat, Size, Type},
   primitive::{Connector, Primitive},
+  render_channel::{IsDepthChannelType, IsRenderChannelType},
+  render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
+  texture::{MagFilter, MinFilter, Sampler, TexelUpload, Wrap},
   vertex::{
     Normalized, Vertex, VertexAttribDesc, VertexAttribDim, VertexAttribType, VertexBufferDesc,
     VertexInstancing,
@@ -16,7 +24,7 @@ use luminance::{
 };
 use std::{
   cell::RefCell,
-  collections::{HashMap, HashSet},
+  collections::HashMap,
   ffi::c_void,
   marker::PhantomData,
   mem,
@@ -97,12 +105,9 @@ pub struct State {
 
   // backend-specific resources
   vertex_entities: HashMap<usize, VertexEntityData>,
-
-  // binding points
-  next_texture_unit: GLuint,
-  free_texture_units: Vec<GLuint>,
-  next_uni_buffer: GLuint,
-  free_uni_buffers: Vec<GLuint>,
+  framebuffers: HashMap<usize, FramebufferData>,
+  textures: HashMap<usize, TextureData>,
+  texture_units: TextureUnits,
 
   // viewport
   viewport: Cached<[GLint; 4]>,
@@ -152,20 +157,6 @@ pub struct State {
 
   // patch primitive vertex number
   patch_vertex_nb: Cached<usize>,
-
-  // texture
-  current_texture_unit: Cached<GLenum>,
-  bound_textures: Vec<GLuint>,
-  // texture pool used to optimize texture creation; regular textures typically will never ask
-  // for fetching from this set but framebuffers, who often generate several textures, might use
-  // this opportunity to get N textures (color, depth and stencil) at once, in a single CPU / GPU
-  // roundtrip
-  //
-  // fishy fishy
-  texture_swimming_pool: Vec<GLuint>,
-
-  // uniform buffer
-  bound_uniform_buffers: Vec<GLuint>,
 
   // array buffer
   bound_array_buffer: Cached<GLuint>,
@@ -219,10 +210,9 @@ impl State {
 
   fn build(context_active: ContextActive) -> Self {
     let vertex_entities = HashMap::new();
-    let next_texture_unit = 0;
-    let free_texture_units = Vec::new();
-    let next_uni_buffer = 0;
-    let free_uni_buffers = Vec::new();
+    let framebuffers = HashMap::new();
+    let textures = HashMap::new();
+    let texture_units = TextureUnits::new();
     let viewport = Cached::empty();
     let clear_color = Cached::empty();
     let clear_depth = Cached::empty();
@@ -254,10 +244,6 @@ impl State {
     let scissor_height = Cached::empty();
     let vertex_restart = Cached::empty();
     let patch_vertex_nb = Cached::empty();
-    let current_texture_unit = Cached::empty();
-    let bound_textures = vec![0; 48]; // 48 is the platform minimal requirement
-    let texture_swimming_pool = Vec::new();
-    let bound_uniform_buffers = vec![0; 36]; // 36 is the platform minimal requirement
     let bound_array_buffer = Cached::empty();
     let bound_element_array_buffer = Cached::empty();
     let bound_draw_framebuffer = Cached::empty();
@@ -274,11 +260,10 @@ impl State {
       _phantom: PhantomData,
 
       vertex_entities,
+      framebuffers,
+      textures,
+      texture_units,
       context_active,
-      next_texture_unit,
-      free_texture_units,
-      next_uni_buffer,
-      free_uni_buffers,
       viewport,
       clear_color,
       clear_depth,
@@ -310,10 +295,6 @@ impl State {
       scissor_height,
       primitive_restart: vertex_restart,
       patch_vertex_nb,
-      current_texture_unit,
-      bound_textures,
-      texture_swimming_pool,
-      bound_uniform_buffers,
       bound_array_buffer,
       bound_element_array_buffer,
       bound_draw_framebuffer,
@@ -332,9 +313,67 @@ impl State {
     self.context_active.is_active()
   }
 
+  fn bind_texture(&mut self, target: GLenum, handle: usize) -> Result<(), TextureError> {
+    let texture_data = self
+      .textures
+      .get_mut(&handle)
+      .ok_or_else(|| TextureError::NoData { handle })?;
+
+    // check whether we are already bound to a texture unit
+    if let Some(unit) = texture_data.unit {
+      // remove the unit from the idling ones
+      self.texture_units.mark_nonidle(unit);
+      Ok(())
+    } else {
+      // if we don’t have any unit associated with, ask one
+      let (unit, old_texture_handle) = self.texture_units.get_texture_unit()?;
+      texture_data.unit = Some(unit);
+
+      // if a texture was previously bound there, remove its unit
+      if let Some(handle) = old_texture_handle {
+        if let Some(old_texture_data) = self.textures.get_mut(&handle) {
+          old_texture_data.unit = None;
+        }
+      }
+
+      // do the bind
+      self
+        .texture_units
+        .current_texture_unit
+        .set_if_invalid(unit, || unsafe {
+          gl::ActiveTexture(gl::TEXTURE0 + unit as GLenum);
+        });
+
+      unsafe {
+        gl::BindTexture(target, handle as GLuint);
+      }
+
+      Ok(())
+    }
+  }
+
+  fn idle_texture(&mut self, handle: usize) -> Result<(), TextureError> {
+    let texture_data = self
+      .textures
+      .get_mut(&handle)
+      .ok_or_else(|| TextureError::NoData { handle })?;
+
+    if let Some(unit) = texture_data.unit {
+      self.texture_units.mark_idle(unit, handle);
+    }
+
+    Ok(())
+  }
+
   fn drop_vertex_entity(&mut self, handle: usize) {
     if self.is_context_active() {
       self.vertex_entities.remove(&handle);
+    }
+  }
+
+  fn drop_framebuffer(&mut self, handle: usize) {
+    if self.is_context_active() {
+      self.framebuffers.remove(&handle);
     }
   }
 }
@@ -476,6 +515,597 @@ impl fmt::Display for BufferError {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
       BufferError::CannotUpdate { handle } => write!(f, "cannot slice buffer {}", handle),
+    }
+  }
+}
+
+#[derive(Debug)]
+struct FramebufferData {
+  handle: GLuint,
+  renderbuffer: Option<GLuint>,
+}
+
+impl Drop for FramebufferData {
+  fn drop(&mut self) {
+    if let Some(renderbuffer) = self.renderbuffer {
+      unsafe {
+        gl::DeleteRenderbuffers(1, &renderbuffer);
+      }
+    }
+
+    unsafe {
+      gl::DeleteFramebuffers(1, &self.handle);
+    }
+  }
+}
+
+#[derive(Debug)]
+struct TextureUnits {
+  current_texture_unit: Cached<usize>,
+  next_texture_unit: usize,
+  max_texture_units: usize,
+  idling_texture_units: HashMap<usize, usize>, // texture unit -> texture handle
+}
+
+impl TextureUnits {
+  fn new() -> Self {
+    Self {
+      current_texture_unit: Cached::empty(),
+      next_texture_unit: 0,
+      max_texture_units: Self::get_max_texture_units(),
+      idling_texture_units: HashMap::new(),
+    }
+  }
+
+  fn get_max_texture_units() -> usize {
+    let mut max: GLint = 0;
+    unsafe {
+      gl::GetIntegerv(gl::MAX_COMBINED_TEXTURE_IMAGE_UNITS, &mut max);
+    }
+    max as _
+  }
+
+  /// Get a texture unit for binding.
+  ///
+  /// We always try to get a fresh texture unit, and if we can’t, we will try to use an idling one.
+  fn get_texture_unit(&mut self) -> Result<(usize, Option<usize>), TextureError> {
+    if self.next_texture_unit < self.max_texture_units {
+      // we still can use a fresh unit
+      let unit = self.next_texture_unit;
+      self.next_texture_unit += 1;
+
+      Ok((unit, None))
+    } else {
+      // we have exhausted the hardware texture units; try to reuse an idling one and if we cannot, then it’s an error
+      self
+        .reuse_texture_unit()
+        .ok_or_else(|| TextureError::NotEnoughTextureUnits {
+          max: self.max_texture_units,
+        })
+    }
+  }
+
+  /// Try to reuse a texture unit. Return `None` if no texture unit is available, and `Some((unit, old_texture_handle))`
+  /// otherwise.
+  fn reuse_texture_unit(&mut self) -> Option<(usize, Option<usize>)> {
+    let unit = self.idling_texture_units.keys().next().cloned()?;
+    let old_texture_handle = self.idling_texture_units.remove(&unit)?;
+
+    Some((unit, Some(old_texture_handle)))
+  }
+
+  /// Mark a unit as idle.
+  fn mark_idle(&mut self, unit: usize, handle: usize) {
+    self.idling_texture_units.insert(unit, handle);
+  }
+
+  /// Mark a unit as non-idle.
+  fn mark_nonidle(&mut self, unit: usize) {
+    self.idling_texture_units.remove(&unit);
+  }
+}
+
+#[derive(Debug)]
+struct TextureData {
+  handle: GLuint,
+  target: GLenum, // “type” of the texture; used for bindings
+  mipmaps: usize,
+  unit: Option<usize>, // texture unit the texture is bound to
+  state: StateRef,
+}
+
+impl TextureData {
+  fn new<D>(
+    state: &StateRef,
+    target: GLenum,
+    size: D::Size,
+    mipmaps: usize,
+    pf: PixelFormat,
+    sampler: Sampler,
+  ) -> Result<TextureData, TextureError>
+  where
+    D: Dimensionable,
+  {
+    let mut texture: GLuint = 0;
+
+    unsafe {
+      gl::GenTextures(1, &mut texture);
+    }
+
+    todo!("bind");
+
+    Self::set_texture_levels(target, mipmaps);
+    Self::apply_sampler_to_texture(target, sampler);
+    Self::create_texture_storage::<D>(size, mipmaps + 1, pf);
+
+    todo!()
+  }
+
+  fn set_texture_levels(target: GLenum, mipmaps: usize) {
+    unsafe {
+      gl::TexParameteri(target, gl::TEXTURE_BASE_LEVEL, 0);
+      gl::TexParameteri(target, gl::TEXTURE_MAX_LEVEL, mipmaps as GLint);
+    }
+  }
+
+  fn apply_sampler_to_texture(target: GLenum, sampler: Sampler) {
+    unsafe {
+      gl::TexParameteri(
+        target,
+        gl::TEXTURE_WRAP_R,
+        GL33::opengl_wrap(sampler.wrap_r) as GLint,
+      );
+      gl::TexParameteri(
+        target,
+        gl::TEXTURE_WRAP_S,
+        GL33::opengl_wrap(sampler.wrap_s) as GLint,
+      );
+      gl::TexParameteri(
+        target,
+        gl::TEXTURE_WRAP_T,
+        GL33::opengl_wrap(sampler.wrap_t) as GLint,
+      );
+      gl::TexParameteri(
+        target,
+        gl::TEXTURE_MIN_FILTER,
+        GL33::opengl_min_filter(sampler.min_filter) as GLint,
+      );
+      gl::TexParameteri(
+        target,
+        gl::TEXTURE_MAG_FILTER,
+        GL33::opengl_mag_filter(sampler.mag_filter) as GLint,
+      );
+
+      match sampler.depth_comparison {
+        Some(fun) => {
+          gl::TexParameteri(
+            target,
+            gl::TEXTURE_COMPARE_FUNC,
+            GL33::opengl_comparison(fun) as GLint,
+          );
+          gl::TexParameteri(
+            target,
+            gl::TEXTURE_COMPARE_MODE,
+            gl::COMPARE_REF_TO_TEXTURE as GLint,
+          );
+        }
+        None => {
+          gl::TexParameteri(target, gl::TEXTURE_COMPARE_MODE, gl::NONE as GLint);
+        }
+      }
+    }
+  }
+
+  fn create_texture_storage<D>(
+    size: D::Size,
+    levels: usize,
+    pf: PixelFormat,
+  ) -> Result<(), TextureError>
+  where
+    D: Dimensionable,
+  {
+    match GL33::opengl_pixel_format(pf) {
+      Some(glf) => {
+        let (format, iformat, encoding) = glf;
+
+        match D::dim() {
+          // 1D texture
+          Dim::Dim1 => {
+            Self::create_texture_1d_storage(format, iformat, encoding, D::width(size), levels);
+            Ok(())
+          }
+
+          // 2D texture
+          Dim::Dim2 => {
+            Self::create_texture_2d_storage(
+              gl::TEXTURE_2D,
+              format,
+              iformat,
+              encoding,
+              D::width(size),
+              D::height(size),
+              levels,
+            );
+            Ok(())
+          }
+
+          // 3D texture
+          Dim::Dim3 => {
+            Self::create_texture_3d_storage(
+              gl::TEXTURE_3D,
+              format,
+              iformat,
+              encoding,
+              D::width(size),
+              D::height(size),
+              D::depth(size),
+              levels,
+            );
+            Ok(())
+          }
+
+          // cubemap
+          Dim::Cubemap => {
+            Self::create_cubemap_storage(format, iformat, encoding, D::width(size), levels);
+            Ok(())
+          }
+
+          // 1D array texture
+          Dim::Dim1Array => {
+            Self::create_texture_2d_storage(
+              gl::TEXTURE_1D_ARRAY,
+              format,
+              iformat,
+              encoding,
+              D::width(size),
+              D::height(size),
+              levels,
+            );
+            Ok(())
+          }
+
+          // 2D array texture
+          Dim::Dim2Array => {
+            Self::create_texture_3d_storage(
+              gl::TEXTURE_2D_ARRAY,
+              format,
+              iformat,
+              encoding,
+              D::width(size),
+              D::height(size),
+              D::depth(size),
+              levels,
+            );
+            Ok(())
+          }
+        }
+      }
+
+      None => Err(TextureError::texture_storage_creation_failed(format!(
+        "unsupported texture pixel format: {:?}",
+        pf
+      ))),
+    }
+  }
+
+  fn create_texture_1d_storage(
+    format: GLenum,
+    iformat: GLenum,
+    encoding: GLenum,
+    w: u32,
+    levels: usize,
+  ) {
+    for level in 0..levels {
+      let w = w / (1 << level as u32);
+
+      unsafe {
+        gl::TexImage1D(
+          gl::TEXTURE_1D,
+          level as GLint,
+          iformat as GLint,
+          w as GLsizei,
+          0,
+          format,
+          encoding,
+          ptr::null(),
+        )
+      };
+    }
+  }
+
+  fn create_texture_2d_storage(
+    target: GLenum,
+    format: GLenum,
+    iformat: GLenum,
+    encoding: GLenum,
+    w: u32,
+    h: u32,
+    levels: usize,
+  ) {
+    for level in 0..levels {
+      let div = 1 << level as u32;
+      let w = w / div;
+      let h = h / div;
+
+      unsafe {
+        gl::TexImage2D(
+          target,
+          level as GLint,
+          iformat as GLint,
+          w as GLsizei,
+          h as GLsizei,
+          0,
+          format,
+          encoding,
+          ptr::null(),
+        )
+      };
+    }
+  }
+
+  fn create_texture_3d_storage(
+    target: GLenum,
+    format: GLenum,
+    iformat: GLenum,
+    encoding: GLenum,
+    w: u32,
+    h: u32,
+    d: u32,
+    levels: usize,
+  ) {
+    for level in 0..levels {
+      let div = 1 << level as u32;
+      let w = w / div;
+      let h = h / div;
+      let d = d / div;
+
+      unsafe {
+        gl::TexImage3D(
+          target,
+          level as GLint,
+          iformat as GLint,
+          w as GLsizei,
+          h as GLsizei,
+          d as GLsizei,
+          0,
+          format,
+          encoding,
+          ptr::null(),
+        )
+      };
+    }
+  }
+
+  fn create_cubemap_storage(
+    format: GLenum,
+    iformat: GLenum,
+    encoding: GLenum,
+    s: u32,
+    levels: usize,
+  ) {
+    for level in 0..levels {
+      let s = s / (1 << level as u32);
+
+      for face in 0..6 {
+        unsafe {
+          gl::TexImage2D(
+            gl::TEXTURE_CUBE_MAP_POSITIVE_X + face,
+            level as GLint,
+            iformat as GLint,
+            s as GLsizei,
+            s as GLsizei,
+            0,
+            format,
+            encoding,
+            ptr::null(),
+          )
+        };
+      }
+    }
+  }
+
+  // set the unpack alignment for uploading aligned texels
+  fn set_unpack_alignment(skip_bytes: usize) {
+    let unpack_alignment = match skip_bytes {
+      0 => 8,
+      2 => 2,
+      4 => 4,
+      _ => 1,
+    };
+
+    unsafe { gl::PixelStorei(gl::UNPACK_ALIGNMENT, unpack_alignment) };
+  }
+
+  // set the pack alignment for downloading aligned texels
+  fn set_pack_alignment(skip_bytes: usize) {
+    let pack_alignment = match skip_bytes {
+      0 => 8,
+      2 => 2,
+      4 => 4,
+      _ => 1,
+    };
+
+    unsafe { gl::PixelStorei(gl::PACK_ALIGNMENT, pack_alignment) };
+  }
+
+  // Upload texels into the texture’s memory.
+  fn upload_texels<D, P, T>(
+    target: GLenum,
+    off: D::Offset,
+    size: D::Size,
+    texels: TexelUpload<[T]>,
+  ) -> Result<(), TextureError>
+  where
+    D: Dimensionable,
+    P: Pixel,
+  {
+    let pf = P::pixel_format();
+    let pf_size = pf.format.bytes_len();
+    let expected_bytes = D::count(size) * pf_size;
+
+    if let Some(base_level_texels) = texels.get_base_level() {
+      // number of bytes in the input texels argument
+      let input_bytes = base_level_texels.len() * mem::size_of::<T>();
+
+      if input_bytes < expected_bytes {
+        // potential segfault / overflow; abort
+        return Err(TextureError::not_enough_pixels(expected_bytes, input_bytes));
+      }
+    }
+
+    // set the pixel row alignment to the required value for uploading data according to the width
+    // of the texture and the size of a single pixel; here, skip_bytes represents the number of bytes
+    // that will be skipped
+    let skip_bytes = (D::width(size) as usize * pf_size) % 8;
+    Self::set_unpack_alignment(skip_bytes);
+
+    // handle mipmaps
+    match texels {
+      TexelUpload::BaseLevel { texels, mipmaps } => {
+        Self::set_texels::<D, _>(target, pf, 0, size, off, texels)?;
+
+        if mipmaps > 0 {
+          unsafe { gl::GenerateMipmap(target) };
+        }
+      }
+
+      TexelUpload::Levels(levels) => {
+        for (i, &texels) in levels.into_iter().enumerate() {
+          Self::set_texels::<D, _>(target, pf, i as _, size, off, texels)?;
+        }
+      }
+
+      TexelUpload::Reserve { mipmaps } => {
+        if mipmaps > 0 {
+          unsafe { gl::GenerateMipmap(target) };
+        }
+      }
+    }
+
+    Ok(())
+  }
+
+  // Set texels for a texture.
+  fn set_texels<D, T>(
+    target: GLenum,
+    pf: PixelFormat,
+    level: GLint,
+    size: D::Size,
+    off: D::Offset,
+    texels: &[T],
+  ) -> Result<(), TextureError>
+  where
+    D: Dimensionable,
+  {
+    match GL33::opengl_pixel_format(pf) {
+      Some((format, _, encoding)) => match D::dim() {
+        Dim::Dim1 => unsafe {
+          gl::TexSubImage1D(
+            target,
+            level,
+            D::x_offset(off) as GLint,
+            D::width(size) as GLsizei,
+            format,
+            encoding,
+            texels.as_ptr() as *const c_void,
+          );
+        },
+
+        Dim::Dim2 => unsafe {
+          gl::TexSubImage2D(
+            target,
+            level,
+            D::x_offset(off) as GLint,
+            D::y_offset(off) as GLint,
+            D::width(size) as GLsizei,
+            D::height(size) as GLsizei,
+            format,
+            encoding,
+            texels.as_ptr() as *const c_void,
+          );
+        },
+
+        Dim::Dim3 => unsafe {
+          gl::TexSubImage3D(
+            target,
+            level,
+            D::x_offset(off) as GLint,
+            D::y_offset(off) as GLint,
+            D::z_offset(off) as GLint,
+            D::width(size) as GLsizei,
+            D::height(size) as GLsizei,
+            D::depth(size) as GLsizei,
+            format,
+            encoding,
+            texels.as_ptr() as *const c_void,
+          );
+        },
+
+        Dim::Cubemap => unsafe {
+          gl::TexSubImage2D(
+            gl::TEXTURE_CUBE_MAP_POSITIVE_X + D::z_offset(off),
+            level,
+            D::x_offset(off) as GLint,
+            D::y_offset(off) as GLint,
+            D::width(size) as GLsizei,
+            D::width(size) as GLsizei,
+            format,
+            encoding,
+            texels.as_ptr() as *const c_void,
+          );
+        },
+
+        Dim::Dim1Array => unsafe {
+          gl::TexSubImage2D(
+            target,
+            level,
+            D::x_offset(off) as GLint,
+            D::y_offset(off) as GLint,
+            D::width(size) as GLsizei,
+            D::height(size) as GLsizei,
+            format,
+            encoding,
+            texels.as_ptr() as *const c_void,
+          );
+        },
+
+        Dim::Dim2Array => unsafe {
+          gl::TexSubImage3D(
+            target,
+            level,
+            D::x_offset(off) as GLint,
+            D::y_offset(off) as GLint,
+            D::z_offset(off) as GLint,
+            D::width(size) as GLsizei,
+            D::height(size) as GLsizei,
+            D::depth(size) as GLsizei,
+            format,
+            encoding,
+            texels.as_ptr() as *const c_void,
+          );
+        },
+      },
+
+      None => return Err(TextureError::unsupported_pixel_format(pf)),
+    }
+
+    Ok(())
+  }
+}
+
+impl Drop for TextureData {
+  fn drop(&mut self) {
+    // ensure we mark the texture unit (if any) idle before dying
+    if let Some(unit) = self.unit {
+      self
+        .state
+        .borrow_mut()
+        .texture_units
+        .mark_idle(unit, self.handle as _);
+    }
+
+    unsafe {
+      gl::DeleteTextures(1, &self.handle);
     }
   }
 }
@@ -757,6 +1387,247 @@ impl GL33 {
       Connector::Patch(_) => gl::PATCHES,
     }
   }
+
+  fn opengl_wrap(wrap: Wrap) -> GLenum {
+    match wrap {
+      Wrap::ClampToEdge => gl::CLAMP_TO_EDGE,
+      Wrap::Repeat => gl::REPEAT,
+      Wrap::MirroredRepeat => gl::MIRRORED_REPEAT,
+    }
+  }
+
+  fn opengl_min_filter(filter: MinFilter) -> GLenum {
+    match filter {
+      MinFilter::Nearest => gl::NEAREST,
+      MinFilter::Linear => gl::LINEAR,
+      MinFilter::NearestMipmapNearest => gl::NEAREST_MIPMAP_NEAREST,
+      MinFilter::NearestMipmapLinear => gl::NEAREST_MIPMAP_LINEAR,
+      MinFilter::LinearMipmapNearest => gl::LINEAR_MIPMAP_NEAREST,
+      MinFilter::LinearMipmapLinear => gl::LINEAR_MIPMAP_LINEAR,
+    }
+  }
+
+  fn opengl_mag_filter(filter: MagFilter) -> GLenum {
+    match filter {
+      MagFilter::Nearest => gl::NEAREST,
+      MagFilter::Linear => gl::LINEAR,
+    }
+  }
+
+  fn opengl_comparison(dc: Comparison) -> GLenum {
+    match dc {
+      Comparison::Never => gl::NEVER,
+      Comparison::Always => gl::ALWAYS,
+      Comparison::Equal => gl::EQUAL,
+      Comparison::NotEqual => gl::NOTEQUAL,
+      Comparison::Less => gl::LESS,
+      Comparison::LessOrEqual => gl::LEQUAL,
+      Comparison::Greater => gl::GREATER,
+      Comparison::GreaterOrEqual => gl::GEQUAL,
+    }
+  }
+
+  // OpenGL format, internal sized-format and type.
+  fn opengl_pixel_format(pf: PixelFormat) -> Option<(GLenum, GLenum, GLenum)> {
+    match (pf.format, pf.encoding) {
+      // red channel
+      (Format::R(Size::Eight), Type::NormUnsigned) => Some((gl::RED, gl::R8, gl::UNSIGNED_BYTE)),
+      (Format::R(Size::Eight), Type::NormIntegral) => Some((gl::RED, gl::R8_SNORM, gl::BYTE)),
+      (Format::R(Size::Eight), Type::Integral) => Some((gl::RED_INTEGER, gl::R8I, gl::BYTE)),
+      (Format::R(Size::Eight), Type::Unsigned) => {
+        Some((gl::RED_INTEGER, gl::R8UI, gl::UNSIGNED_BYTE))
+      }
+
+      (Format::R(Size::Sixteen), Type::NormUnsigned) => {
+        Some((gl::RED_INTEGER, gl::R16, gl::UNSIGNED_SHORT))
+      }
+      (Format::R(Size::Sixteen), Type::NormIntegral) => {
+        Some((gl::RED_INTEGER, gl::R16_SNORM, gl::SHORT))
+      }
+      (Format::R(Size::Sixteen), Type::Integral) => Some((gl::RED_INTEGER, gl::R16I, gl::SHORT)),
+      (Format::R(Size::Sixteen), Type::Unsigned) => {
+        Some((gl::RED_INTEGER, gl::R16UI, gl::UNSIGNED_SHORT))
+      }
+
+      (Format::R(Size::ThirtyTwo), Type::NormUnsigned) => {
+        Some((gl::RED_INTEGER, gl::RED, gl::UNSIGNED_INT))
+      }
+      (Format::R(Size::ThirtyTwo), Type::NormIntegral) => Some((gl::RED_INTEGER, gl::RED, gl::INT)),
+      (Format::R(Size::ThirtyTwo), Type::Integral) => Some((gl::RED_INTEGER, gl::R32I, gl::INT)),
+      (Format::R(Size::ThirtyTwo), Type::Unsigned) => {
+        Some((gl::RED_INTEGER, gl::R32UI, gl::UNSIGNED_INT))
+      }
+      (Format::R(Size::ThirtyTwo), Type::Floating) => Some((gl::RED, gl::R32F, gl::FLOAT)),
+
+      // red, blue channels
+      (Format::RG(Size::Eight, Size::Eight), Type::NormUnsigned) => {
+        Some((gl::RG, gl::RG8, gl::UNSIGNED_BYTE))
+      }
+      (Format::RG(Size::Eight, Size::Eight), Type::NormIntegral) => {
+        Some((gl::RG, gl::RG8_SNORM, gl::BYTE))
+      }
+      (Format::RG(Size::Eight, Size::Eight), Type::Integral) => {
+        Some((gl::RG_INTEGER, gl::RG8I, gl::BYTE))
+      }
+      (Format::RG(Size::Eight, Size::Eight), Type::Unsigned) => {
+        Some((gl::RG_INTEGER, gl::RG8UI, gl::UNSIGNED_BYTE))
+      }
+
+      (Format::RG(Size::Sixteen, Size::Sixteen), Type::NormUnsigned) => {
+        Some((gl::RG, gl::RG16, gl::UNSIGNED_SHORT))
+      }
+      (Format::RG(Size::Sixteen, Size::Sixteen), Type::NormIntegral) => {
+        Some((gl::RG, gl::RG16_SNORM, gl::SHORT))
+      }
+      (Format::RG(Size::Sixteen, Size::Sixteen), Type::Integral) => {
+        Some((gl::RG_INTEGER, gl::RG16I, gl::SHORT))
+      }
+      (Format::RG(Size::Sixteen, Size::Sixteen), Type::Unsigned) => {
+        Some((gl::RG_INTEGER, gl::RG16UI, gl::UNSIGNED_SHORT))
+      }
+
+      (Format::RG(Size::ThirtyTwo, Size::ThirtyTwo), Type::NormUnsigned) => {
+        Some((gl::RG, gl::RG, gl::UNSIGNED_INT))
+      }
+      (Format::RG(Size::ThirtyTwo, Size::ThirtyTwo), Type::NormIntegral) => {
+        Some((gl::RG, gl::RG, gl::INT))
+      }
+      (Format::RG(Size::ThirtyTwo, Size::ThirtyTwo), Type::Integral) => {
+        Some((gl::RG_INTEGER, gl::RG32I, gl::INT))
+      }
+      (Format::RG(Size::ThirtyTwo, Size::ThirtyTwo), Type::Unsigned) => {
+        Some((gl::RG_INTEGER, gl::RG32UI, gl::UNSIGNED_INT))
+      }
+      (Format::RG(Size::ThirtyTwo, Size::ThirtyTwo), Type::Floating) => {
+        Some((gl::RG, gl::RG32F, gl::FLOAT))
+      }
+
+      // red, blue, green channels
+      (Format::RGB(Size::Eight, Size::Eight, Size::Eight), Type::NormUnsigned) => {
+        Some((gl::RGB, gl::RGB8, gl::UNSIGNED_BYTE))
+      }
+      (Format::RGB(Size::Eight, Size::Eight, Size::Eight), Type::NormIntegral) => {
+        Some((gl::RGB, gl::RGB8_SNORM, gl::BYTE))
+      }
+      (Format::RGB(Size::Eight, Size::Eight, Size::Eight), Type::Integral) => {
+        Some((gl::RGB_INTEGER, gl::RGB8I, gl::BYTE))
+      }
+      (Format::RGB(Size::Eight, Size::Eight, Size::Eight), Type::Unsigned) => {
+        Some((gl::RGB_INTEGER, gl::RGB8UI, gl::UNSIGNED_BYTE))
+      }
+
+      (Format::RGB(Size::Sixteen, Size::Sixteen, Size::Sixteen), Type::NormUnsigned) => {
+        Some((gl::RGB, gl::RGB16, gl::UNSIGNED_SHORT))
+      }
+      (Format::RGB(Size::Sixteen, Size::Sixteen, Size::Sixteen), Type::NormIntegral) => {
+        Some((gl::RGB, gl::RGB16_SNORM, gl::SHORT))
+      }
+      (Format::RGB(Size::Sixteen, Size::Sixteen, Size::Sixteen), Type::Integral) => {
+        Some((gl::RGB_INTEGER, gl::RGB16I, gl::SHORT))
+      }
+      (Format::RGB(Size::Sixteen, Size::Sixteen, Size::Sixteen), Type::Unsigned) => {
+        Some((gl::RGB_INTEGER, gl::RGB16UI, gl::UNSIGNED_SHORT))
+      }
+
+      (Format::RGB(Size::Eleven, Size::Eleven, Size::Ten), Type::Floating) => {
+        Some((gl::RGB, gl::R11F_G11F_B10F, gl::FLOAT))
+      }
+
+      (Format::RGB(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo), Type::NormUnsigned) => {
+        Some((gl::RGB, gl::RGB, gl::UNSIGNED_INT))
+      }
+      (Format::RGB(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo), Type::NormIntegral) => {
+        Some((gl::RGB, gl::RGB, gl::INT))
+      }
+      (Format::RGB(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo), Type::Integral) => {
+        Some((gl::RGB_INTEGER, gl::RGB32I, gl::INT))
+      }
+      (Format::RGB(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo), Type::Unsigned) => {
+        Some((gl::RGB_INTEGER, gl::RGB32UI, gl::UNSIGNED_INT))
+      }
+      (Format::RGB(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo), Type::Floating) => {
+        Some((gl::RGB, gl::RGB32F, gl::FLOAT))
+      }
+
+      // red, blue, green, alpha channels
+      (Format::RGBA(Size::Eight, Size::Eight, Size::Eight, Size::Eight), Type::NormUnsigned) => {
+        Some((gl::RGBA, gl::RGBA8, gl::UNSIGNED_BYTE))
+      }
+      (Format::RGBA(Size::Eight, Size::Eight, Size::Eight, Size::Eight), Type::NormIntegral) => {
+        Some((gl::RGBA, gl::RGBA8_SNORM, gl::BYTE))
+      }
+      (Format::RGBA(Size::Eight, Size::Eight, Size::Eight, Size::Eight), Type::Integral) => {
+        Some((gl::RGBA_INTEGER, gl::RGBA8I, gl::BYTE))
+      }
+      (Format::RGBA(Size::Eight, Size::Eight, Size::Eight, Size::Eight), Type::Unsigned) => {
+        Some((gl::RGBA_INTEGER, gl::RGBA8UI, gl::UNSIGNED_BYTE))
+      }
+
+      (
+        Format::RGBA(Size::Sixteen, Size::Sixteen, Size::Sixteen, Size::Sixteen),
+        Type::NormUnsigned,
+      ) => Some((gl::RGBA, gl::RGBA16, gl::UNSIGNED_SHORT)),
+      (
+        Format::RGBA(Size::Sixteen, Size::Sixteen, Size::Sixteen, Size::Sixteen),
+        Type::NormIntegral,
+      ) => Some((gl::RGBA, gl::RGBA16_SNORM, gl::SHORT)),
+      (
+        Format::RGBA(Size::Sixteen, Size::Sixteen, Size::Sixteen, Size::Sixteen),
+        Type::Integral,
+      ) => Some((gl::RGBA_INTEGER, gl::RGBA16I, gl::SHORT)),
+      (
+        Format::RGBA(Size::Sixteen, Size::Sixteen, Size::Sixteen, Size::Sixteen),
+        Type::Unsigned,
+      ) => Some((gl::RGBA_INTEGER, gl::RGBA16UI, gl::UNSIGNED_SHORT)),
+
+      (
+        Format::RGBA(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo),
+        Type::NormUnsigned,
+      ) => Some((gl::RGBA, gl::RGBA, gl::UNSIGNED_INT)),
+      (
+        Format::RGBA(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo),
+        Type::NormIntegral,
+      ) => Some((gl::RGBA, gl::RGBA, gl::INT)),
+      (
+        Format::RGBA(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo),
+        Type::Integral,
+      ) => Some((gl::RGBA_INTEGER, gl::RGBA32I, gl::INT)),
+      (
+        Format::RGBA(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo),
+        Type::Unsigned,
+      ) => Some((gl::RGBA_INTEGER, gl::RGBA32UI, gl::UNSIGNED_INT)),
+      (
+        Format::RGBA(Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo, Size::ThirtyTwo),
+        Type::Floating,
+      ) => Some((gl::RGBA, gl::RGBA32F, gl::FLOAT)),
+
+      // sRGB
+      (Format::SRGB(Size::Eight, Size::Eight, Size::Eight), Type::NormUnsigned) => {
+        Some((gl::RGB, gl::SRGB8, gl::UNSIGNED_BYTE))
+      }
+      (Format::SRGB(Size::Eight, Size::Eight, Size::Eight), Type::NormIntegral) => {
+        Some((gl::RGB, gl::SRGB8, gl::BYTE))
+      }
+      (Format::SRGBA(Size::Eight, Size::Eight, Size::Eight, Size::Eight), Type::NormUnsigned) => {
+        Some((gl::RGBA, gl::SRGB8_ALPHA8, gl::UNSIGNED_BYTE))
+      }
+      (Format::SRGBA(Size::Eight, Size::Eight, Size::Eight, Size::Eight), Type::NormIntegral) => {
+        Some((gl::RGBA, gl::SRGB8_ALPHA8, gl::BYTE))
+      }
+
+      (Format::Depth(Size::ThirtyTwo), Type::Floating) => {
+        Some((gl::DEPTH_COMPONENT, gl::DEPTH_COMPONENT32F, gl::FLOAT))
+      }
+
+      (Format::DepthStencil(Size::ThirtyTwo, Size::Eight), Type::Floating) => Some((
+        gl::DEPTH_STENCIL,
+        gl::DEPTH32F_STENCIL8,
+        gl::FLOAT_32_UNSIGNED_INT_24_8_REV,
+      )),
+
+      _ => None,
+    }
+  }
 }
 
 unsafe impl VertexEntityBackend for GL33 {
@@ -968,5 +1839,53 @@ unsafe impl VertexEntityBackend for GL33 {
       }
       None => Err(VertexEntityError::UpdateIndices { cause: None }),
     }
+  }
+}
+
+unsafe impl FramebufferBackend for GL33 {
+  unsafe fn new_render_layer<D, RC>(
+    &mut self,
+    size: D::Size,
+  ) -> Result<RenderLayer<RC>, FramebufferError>
+  where
+    D: Dimensionable,
+    RC: IsRenderChannelType,
+  {
+    todo!()
+  }
+
+  unsafe fn new_depth_render_layer<D, DC>(
+    &mut self,
+    size: D::Size,
+  ) -> Result<RenderLayer<DC>, FramebufferError>
+  where
+    D: Dimensionable,
+    DC: IsDepthChannelType,
+  {
+    todo!()
+  }
+
+  unsafe fn new_framebuffer<D, RS, DS>(
+    &mut self,
+    size: D::Size,
+  ) -> Result<Framebuffer<D, RS, DS>, FramebufferError>
+  where
+    D: Dimensionable,
+    RS: RenderSlots,
+    DS: DepthRenderSlot,
+  {
+    todo!()
+  }
+
+  unsafe fn back_buffer<D, RS, DS>(
+    &mut self,
+    size: D::Size,
+  ) -> Result<Framebuffer<D, RS, DS>, FramebufferError>
+  where
+    D: Dimensionable,
+    RS: RenderSlots,
+    DS: DepthRenderSlot,
+  {
+    todo!()
   }
 }

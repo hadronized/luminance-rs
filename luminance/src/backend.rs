@@ -2,6 +2,7 @@ use crate::{
   dim::Dimensionable,
   framebuffer::Framebuffer,
   pipeline::{PipelineState, WithFramebuffer, WithProgram, WithRenderState},
+  pixel::PixelFormat,
   primitive::Primitive,
   render_channel::{IsDepthChannelType, IsRenderChannelType},
   render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
@@ -14,6 +15,7 @@ use crate::{
 use std::{error::Error as ErrorTrait, fmt};
 
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum VertexEntityError {
   Creation { cause: Option<Box<dyn ErrorTrait>> },
   Render { cause: Option<Box<dyn ErrorTrait>> },
@@ -65,6 +67,7 @@ impl fmt::Display for VertexEntityError {
 }
 
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum FramebufferError {
   Creation { cause: Option<Box<dyn ErrorTrait>> },
   RenderLayerCreation { cause: Option<Box<dyn ErrorTrait>> },
@@ -193,6 +196,7 @@ impl fmt::Display for ShaderError {
 }
 
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum PipelineError {
   WithFramebuffer {
     pipeline_state: PipelineState,
@@ -268,6 +272,119 @@ impl fmt::Display for PipelineError {
     }
   }
 }
+
+/// Errors that might happen when working with textures.
+#[non_exhaustive]
+#[derive(Debug)]
+pub enum TextureError {
+  /// The texture handle has no data associated with.
+  NoData { handle: usize },
+
+  /// Not enough texture units.
+  NotEnoughTextureUnits { max: usize },
+
+  /// A texture’s storage failed to be created.
+  ///
+  /// The carried [`String`] gives the reason of the failure.
+  TextureStorageCreationFailed(String),
+
+  /// Not enough pixel data provided for the given area asked.
+  ///
+  /// You must provide at least as many pixels as expected by the area in the texture you’re
+  /// uploading to.
+  NotEnoughPixels {
+    /// Expected number of pixels in bytes.
+    expected_bytes: usize,
+    /// Provided number of pixels in bytes.
+    provided_bytes: usize,
+  },
+
+  /// Unsupported pixel format.
+  ///
+  /// Sometimes, some hardware might not support a given pixel format (or the format exists on
+  /// the interface side but doesn’t in the implementation). That error represents such a case.
+  UnsupportedPixelFormat(PixelFormat),
+
+  /// Cannot retrieve texels from a texture.
+  ///
+  /// That error might happen on some hardware implementations if the user tries to retrieve
+  /// texels from a texture that doesn’t support getting its texels retrieved.
+  CannotRetrieveTexels(String),
+
+  /// Failed to upload texels.
+  CannotUploadTexels(String),
+}
+
+impl TextureError {
+  /// A texture’s storage failed to be created.
+  pub fn texture_storage_creation_failed(reason: impl Into<String>) -> Self {
+    TextureError::TextureStorageCreationFailed(reason.into())
+  }
+
+  /// Not enough pixel data provided for the given area asked.
+  pub fn not_enough_pixels(expected_bytes: usize, provided_bytes: usize) -> Self {
+    TextureError::NotEnoughPixels {
+      expected_bytes,
+      provided_bytes,
+    }
+  }
+
+  /// Unsupported pixel format.
+  pub fn unsupported_pixel_format(pf: PixelFormat) -> Self {
+    TextureError::UnsupportedPixelFormat(pf)
+  }
+
+  /// Cannot retrieve texels from a texture.
+  pub fn cannot_retrieve_texels(reason: impl Into<String>) -> Self {
+    TextureError::CannotRetrieveTexels(reason.into())
+  }
+
+  /// Failed to upload texels.
+  pub fn cannot_upload_texels(reason: impl Into<String>) -> Self {
+    TextureError::CannotUploadTexels(reason.into())
+  }
+}
+
+impl fmt::Display for TextureError {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    match *self {
+      TextureError::NoData { handle } => {
+        write!(f, "texture {} has no data associated with", handle)
+      }
+
+      TextureError::NotEnoughTextureUnits { max } => {
+        write!(f, "not enough texture units (max = {})", max)
+      }
+
+      TextureError::TextureStorageCreationFailed(ref e) => {
+        write!(f, "texture storage creation failed: {}", e)
+      }
+
+      TextureError::NotEnoughPixels {
+        ref expected_bytes,
+        ref provided_bytes,
+      } => write!(
+        f,
+        "not enough texels provided: expected {} bytes, provided {} bytes",
+        expected_bytes, provided_bytes
+      ),
+
+      TextureError::UnsupportedPixelFormat(ref fmt) => {
+        write!(f, "unsupported pixel format: {:?}", fmt)
+      }
+
+      TextureError::CannotRetrieveTexels(ref e) => {
+        write!(f, "cannot retrieve texture’s texels: {}", e)
+      }
+
+      TextureError::CannotUploadTexels(ref e) => {
+        write!(f, "cannot upload texels to texture: {}", e)
+      }
+    }
+  }
+}
+
+impl std::error::Error for TextureError {}
 
 /// Query error.
 #[derive(Debug)]
