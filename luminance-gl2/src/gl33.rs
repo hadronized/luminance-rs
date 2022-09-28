@@ -1,3 +1,4 @@
+use core::fmt;
 use gl::types::{GLboolean, GLenum, GLfloat, GLint, GLsizei, GLubyte, GLuint};
 use luminance::{
   backend::{VertexEntityBackend, VertexEntityError},
@@ -95,7 +96,6 @@ pub struct State {
   context_active: ContextActive,
 
   // backend-specific resources
-  buffers: HashSet<GLuint>,
   vertex_entities: HashMap<usize, VertexEntityData>,
 
   // binding points
@@ -218,7 +218,6 @@ impl State {
   }
 
   fn build(context_active: ContextActive) -> Self {
-    let buffers = HashSet::new();
     let vertex_entities = HashMap::new();
     let next_texture_unit = 0;
     let free_texture_units = Vec::new();
@@ -274,7 +273,6 @@ impl State {
     State {
       _phantom: PhantomData,
 
-      buffers,
       vertex_entities,
       context_active,
       next_texture_unit,
@@ -334,20 +332,10 @@ impl State {
     self.context_active.is_active()
   }
 
-  fn drop_buffer(&mut self, handle: usize) {
-    let handle = handle as GLuint;
-    unsafe {
-      gl::DeleteBuffers(1, &handle);
-    }
-    self.buffers.remove(&handle);
-  }
-
   fn drop_vertex_entity(&mut self, handle: usize) {
-    let vao = handle as GLuint;
-    unsafe {
-      gl::DeleteVertexArrays(1, &vao);
+    if self.is_context_active() {
+      self.vertex_entities.remove(&handle);
     }
-    self.vertex_entities.remove(&handle);
   }
 }
 
@@ -388,9 +376,8 @@ struct Buffer {
 
 impl Drop for Buffer {
   fn drop(&mut self) {
-    if self.state.borrow().is_context_active() {
-      unsafe { gl::DeleteBuffers(1, &self.handle) };
-      self.state.borrow_mut().buffers.remove(&self.handle);
+    unsafe {
+      gl::DeleteBuffers(1, &self.handle);
     }
   }
 }
@@ -419,12 +406,35 @@ impl Buffer {
       );
     }
 
-    st.buffers.insert(handle);
-
     Buffer {
       handle,
       state: state.clone(),
     }
+  }
+
+  fn update<T>(&self, values: &[T], start: usize, len: usize) -> Result<(), BufferError> {
+    self
+      .state
+      .borrow_mut()
+      .bound_array_buffer
+      .set_if_invalid(self.handle, || unsafe {
+        gl::BindBuffer(gl::ARRAY_BUFFER, self.handle);
+      });
+
+    let ptr = unsafe { gl::MapBuffer(gl::ARRAY_BUFFER, gl::WRITE_ONLY) as *mut T };
+
+    if ptr.is_null() {
+      return Err(BufferError::CannotUpdate {
+        handle: self.handle as _,
+      });
+    }
+
+    unsafe {
+      let src = values.as_ptr();
+      std::ptr::copy_nonoverlapping(src, ptr.add(start), len);
+    }
+
+    Ok(())
   }
 }
 
@@ -441,10 +451,33 @@ struct VertexEntityData {
   index_buffer: Option<Buffer>,
 }
 
+impl Drop for VertexEntityData {
+  fn drop(&mut self) {
+    unsafe {
+      gl::DeleteVertexArrays(1, &self.vao);
+    }
+  }
+}
+
 struct BuiltVertexBuffers {
   buffers: Option<VertexEntityBuffers>,
   len: usize,
   primitive_restart: bool,
+}
+
+#[derive(Debug)]
+pub enum BufferError {
+  CannotUpdate { handle: usize },
+}
+
+impl std::error::Error for BufferError {}
+
+impl fmt::Display for BufferError {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match self {
+      BufferError::CannotUpdate { handle } => write!(f, "cannot slice buffer {}", handle),
+    }
+  }
 }
 
 #[derive(Debug)]
@@ -764,11 +797,7 @@ unsafe impl VertexEntityBackend for GL33 {
 
     let state = self.state.clone();
     let dropper = Box::new(move |vao| {
-      if state.borrow().is_context_active() {
-        unsafe {
-          gl::DeleteVertexArrays(1, &(vao as GLuint));
-        }
-      }
+      state.borrow_mut().drop_vertex_entity(vao);
     });
 
     Ok(VertexEntity::new(
@@ -878,7 +907,42 @@ unsafe impl VertexEntityBackend for GL33 {
     V: Vertex,
     S: AsVertexStorage<V>,
   {
-    todo!()
+    // get the associated data with the handle first
+    let st = self.state.borrow();
+    let data = st
+      .vertex_entities
+      .get(&handle)
+      .ok_or_else(|| VertexEntityError::UpdateVertexStorage { cause: None })?;
+
+    // allow updating only if the vertex storage has the same shape as the one used to create the vertex entity
+    // (interleaved/interleaved or deinterleaved/deinterleaved)
+    match (storage.as_vertex_storage(), &data.vertex_buffers) {
+      (VertexStorage::Interleaved(storage), Some(VertexEntityBuffers::Interleaved(ref buffer))) => {
+        let vertices = storage.vertices();
+        buffer.update(&vertices, 0, vertices.len()).map_err(|e| {
+          VertexEntityError::UpdateVertexStorage {
+            cause: Some(Box::new(e)),
+          }
+        })
+      }
+
+      (
+        VertexStorage::Deinterleaved(storage),
+        Some(VertexEntityBuffers::Deinterleaved(buffers)),
+      ) => {
+        for (comp, buffer) in storage.components_list().iter().zip(buffers) {
+          buffer.update(&comp, 0, comp.len()).map_err(|e| {
+            VertexEntityError::UpdateVertexStorage {
+              cause: Some(Box::new(e)),
+            }
+          })?;
+        }
+
+        Ok(())
+      }
+
+      _ => Err(VertexEntityError::UpdateVertexStorage { cause: None }),
+    }
   }
 
   unsafe fn vertex_entity_update_indices(
@@ -886,6 +950,23 @@ unsafe impl VertexEntityBackend for GL33 {
     handle: usize,
     indices: &mut Vec<u32>,
   ) -> Result<(), VertexEntityError> {
-    todo!()
+    // get the associated data with the handle first
+    let st = self.state.borrow();
+    let data = st
+      .vertex_entities
+      .get(&handle)
+      .ok_or_else(|| VertexEntityError::UpdateIndices { cause: None })?;
+
+    // update the index buffer if it exists
+    match &data.index_buffer {
+      Some(buffer) => {
+        buffer
+          .update(&indices, 0, indices.len())
+          .map_err(|e| VertexEntityError::UpdateIndices {
+            cause: Some(Box::new(e)),
+          })
+      }
+      None => Err(VertexEntityError::UpdateIndices { cause: None }),
+    }
   }
 }
