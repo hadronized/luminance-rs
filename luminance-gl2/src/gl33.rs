@@ -12,7 +12,7 @@ use luminance::{
   framebuffer::Framebuffer,
   pixel::{Format, Pixel, PixelFormat, Size, Type},
   primitive::{Connector, Primitive},
-  render_channel::{IsDepthChannelType, IsRenderChannelType},
+  render_channel::{RenderChannel, RenderChannel},
   render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
   texture::{MagFilter, MinFilter, Sampler, TexelUpload, Wrap},
   vertex::{
@@ -622,23 +622,35 @@ impl TextureData {
     mipmaps: usize,
     pf: PixelFormat,
     sampler: Sampler,
-  ) -> Result<TextureData, TextureError>
+  ) -> Result<usize, TextureError>
   where
     D: Dimensionable,
   {
     let mut texture: GLuint = 0;
+    let handle = texture as usize;
 
     unsafe {
       gl::GenTextures(1, &mut texture);
     }
 
-    todo!("bind");
+    let texture_data = TextureData {
+      handle: texture,
+      target,
+      mipmaps,
+      unit: None,
+      state: state.clone(),
+    };
+    state.borrow_mut().textures.insert(handle, texture_data);
+
+    state.borrow_mut().bind_texture(target, handle as _)?;
 
     Self::set_texture_levels(target, mipmaps);
     Self::apply_sampler_to_texture(target, sampler);
-    Self::create_texture_storage::<D>(size, mipmaps + 1, pf);
+    Self::create_texture_storage::<D>(size, mipmaps + 1, pf)?;
 
-    todo!()
+    state.borrow_mut().idle_texture(handle as _)?;
+
+    Ok(handle)
   }
 
   fn set_texture_levels(target: GLenum, mipmaps: usize) {
@@ -1845,22 +1857,24 @@ unsafe impl VertexEntityBackend for GL33 {
 unsafe impl FramebufferBackend for GL33 {
   unsafe fn new_render_layer<D, RC>(
     &mut self,
+    framebuffer_handle: usize,
     size: D::Size,
   ) -> Result<RenderLayer<RC>, FramebufferError>
   where
     D: Dimensionable,
-    RC: IsRenderChannelType,
+    RC: RenderChannel,
   {
     todo!()
   }
 
   unsafe fn new_depth_render_layer<D, DC>(
     &mut self,
+    framebuffer_handle: usize,
     size: D::Size,
   ) -> Result<RenderLayer<DC>, FramebufferError>
   where
     D: Dimensionable,
-    DC: IsDepthChannelType,
+    DC: RenderChannel,
   {
     todo!()
   }

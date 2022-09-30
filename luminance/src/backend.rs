@@ -4,7 +4,7 @@ use crate::{
   pipeline::{PipelineState, WithFramebuffer, WithProgram, WithRenderState},
   pixel::PixelFormat,
   primitive::Primitive,
-  render_channel::{IsDepthChannelType, IsRenderChannelType},
+  render_channel::{DepthChannel, RenderChannel},
   render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
   render_state::RenderState,
   shader::{FromUni, IsUniBuffer, Program, Uni, UniBuffer, Uniform},
@@ -500,19 +500,22 @@ pub unsafe trait VertexEntityBackend {
 pub unsafe trait FramebufferBackend {
   unsafe fn new_render_layer<D, RC>(
     &mut self,
+    framebuffer_handle: usize,
     size: D::Size,
+    index: usize,
   ) -> Result<RenderLayer<RC>, FramebufferError>
   where
     D: Dimensionable,
-    RC: IsRenderChannelType;
+    RC: RenderChannel;
 
   unsafe fn new_depth_render_layer<D, DC>(
     &mut self,
+    framebuffer_handle: usize,
     size: D::Size,
   ) -> Result<RenderLayer<DC>, FramebufferError>
   where
     D: Dimensionable,
-    DC: IsDepthChannelType;
+    DC: DepthChannel;
 
   unsafe fn new_framebuffer<D, RS, DS>(
     &mut self,

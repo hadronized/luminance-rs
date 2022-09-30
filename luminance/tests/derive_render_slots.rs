@@ -1,11 +1,10 @@
-#![cfg(all(feature = "derive", feature = "mint"))]
+#![cfg(all(feature = "luminance-derive", feature = "mint"))]
 #![allow(incomplete_features)]
 #![feature(adt_const_params)]
 
 use luminance::{
   has_field::HasField,
   namespace,
-  render_channel::{RenderChannel, RenderChannelDim, RenderChannelType},
   render_slots::{CompatibleRenderSlots, RenderSlots},
   RenderSlots,
 };
@@ -26,30 +25,6 @@ struct Slots {
 #[slot(namespace = "Namespace")]
 struct Slots1 {
   _diffuse: mint::Vector3<f32>,
-}
-
-#[test]
-fn render_slots_channels() {
-  assert_eq!(
-    Slots::CHANNELS,
-    &[
-      RenderChannel {
-        index: 0,
-        name: "_diffuse",
-        ty: RenderChannelType::Floating(RenderChannelDim::Dim3),
-      },
-      RenderChannel {
-        index: 1,
-        name: "_normal",
-        ty: RenderChannelType::Floating(RenderChannelDim::Dim3),
-      },
-      RenderChannel {
-        index: 2,
-        name: "_test",
-        ty: RenderChannelType::Floating(RenderChannelDim::Dim1),
-      },
-    ]
-  );
 }
 
 #[test]

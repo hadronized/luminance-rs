@@ -33,14 +33,6 @@ pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
           let field_name = field_ident.to_string();
           let field_ty = &field.ty;
 
-          let render_channel = quote! {
-            luminance::render_channel::RenderChannel {
-              index: <#namespace as luminance::named_index::NamedIndex<#field_name>>::INDEX,
-              name: #field_name,
-              ty: <#field_ty as luminance::render_channel::IsRenderChannelType>::CHANNEL_TY,
-            }
-          };
-
           let impl_has_field = quote! {
             impl luminance::has_field::HasField<#field_name> for #type_ident {
               type FieldType = #field_ty;
@@ -55,22 +47,27 @@ pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
             pub #field_ident: luminance::render_slots::RenderLayer<#field_ty>
           };
 
+          let render_layer_decl = quote! {
+            #field_ident: backend.new_render_layer::<D, _>(
+              framebuffer_handle,
+              size,
+              <#namespace as luminance::named_index::NamedIndex<#field_name>>::INDEX
+            )?
+          };
+
           (
-            render_channel,
             impl_has_field,
             has_field_trait_bound,
             render_layer_field,
-            field_ident,
+            render_layer_decl,
           )
         })
         .collect::<Vec<_>>();
-      let channels = per_channel.iter().map(|f| &f.0);
-      let has_field_impls = per_channel.iter().map(|f| &f.1);
-      let has_field_trait_bounds = per_channel.iter().map(|f| &f.2);
-      let render_layer_fields = per_channel.iter().map(|f| &f.3);
-      let field_idents = per_channel.iter().map(|f| &f.4);
+      let has_field_impls = per_channel.iter().map(|f| &f.0);
+      let has_field_trait_bounds = per_channel.iter().map(|f| &f.1);
+      let render_layer_fields = per_channel.iter().map(|f| &f.2);
+      let render_layer_decls = per_channel.iter().map(|f| &f.3);
 
-      let channels_count = data.fields.len();
       let render_layers_ty = Ident::new(&format!("{}RenderLayers", type_ident), Span::call_site());
 
       quote! {
@@ -93,24 +90,17 @@ pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
         impl luminance::render_slots::RenderSlots for #type_ident {
           type RenderLayers = #render_layers_ty;
 
-          const CHANNELS: &'static [luminance::render_channel::RenderChannel] = &[ #(#channels),* ];
-
-          fn channels_count() -> usize {
-            #channels_count
-          }
-
           unsafe fn new_render_layers<B, D>(
             backend: &mut B,
+            framebuffer_handle: usize,
             size: D::Size
           ) -> Result<Self::RenderLayers, luminance::backend::FramebufferError>
           where
-            B: luminance::backend::Backend,
+            B: luminance::backend::FramebufferBackend,
             D: luminance::dim::Dimensionable,
           {
             Ok(
-              #render_layers_ty {
-                #( #field_idents: backend.new_render_layer::<D, _>(size)? ),*
-              }
+              #render_layers_ty { #( #render_layer_decls),* }
             )
           }
         }

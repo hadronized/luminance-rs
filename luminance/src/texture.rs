@@ -1,6 +1,4 @@
-use std::fmt;
-
-use crate::{depth_stencil::Comparison, pixel::PixelFormat};
+use crate::depth_stencil::Comparison;
 
 /// How to wrap texture coordinates while sampling textures?
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

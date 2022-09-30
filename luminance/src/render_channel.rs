@@ -1,63 +1,46 @@
-/// Render channel definition.
-///
-/// A render channel is a named slot in a [`RenderLayer`].
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct RenderChannel {
-  /// Index of the render channel.
-  pub index: usize,
-
-  /// Name of the render channel.
-  ///
-  /// Used by other systems, mostly.
-  pub name: &'static str,
-
-  /// Type of the render channel.
-  pub ty: RenderChannelType,
-}
-
-pub trait IsRenderChannelType {
+pub trait RenderChannel {
   const CHANNEL_TY: RenderChannelType;
 }
 
-macro_rules! impl_IsRenderChannelType {
+macro_rules! impl_RenderChannel {
   ($ty:ty, $var:ident, $dim:ident) => {
-    impl IsRenderChannelType for $ty {
+    impl RenderChannel for $ty {
       const CHANNEL_TY: RenderChannelType = RenderChannelType::$var(RenderChannelDim::$dim);
     }
   };
 }
 
-impl_IsRenderChannelType!(i32, Integral, Dim1);
-impl_IsRenderChannelType!(u32, Unsigned, Dim1);
-impl_IsRenderChannelType!(f32, Floating, Dim1);
-impl_IsRenderChannelType!(bool, Boolean, Dim1);
+impl_RenderChannel!(i32, Integral, Dim1);
+impl_RenderChannel!(u32, Unsigned, Dim1);
+impl_RenderChannel!(f32, Floating, Dim1);
+impl_RenderChannel!(bool, Boolean, Dim1);
 
 #[cfg(feature = "mint")]
-impl_IsRenderChannelType!(mint::Vector2<i32>, Integral, Dim2);
+impl_RenderChannel!(mint::Vector2<i32>, Integral, Dim2);
 #[cfg(feature = "mint")]
-impl_IsRenderChannelType!(mint::Vector2<u32>, Unsigned, Dim2);
+impl_RenderChannel!(mint::Vector2<u32>, Unsigned, Dim2);
 #[cfg(feature = "mint")]
-impl_IsRenderChannelType!(mint::Vector2<f32>, Floating, Dim2);
+impl_RenderChannel!(mint::Vector2<f32>, Floating, Dim2);
 #[cfg(feature = "mint")]
-impl_IsRenderChannelType!(mint::Vector2<bool>, Boolean, Dim2);
+impl_RenderChannel!(mint::Vector2<bool>, Boolean, Dim2);
 
 #[cfg(feature = "mint")]
-impl_IsRenderChannelType!(mint::Vector3<i32>, Integral, Dim3);
+impl_RenderChannel!(mint::Vector3<i32>, Integral, Dim3);
 #[cfg(feature = "mint")]
-impl_IsRenderChannelType!(mint::Vector3<u32>, Unsigned, Dim3);
+impl_RenderChannel!(mint::Vector3<u32>, Unsigned, Dim3);
 #[cfg(feature = "mint")]
-impl_IsRenderChannelType!(mint::Vector3<f32>, Floating, Dim3);
+impl_RenderChannel!(mint::Vector3<f32>, Floating, Dim3);
 #[cfg(feature = "mint")]
-impl_IsRenderChannelType!(mint::Vector3<bool>, Boolean, Dim3);
+impl_RenderChannel!(mint::Vector3<bool>, Boolean, Dim3);
 
 #[cfg(feature = "mint")]
-impl_IsRenderChannelType!(mint::Vector4<i32>, Integral, Dim4);
+impl_RenderChannel!(mint::Vector4<i32>, Integral, Dim4);
 #[cfg(feature = "mint")]
-impl_IsRenderChannelType!(mint::Vector4<u32>, Unsigned, Dim4);
+impl_RenderChannel!(mint::Vector4<u32>, Unsigned, Dim4);
 #[cfg(feature = "mint")]
-impl_IsRenderChannelType!(mint::Vector4<f32>, Floating, Dim4);
+impl_RenderChannel!(mint::Vector4<f32>, Floating, Dim4);
 #[cfg(feature = "mint")]
-impl_IsRenderChannelType!(mint::Vector4<bool>, Boolean, Dim4);
+impl_RenderChannel!(mint::Vector4<bool>, Boolean, Dim4);
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum RenderChannelType {
@@ -78,7 +61,7 @@ pub enum RenderChannelType {
   Boolean(RenderChannelDim),
 }
 
-pub trait IsDepthChannelType {
+pub trait DepthChannel {
   const CHANNEL_TY: DepthChannelType;
 }
 
@@ -99,13 +82,13 @@ pub enum DepthChannelType {
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Depth32F;
 
-impl IsDepthChannelType for Depth32F {
+impl DepthChannel for Depth32F {
   const CHANNEL_TY: DepthChannelType = DepthChannelType::Depth32F;
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Depth24FStencil8;
 
-impl IsDepthChannelType for Depth24FStencil8 {
+impl DepthChannel for Depth24FStencil8 {
   const CHANNEL_TY: DepthChannelType = DepthChannelType::Depth24FStencil8;
 }

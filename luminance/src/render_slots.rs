@@ -1,9 +1,9 @@
 use std::marker::PhantomData;
 
 use crate::{
-  backend::{Backend, FramebufferError},
+  backend::{FramebufferBackend, FramebufferError},
   dim::Dimensionable,
-  render_channel::{DepthChannelType, IsDepthChannelType, RenderChannel},
+  render_channel::{DepthChannel, DepthChannelType},
 };
 
 /// Render slots.
@@ -14,36 +14,26 @@ use crate::{
 pub trait RenderSlots {
   type RenderLayers;
 
-  const CHANNELS: &'static [RenderChannel];
-
-  fn channels_count() -> usize {
-    Self::CHANNELS.len()
-  }
-
   unsafe fn new_render_layers<B, D>(
     backend: &mut B,
+    framebuffer_handle: usize,
     size: D::Size,
   ) -> Result<Self::RenderLayers, FramebufferError>
   where
-    B: Backend,
+    B: FramebufferBackend,
     D: Dimensionable;
 }
 
 impl RenderSlots for () {
   type RenderLayers = ();
 
-  const CHANNELS: &'static [RenderChannel] = &[];
-
-  fn channels_count() -> usize {
-    0
-  }
-
   unsafe fn new_render_layers<B, D>(
     _: &mut B,
+    _: usize,
     _: D::Size,
   ) -> Result<Self::RenderLayers, FramebufferError>
   where
-    B: Backend,
+    B: FramebufferBackend,
     D: Dimensionable,
   {
     Ok(())
@@ -78,10 +68,11 @@ pub trait DepthRenderSlot {
 
   unsafe fn new_depth_render_layer<B, D>(
     backend: &mut B,
+    framebuffer_handle: usize,
     size: D::Size,
   ) -> Result<Self::DepthRenderLayer, FramebufferError>
   where
-    B: Backend,
+    B: FramebufferBackend,
     D: Dimensionable;
 }
 
@@ -92,10 +83,11 @@ impl DepthRenderSlot for () {
 
   unsafe fn new_depth_render_layer<B, D>(
     _: &mut B,
+    _: usize,
     _: D::Size,
   ) -> Result<Self::DepthRenderLayer, FramebufferError>
   where
-    B: Backend,
+    B: FramebufferBackend,
     D: Dimensionable,
   {
     Ok(())
@@ -104,7 +96,7 @@ impl DepthRenderSlot for () {
 
 impl<RC> DepthRenderSlot for RC
 where
-  RC: IsDepthChannelType,
+  RC: DepthChannel,
 {
   type DepthRenderLayer = RenderLayer<RC>;
 
@@ -112,12 +104,13 @@ where
 
   unsafe fn new_depth_render_layer<B, D>(
     backend: &mut B,
+    framebuffer_handle: usize,
     size: D::Size,
   ) -> Result<Self::DepthRenderLayer, FramebufferError>
   where
-    B: Backend,
+    B: FramebufferBackend,
     D: Dimensionable,
   {
-    Ok(backend.new_depth_render_layer::<D, _>(size)?)
+    Ok(backend.new_depth_render_layer::<D, _>(framebuffer_handle, size)?)
   }
 }
