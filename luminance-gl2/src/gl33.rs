@@ -12,7 +12,7 @@ use luminance::{
   framebuffer::Framebuffer,
   pixel::{Format, Pixel, PixelFormat, Size, Type},
   primitive::{Connector, Primitive},
-  render_channel::{RenderChannel, RenderChannel},
+  render_channel::{DepthChannel, RenderChannel},
   render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
   texture::{MagFilter, MinFilter, Sampler, TexelUpload, Wrap},
   vertex::{
@@ -1426,6 +1426,17 @@ impl GL33 {
     }
   }
 
+  fn opengl_target(d: Dim) -> GLenum {
+    match d {
+      Dim::Dim1 => gl::TEXTURE_1D,
+      Dim::Dim2 => gl::TEXTURE_2D,
+      Dim::Dim3 => gl::TEXTURE_3D,
+      Dim::Cubemap => gl::TEXTURE_CUBE_MAP,
+      Dim::Dim1Array => gl::TEXTURE_1D_ARRAY,
+      Dim::Dim2Array => gl::TEXTURE_2D_ARRAY,
+    }
+  }
+
   fn opengl_comparison(dc: Comparison) -> GLenum {
     match dc {
       Comparison::Never => gl::NEVER,
@@ -1859,29 +1870,72 @@ unsafe impl FramebufferBackend for GL33 {
     &mut self,
     framebuffer_handle: usize,
     size: D::Size,
+    mipmaps: usize,
+    index: usize,
   ) -> Result<RenderLayer<RC>, FramebufferError>
   where
     D: Dimensionable,
     RC: RenderChannel,
   {
-    todo!()
+    // a render layer is a texture, so there is no need to wrap it
+    let pixel_format = RC::CHANNEL_TY.to_pixel_format();
+    let tex = TextureData::new::<D>(
+      &self.state,
+      GL33::opengl_target(D::dim()),
+      size,
+      mipmaps,
+      pixel_format,
+      Sampler::default(),
+    )
+    .map_err(|e| FramebufferError::RenderLayerCreation {
+      cause: Some(Box::new(e)),
+    })?;
+
+    // attach the texture to the framebuffer
+    gl::FramebufferTexture(
+      gl::FRAMEBUFFER,
+      gl::COLOR_ATTACHMENT0 + index as GLenum,
+      tex as GLuint,
+      0,
+    );
+
+    Ok(RenderLayer::new(tex))
   }
 
   unsafe fn new_depth_render_layer<D, DC>(
     &mut self,
     framebuffer_handle: usize,
     size: D::Size,
+    mipmaps: usize,
   ) -> Result<RenderLayer<DC>, FramebufferError>
   where
     D: Dimensionable,
-    DC: RenderChannel,
+    DC: DepthChannel,
   {
-    todo!()
+    // a depth render layer is also a texture, attached to the depth attachment of the framebuffer
+    let pixel_format = DC::CHANNEL_TY.to_pixel_format();
+    let tex = TextureData::new::<D>(
+      &self.state,
+      GL33::opengl_target(D::dim()),
+      size,
+      mipmaps,
+      pixel_format,
+      Sampler::default(),
+    )
+    .map_err(|e| FramebufferError::RenderLayerCreation {
+      cause: Some(Box::new(e)),
+    })?;
+
+    // attach the texture to the framebuffer
+    gl::FramebufferTexture(gl::FRAMEBUFFER, gl::DEPTH_ATTACHMENT, tex as GLuint, 0);
+
+    Ok(RenderLayer::new(tex))
   }
 
   unsafe fn new_framebuffer<D, RS, DS>(
     &mut self,
     size: D::Size,
+    mipmaps: usize,
   ) -> Result<Framebuffer<D, RS, DS>, FramebufferError>
   where
     D: Dimensionable,

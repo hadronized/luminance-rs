@@ -502,6 +502,7 @@ pub unsafe trait FramebufferBackend {
     &mut self,
     framebuffer_handle: usize,
     size: D::Size,
+    mipmaps: usize,
     index: usize,
   ) -> Result<RenderLayer<RC>, FramebufferError>
   where
@@ -512,6 +513,7 @@ pub unsafe trait FramebufferBackend {
     &mut self,
     framebuffer_handle: usize,
     size: D::Size,
+    mipmaps: usize,
   ) -> Result<RenderLayer<DC>, FramebufferError>
   where
     D: Dimensionable,
@@ -520,6 +522,7 @@ pub unsafe trait FramebufferBackend {
   unsafe fn new_framebuffer<D, RS, DS>(
     &mut self,
     size: D::Size,
+    mipmaps: usize,
   ) -> Result<Framebuffer<D, RS, DS>, FramebufferError>
   where
     D: Dimensionable,

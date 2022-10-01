@@ -18,6 +18,7 @@ pub trait RenderSlots {
     backend: &mut B,
     framebuffer_handle: usize,
     size: D::Size,
+    mipmaps: usize,
   ) -> Result<Self::RenderLayers, FramebufferError>
   where
     B: FramebufferBackend,
@@ -31,6 +32,7 @@ impl RenderSlots for () {
     _: &mut B,
     _: usize,
     _: D::Size,
+    _: usize,
   ) -> Result<Self::RenderLayers, FramebufferError>
   where
     B: FramebufferBackend,
@@ -70,6 +72,7 @@ pub trait DepthRenderSlot {
     backend: &mut B,
     framebuffer_handle: usize,
     size: D::Size,
+    mipmaps: usize,
   ) -> Result<Self::DepthRenderLayer, FramebufferError>
   where
     B: FramebufferBackend,
@@ -85,6 +88,7 @@ impl DepthRenderSlot for () {
     _: &mut B,
     _: usize,
     _: D::Size,
+    _: usize,
   ) -> Result<Self::DepthRenderLayer, FramebufferError>
   where
     B: FramebufferBackend,
@@ -106,11 +110,12 @@ where
     backend: &mut B,
     framebuffer_handle: usize,
     size: D::Size,
+    mipmaps: usize,
   ) -> Result<Self::DepthRenderLayer, FramebufferError>
   where
     B: FramebufferBackend,
     D: Dimensionable,
   {
-    Ok(backend.new_depth_render_layer::<D, _>(framebuffer_handle, size)?)
+    Ok(backend.new_depth_render_layer::<D, _>(framebuffer_handle, size, mipmaps)?)
   }
 }

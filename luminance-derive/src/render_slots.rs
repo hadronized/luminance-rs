@@ -51,6 +51,7 @@ pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
             #field_ident: backend.new_render_layer::<D, _>(
               framebuffer_handle,
               size,
+              mipmaps,
               <#namespace as luminance::named_index::NamedIndex<#field_name>>::INDEX
             )?
           };
@@ -93,7 +94,8 @@ pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
           unsafe fn new_render_layers<B, D>(
             backend: &mut B,
             framebuffer_handle: usize,
-            size: D::Size
+            size: D::Size,
+            mipmaps: usize,
           ) -> Result<Self::RenderLayers, luminance::backend::FramebufferError>
           where
             B: luminance::backend::FramebufferBackend,

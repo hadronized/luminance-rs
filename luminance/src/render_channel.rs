@@ -1,3 +1,8 @@
+use crate::pixel::{
+  self, Pixel, PixelFormat, R32F, R32I, R32UI, RG32F, RG32I, RG32UI, RGB32F, RGB32I, RGB32UI,
+  RGBA32F, RGBA32I, RGBA32UI,
+};
+
 pub trait RenderChannel {
   const CHANNEL_TY: RenderChannelType;
 }
@@ -61,6 +66,32 @@ pub enum RenderChannelType {
   Boolean(RenderChannelDim),
 }
 
+impl RenderChannelType {
+  pub fn to_pixel_format(&self) -> PixelFormat {
+    match self {
+      RenderChannelType::Integral(RenderChannelDim::Dim1) => R32I::pixel_format(),
+      RenderChannelType::Integral(RenderChannelDim::Dim2) => RG32I::pixel_format(),
+      RenderChannelType::Integral(RenderChannelDim::Dim3) => RGB32I::pixel_format(),
+      RenderChannelType::Integral(RenderChannelDim::Dim4) => RGBA32I::pixel_format(),
+
+      RenderChannelType::Unsigned(RenderChannelDim::Dim1) => R32UI::pixel_format(),
+      RenderChannelType::Unsigned(RenderChannelDim::Dim2) => RG32UI::pixel_format(),
+      RenderChannelType::Unsigned(RenderChannelDim::Dim3) => RGB32UI::pixel_format(),
+      RenderChannelType::Unsigned(RenderChannelDim::Dim4) => RGBA32UI::pixel_format(),
+
+      RenderChannelType::Floating(RenderChannelDim::Dim1) => R32F::pixel_format(),
+      RenderChannelType::Floating(RenderChannelDim::Dim2) => RG32F::pixel_format(),
+      RenderChannelType::Floating(RenderChannelDim::Dim3) => RGB32F::pixel_format(),
+      RenderChannelType::Floating(RenderChannelDim::Dim4) => RGBA32F::pixel_format(),
+
+      RenderChannelType::Boolean(RenderChannelDim::Dim1) => R32UI::pixel_format(),
+      RenderChannelType::Boolean(RenderChannelDim::Dim2) => RG32UI::pixel_format(),
+      RenderChannelType::Boolean(RenderChannelDim::Dim3) => RGB32UI::pixel_format(),
+      RenderChannelType::Boolean(RenderChannelDim::Dim4) => RGBA32UI::pixel_format(),
+    }
+  }
+}
+
 pub trait DepthChannel {
   const CHANNEL_TY: DepthChannelType;
 }
@@ -77,6 +108,15 @@ pub enum RenderChannelDim {
 pub enum DepthChannelType {
   Depth32F,
   Depth24FStencil8,
+}
+
+impl DepthChannelType {
+  pub fn to_pixel_format(&self) -> PixelFormat {
+    match self {
+      DepthChannelType::Depth32F => pixel::Depth32F::pixel_format(),
+      DepthChannelType::Depth24FStencil8 => pixel::Depth32FStencil8::pixel_format(),
+    }
+  }
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]

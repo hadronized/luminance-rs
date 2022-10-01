@@ -94,13 +94,14 @@ where
   pub fn new_framebuffer<D, RS, DS>(
     &mut self,
     size: D::Size,
+    mipmaps: usize,
   ) -> Result<Framebuffer<D, RS, DS>, FramebufferError>
   where
     D: Dimensionable,
     RS: RenderSlots,
     DS: DepthRenderSlot,
   {
-    unsafe { self.backend.new_framebuffer(size) }
+    unsafe { self.backend.new_framebuffer(size, mipmaps) }
   }
 
   pub fn back_buffer<D, RS, DS>(
