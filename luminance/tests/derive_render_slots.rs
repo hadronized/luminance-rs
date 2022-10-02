@@ -4,17 +4,12 @@
 
 use luminance::{
   has_field::HasField,
-  namespace,
+  render_channel::RenderChannelDesc,
   render_slots::{CompatibleRenderSlots, RenderSlots},
   RenderSlots,
 };
 
-namespace! {
-  Namespace = { "_diffuse", "_normal", "_test" }
-}
-
 #[derive(RenderSlots)]
-#[slot(namespace = "Namespace")]
 struct Slots {
   _diffuse: mint::Vector3<f32>,
   _normal: mint::Vector3<f32>,
@@ -22,7 +17,6 @@ struct Slots {
 }
 
 #[derive(RenderSlots)]
-#[slot(namespace = "Namespace")]
 struct Slots1 {
   _diffuse: mint::Vector3<f32>,
 }
@@ -49,4 +43,28 @@ fn compatible_render_slots() {
 
   compatible::<Slots, Slots>();
   compatible::<Slots1, Slots>();
+}
+
+#[test]
+fn render_channels() {
+  let diffuse = RenderChannelDesc {
+    name: "_diffuse",
+    ty: luminance::render_channel::RenderChannelType::Floating(
+      luminance::render_channel::RenderChannelDim::Dim3,
+    ),
+  };
+  let normal = RenderChannelDesc {
+    name: "_normal",
+    ty: luminance::render_channel::RenderChannelType::Floating(
+      luminance::render_channel::RenderChannelDim::Dim3,
+    ),
+  };
+  let test = RenderChannelDesc {
+    name: "_test",
+    ty: luminance::render_channel::RenderChannelType::Floating(
+      luminance::render_channel::RenderChannelDim::Dim1,
+    ),
+  };
+
+  assert_eq!(Slots::color_channel_descs(), &[diffuse, normal, test]);
 }

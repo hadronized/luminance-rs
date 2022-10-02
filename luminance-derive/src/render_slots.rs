@@ -5,30 +5,16 @@ use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{DeriveInput, Ident};
 
-use crate::attrib::get_field_attr_once;
-
-// accepted sub keys for the "vertex" key
-const KNOWN_SUBKEYS: &[&str] = &["namespace"];
-
 pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
   let type_ident = &item.ident;
-  let attrs = &item.attrs;
-
-  let namespace = get_field_attr_once(type_ident, attrs, "slot", "namespace", KNOWN_SUBKEYS)
-    .map(|namespace: Ident| {
-      quote! { #namespace }
-    })
-    .unwrap_or_else(|e| {
-      Diagnostic::new(Level::Error, format!("cannot find namespace: {}", e)).emit();
-      proc_macro2::TokenStream::new()
-    });
 
   match item.data {
     syn::Data::Struct(data) => {
       let per_channel = data
         .fields
         .iter()
-        .map(|field| {
+        .enumerate()
+        .map(|(rank, field)| {
           let field_ident = field.ident.as_ref().expect("field ident");
           let field_name = field_ident.to_string();
           let field_ty = &field.ty;
@@ -52,8 +38,15 @@ pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
               framebuffer_handle,
               size,
               mipmaps,
-              <#namespace as luminance::named_index::NamedIndex<#field_name>>::INDEX
+              #rank,
             )?
+          };
+
+          let render_channel_desc = quote! {
+            luminance::render_channel::RenderChannelDesc {
+              name: #field_name,
+              ty: <#field_ty as luminance::render_channel::RenderChannel>::CHANNEL_TY,
+            }
           };
 
           (
@@ -61,6 +54,7 @@ pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
             has_field_trait_bound,
             render_layer_field,
             render_layer_decl,
+            render_channel_desc,
           )
         })
         .collect::<Vec<_>>();
@@ -68,6 +62,7 @@ pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
       let has_field_trait_bounds = per_channel.iter().map(|f| &f.1);
       let render_layer_fields = per_channel.iter().map(|f| &f.2);
       let render_layer_decls = per_channel.iter().map(|f| &f.3);
+      let render_channel_descs = per_channel.iter().map(|f| &f.4);
 
       let render_layers_ty = Ident::new(&format!("{}RenderLayers", type_ident), Span::call_site());
 
@@ -90,6 +85,10 @@ pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
         // implement RenderSlots
         impl luminance::render_slots::RenderSlots for #type_ident {
           type RenderLayers = #render_layers_ty;
+
+          fn color_channel_descs() -> &'static [luminance::render_channel::RenderChannelDesc] {
+            &[#(#render_channel_descs),*]
+          }
 
           unsafe fn new_render_layers<B, D>(
             backend: &mut B,

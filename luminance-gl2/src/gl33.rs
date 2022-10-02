@@ -9,7 +9,7 @@ use luminance::{
   depth_stencil::{Comparison, StencilOp},
   dim::{Dim, Dimensionable},
   face_culling::{FaceCullingFace, FaceCullingOrder},
-  framebuffer::Framebuffer,
+  framebuffer::{Back, Framebuffer},
   pixel::{Format, Pixel, PixelFormat, Size, Type},
   primitive::{Connector, Primitive},
   render_channel::{DepthChannel, RenderChannel},
@@ -1942,18 +1942,82 @@ unsafe impl FramebufferBackend for GL33 {
     RS: RenderSlots,
     DS: DepthRenderSlot,
   {
-    todo!()
+    let mut st = self.state.borrow_mut();
+
+    // generate the framebuffer
+    let mut handle: GLuint = 0;
+    gl::GenFramebuffers(1, &mut handle);
+
+    st.bound_draw_framebuffer.set_if_invalid(handle, || {
+      gl::BindFramebuffer(gl::DRAW_FRAMEBUFFER, handle);
+    });
+
+    // set the color channels
+    let color_channels = RS::color_channel_descs();
+    if color_channels.is_empty() {
+      gl::DrawBuffer(gl::NONE);
+    } else {
+      let color_buf_nb = color_channels.len() as GLsizei;
+      let color_buffers: Vec<_> =
+        (gl::COLOR_ATTACHMENT0..gl::COLOR_ATTACHMENT0 + color_buf_nb as GLenum).collect();
+
+      gl::DrawBuffers(color_buf_nb, color_buffers.as_ptr());
+    }
+
+    // depth channel
+    let depth_channel = DS::DEPTH_CHANNEL_TY;
+    let renderbuffer = if depth_channel.is_none() {
+      let mut renderbuffer: GLuint = 0;
+
+      gl::GenRenderbuffers(1, &mut renderbuffer);
+      gl::BindRenderbuffer(gl::RENDERBUFFER, renderbuffer);
+      gl::RenderbufferStorage(
+        gl::RENDERBUFFER,
+        gl::DEPTH_COMPONENT32F,
+        D::width(size) as GLsizei,
+        D::height(size) as GLsizei,
+      );
+
+      gl::FramebufferRenderbuffer(
+        gl::FRAMEBUFFER,
+        gl::DEPTH_ATTACHMENT,
+        gl::RENDERBUFFER,
+        renderbuffer,
+      );
+
+      Some(renderbuffer)
+    } else {
+      None
+    };
+
+    let data = FramebufferData {
+      handle,
+      renderbuffer,
+    };
+
+    let handle = handle as usize;
+    st.framebuffers.insert(handle, data);
+    drop(st);
+
+    let layers = RS::new_render_layers::<_, D>(self, handle, size, mipmaps)?;
+    let depth_layer = DS::new_depth_render_layer::<_, D>(self, handle, size, mipmaps)?;
+    let state = self.state.clone();
+    let dropper = Box::new(move |handle| {
+      state.borrow_mut().drop_framebuffer(handle);
+    });
+
+    Ok(Framebuffer::new(handle, size, layers, depth_layer, dropper))
   }
 
   unsafe fn back_buffer<D, RS, DS>(
     &mut self,
     size: D::Size,
-  ) -> Result<Framebuffer<D, RS, DS>, FramebufferError>
+  ) -> Result<Framebuffer<D, Back<RS>, Back<DS>>, FramebufferError>
   where
     D: Dimensionable,
     RS: RenderSlots,
     DS: DepthRenderSlot,
   {
-    todo!()
+    Ok(Framebuffer::new(0, size, (), (), Box::new(|_| {})))
   }
 }

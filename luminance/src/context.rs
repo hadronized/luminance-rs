@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use crate::{
   backend::{Backend, FramebufferError, PipelineError, ShaderError, VertexEntityError},
   dim::Dimensionable,
-  framebuffer::Framebuffer,
+  framebuffer::{Back, Framebuffer},
   pipeline::{PipelineState, WithFramebuffer},
   primitive::Primitive,
   render_slots::{DepthRenderSlot, RenderSlots},
@@ -107,7 +107,7 @@ where
   pub fn back_buffer<D, RS, DS>(
     &mut self,
     size: D::Size,
-  ) -> Result<Framebuffer<D, RS, DS>, FramebufferError>
+  ) -> Result<Framebuffer<D, Back<RS>, Back<DS>>, FramebufferError>
   where
     D: Dimensionable,
     RS: RenderSlots,

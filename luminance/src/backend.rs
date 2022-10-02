@@ -1,6 +1,6 @@
 use crate::{
   dim::Dimensionable,
-  framebuffer::Framebuffer,
+  framebuffer::{Back, Framebuffer},
   pipeline::{PipelineState, WithFramebuffer, WithProgram, WithRenderState},
   pixel::PixelFormat,
   primitive::Primitive,
@@ -532,7 +532,7 @@ pub unsafe trait FramebufferBackend {
   unsafe fn back_buffer<D, RS, DS>(
     &mut self,
     size: D::Size,
-  ) -> Result<Framebuffer<D, RS, DS>, FramebufferError>
+  ) -> Result<Framebuffer<D, Back<RS>, Back<DS>>, FramebufferError>
   where
     D: Dimensionable,
     RS: RenderSlots,

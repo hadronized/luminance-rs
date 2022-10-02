@@ -3,7 +3,8 @@ use std::marker::PhantomData;
 use crate::{
   backend::{FramebufferBackend, FramebufferError},
   dim::Dimensionable,
-  render_channel::{DepthChannel, DepthChannelType},
+  framebuffer::Back,
+  render_channel::{DepthChannel, DepthChannelType, RenderChannelDesc},
 };
 
 /// Render slots.
@@ -13,6 +14,8 @@ use crate::{
 /// channel.
 pub trait RenderSlots {
   type RenderLayers;
+
+  fn color_channel_descs() -> &'static [RenderChannelDesc];
 
   unsafe fn new_render_layers<B, D>(
     backend: &mut B,
@@ -27,6 +30,34 @@ pub trait RenderSlots {
 
 impl RenderSlots for () {
   type RenderLayers = ();
+
+  fn color_channel_descs() -> &'static [RenderChannelDesc] {
+    &[]
+  }
+
+  unsafe fn new_render_layers<B, D>(
+    _: &mut B,
+    _: usize,
+    _: D::Size,
+    _: usize,
+  ) -> Result<Self::RenderLayers, FramebufferError>
+  where
+    B: FramebufferBackend,
+    D: Dimensionable,
+  {
+    Ok(())
+  }
+}
+
+impl<RS> RenderSlots for Back<RS>
+where
+  RS: RenderSlots,
+{
+  type RenderLayers = ();
+
+  fn color_channel_descs() -> &'static [RenderChannelDesc] {
+    &[]
+  }
 
   unsafe fn new_render_layers<B, D>(
     _: &mut B,
@@ -80,6 +111,28 @@ pub trait DepthRenderSlot {
 }
 
 impl DepthRenderSlot for () {
+  type DepthRenderLayer = ();
+
+  const DEPTH_CHANNEL_TY: Option<DepthChannelType> = None;
+
+  unsafe fn new_depth_render_layer<B, D>(
+    _: &mut B,
+    _: usize,
+    _: D::Size,
+    _: usize,
+  ) -> Result<Self::DepthRenderLayer, FramebufferError>
+  where
+    B: FramebufferBackend,
+    D: Dimensionable,
+  {
+    Ok(())
+  }
+}
+
+impl<DS> DepthRenderSlot for Back<DS>
+where
+  DS: DepthRenderSlot,
+{
   type DepthRenderLayer = ();
 
   const DEPTH_CHANNEL_TY: Option<DepthChannelType> = None;

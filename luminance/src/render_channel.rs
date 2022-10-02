@@ -3,6 +3,12 @@ use crate::pixel::{
   RGBA32F, RGBA32I, RGBA32UI,
 };
 
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct RenderChannelDesc {
+  pub name: &'static str,
+  pub ty: RenderChannelType,
+}
+
 pub trait RenderChannel {
   const CHANNEL_TY: RenderChannelType;
 }

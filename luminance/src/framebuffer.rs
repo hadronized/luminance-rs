@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use crate::{
   dim::Dimensionable,
   render_slots::{DepthRenderSlot, RenderSlots},
@@ -64,4 +66,8 @@ where
   fn drop(&mut self) {
     (self.dropper)(self.handle);
   }
+}
+
+pub struct Back<T> {
+  _phantom: PhantomData<*const T>,
 }
