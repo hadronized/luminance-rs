@@ -525,6 +525,28 @@ struct FramebufferData {
   renderbuffer: Option<GLuint>,
 }
 
+impl FramebufferData {
+  fn validate() -> Result<(), IncompleteReason> {
+    let status = unsafe { gl::CheckFramebufferStatus(gl::FRAMEBUFFER) };
+
+    match status {
+      gl::FRAMEBUFFER_COMPLETE => Ok(()),
+      gl::FRAMEBUFFER_UNDEFINED => Err(IncompleteReason::Undefined),
+      gl::FRAMEBUFFER_INCOMPLETE_ATTACHMENT => Err(IncompleteReason::IncompleteAttachment),
+      gl::FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT => Err(IncompleteReason::MissingAttachment),
+      gl::FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER => Err(IncompleteReason::IncompleteDrawBuffer),
+      gl::FRAMEBUFFER_INCOMPLETE_READ_BUFFER => Err(IncompleteReason::IncompleteReadBuffer),
+      gl::FRAMEBUFFER_UNSUPPORTED => Err(IncompleteReason::Unsupported),
+      gl::FRAMEBUFFER_INCOMPLETE_MULTISAMPLE => Err(IncompleteReason::IncompleteMultisample),
+      gl::FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS => Err(IncompleteReason::IncompleteLayerTargets),
+      _ => panic!(
+        "unknown OpenGL framebuffer incomplete status! status={}",
+        status
+      ),
+    }
+  }
+}
+
 impl Drop for FramebufferData {
   fn drop(&mut self) {
     if let Some(renderbuffer) = self.renderbuffer {
@@ -535,6 +557,63 @@ impl Drop for FramebufferData {
 
     unsafe {
       gl::DeleteFramebuffers(1, &self.handle);
+    }
+  }
+}
+
+/// Reason a framebuffer is incomplete.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum IncompleteReason {
+  /// Incomplete framebuffer.
+  Undefined,
+
+  /// Incomplete attachment (color / depth).
+  IncompleteAttachment,
+
+  /// An attachment was missing.
+  MissingAttachment,
+
+  /// Incomplete draw buffer.
+  IncompleteDrawBuffer,
+
+  /// Incomplete read buffer.
+  IncompleteReadBuffer,
+
+  /// Unsupported framebuffer.
+  Unsupported,
+
+  /// Incomplete multisample configuration.
+  IncompleteMultisample,
+
+  /// Incomplete layer targets.
+  IncompleteLayerTargets,
+
+  /// Unknown reason.
+  Unknown(String),
+}
+
+impl fmt::Display for IncompleteReason {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    match self {
+      IncompleteReason::Undefined => write!(f, "incomplete reason"),
+      IncompleteReason::IncompleteAttachment => write!(f, "incomplete attachment"),
+      IncompleteReason::MissingAttachment => write!(f, "missing attachment"),
+      IncompleteReason::IncompleteDrawBuffer => write!(f, "incomplete draw buffer"),
+      IncompleteReason::IncompleteReadBuffer => write!(f, "incomplete read buffer"),
+      IncompleteReason::Unsupported => write!(f, "unsupported"),
+      IncompleteReason::IncompleteMultisample => write!(f, "incomplete multisample"),
+      IncompleteReason::IncompleteLayerTargets => write!(f, "incomplete layer targets"),
+      IncompleteReason::Unknown(reason) => write!(f, "unknown reason: {}", reason),
+    }
+  }
+}
+
+impl std::error::Error for IncompleteReason {}
+
+impl From<IncompleteReason> for FramebufferError {
+  fn from(e: IncompleteReason) -> Self {
+    FramebufferError::Creation {
+      cause: Some(Box::new(e)),
     }
   }
 }
@@ -1947,10 +2026,8 @@ unsafe impl FramebufferBackend for GL33 {
     // generate the framebuffer
     let mut handle: GLuint = 0;
     gl::GenFramebuffers(1, &mut handle);
-
-    st.bound_draw_framebuffer.set_if_invalid(handle, || {
-      gl::BindFramebuffer(gl::DRAW_FRAMEBUFFER, handle);
-    });
+    gl::BindFramebuffer(gl::DRAW_FRAMEBUFFER, handle);
+    st.bound_draw_framebuffer.set(handle);
 
     // set the color channels
     let color_channels = RS::color_channel_descs();
@@ -1995,16 +2072,23 @@ unsafe impl FramebufferBackend for GL33 {
       renderbuffer,
     };
 
-    let handle = handle as usize;
-    st.framebuffers.insert(handle, data);
     drop(st);
+    let handle = handle as usize;
 
+    // create render and depth render layers
     let layers = RS::new_render_layers::<_, D>(self, handle, size, mipmaps)?;
     let depth_layer = DS::new_depth_render_layer::<_, D>(self, handle, size, mipmaps)?;
+
+    // validate the state of the framebuffer (the framebuffer is already bound)
+    FramebufferData::validate()?;
+
+    // dropper
     let state = self.state.clone();
     let dropper = Box::new(move |handle| {
       state.borrow_mut().drop_framebuffer(handle);
     });
+
+    self.state.borrow_mut().framebuffers.insert(handle, data);
 
     Ok(Framebuffer::new(handle, size, layers, depth_layer, dropper))
   }
