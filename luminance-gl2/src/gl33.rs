@@ -1208,7 +1208,13 @@ pub struct GL33 {
 
 impl GL33 {
   pub fn new(state: StateRef) -> Self {
+    // some initialization things
+    init();
     Self { state }
+  }
+
+  fn init() {
+    unsafe { gl::PrimitiveRestartIndex(u32::MAX) };
   }
 
   fn build_interleaved_buffer<V>(
