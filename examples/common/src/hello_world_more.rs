@@ -206,7 +206,7 @@ impl Example for LocalExample {
         ProgramBuilder::new()
           .add_vertex_stage(Stage::<Vertex, Vertex, ()>::new(VS))
           .no_primitive_stage::<Triangle<Vertex>>()
-          .add_shading_code(Stage::<Vertex, Slots, ()>::new(FS)),
+          .add_shading_stage(Stage::<Vertex, Slots, ()>::new(FS)),
       )
       .unwrap();
 

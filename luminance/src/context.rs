@@ -7,7 +7,7 @@ use crate::{
   pipeline::{PipelineState, WithFramebuffer},
   primitive::Primitive,
   render_slots::{DepthRenderSlot, RenderSlots},
-  shader::{FromUni, Program, ProgramBuilder, ProgramUpdate},
+  shader::{Program, ProgramBuilder, ProgramUpdate, Uniforms},
   vertex::Vertex,
   vertex_entity::VertexEntity,
   vertex_storage::AsVertexStorage,
@@ -126,7 +126,7 @@ where
     P: Primitive<Vertex = W>,
     Q: Primitive,
     S: RenderSlots,
-    E: FromUni,
+    E: Uniforms,
   {
     unsafe {
       self.backend.new_program(
@@ -152,7 +152,7 @@ where
       program_handle: program.handle(),
     };
 
-    updater(program_update, &program.environment)
+    updater(program_update, &program.uniforms)
   }
 
   pub fn with_framebuffer<'a, D, CS, DS, Err>(

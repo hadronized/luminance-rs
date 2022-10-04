@@ -1,5 +1,8 @@
 use core::fmt;
-use gl::types::{GLboolean, GLchar, GLenum, GLfloat, GLint, GLsizei, GLubyte, GLuint};
+use gl::{
+  types::{GLboolean, GLchar, GLenum, GLfloat, GLint, GLsizei, GLubyte, GLuint},
+  DeleteProgram,
+};
 use luminance::{
   backend::{
     FramebufferBackend, FramebufferError, ShaderBackend, ShaderError, TextureError,
@@ -15,18 +18,18 @@ use luminance::{
   primitive::{Connector, Primitive},
   render_channel::{DepthChannel, RenderChannel},
   render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
-  shader::{FromUni, Program, Stage, Uni, UniBuffer, Uniform},
+  shader::{Program, Stage, Uni, Uniform, Uniforms},
   texture::{MagFilter, MinFilter, Sampler, TexelUpload, Wrap},
   vertex::{
     Normalized, Vertex, VertexAttribDesc, VertexAttribDim, VertexAttribType, VertexBufferDesc,
-    VertexInstancing,
+    VertexDesc, VertexInstancing,
   },
   vertex_entity::VertexEntity,
   vertex_storage::{AsVertexStorage, Deinterleaved, Interleaved, VertexStorage},
 };
 use std::{
   cell::RefCell,
-  collections::{HashMap, HashSet},
+  collections::HashMap,
   ffi::{c_void, CString},
   marker::PhantomData,
   mem,
@@ -110,7 +113,7 @@ pub struct State {
   framebuffers: HashMap<usize, FramebufferData>,
   textures: HashMap<usize, TextureData>,
   texture_units: TextureUnits,
-  programs: HashSet<usize>,
+  programs: HashMap<usize, ProgramData>,
 
   // viewport
   viewport: Cached<[GLint; 4]>,
@@ -216,7 +219,7 @@ impl State {
     let framebuffers = HashMap::new();
     let textures = HashMap::new();
     let texture_units = TextureUnits::new();
-    let programs = HashSet::new();
+    let programs = HashMap::new();
     let viewport = Cached::empty();
     let clear_color = Cached::empty();
     let clear_depth = Cached::empty();
@@ -379,6 +382,12 @@ impl State {
   fn drop_framebuffer(&mut self, handle: usize) {
     if self.is_context_active() {
       self.framebuffers.remove(&handle);
+    }
+  }
+
+  fn drop_program(&mut self, handle: usize) {
+    if self.is_context_active() {
+      self.programs.remove(&handle);
     }
   }
 }
@@ -1336,10 +1345,102 @@ impl From<ProgramError> for ShaderError {
 
 #[derive(Debug)]
 struct ProgramData {
-  handle: usize,
+  handle: GLuint,
 }
 
-impl ProgramData {}
+impl Drop for ProgramData {
+  fn drop(&mut self) {
+    unsafe {
+      gl::DeleteProgram(self.handle);
+    }
+  }
+}
+
+impl ProgramData {
+  fn link(&self) -> Result<(), ProgramError> {
+    unsafe {
+      gl::LinkProgram(self.handle);
+
+      let mut linked: GLint = gl::FALSE.into();
+      gl::GetProgramiv(self.handle, gl::LINK_STATUS, &mut linked);
+
+      if linked == gl::FALSE.into() {
+        let mut log_len: GLint = 0;
+        gl::GetProgramiv(self.handle, gl::INFO_LOG_LENGTH, &mut log_len);
+
+        let mut log: Vec<u8> = Vec::with_capacity(log_len as usize);
+        gl::GetProgramInfoLog(
+          self.handle,
+          log_len,
+          null_mut(),
+          log.as_mut_ptr() as *mut GLchar,
+        );
+
+        log.set_len(log_len as usize);
+
+        return Err(ProgramError::LinkFailed {
+          handle: self.handle as _,
+          reason: String::from_utf8(log).unwrap(),
+        });
+      }
+    }
+
+    Ok(())
+  }
+
+  fn bind_vertex_attribs(&self, vertex_desc: VertexDesc) -> Result<(), ProgramError> {
+    let mut warnings = Vec::new();
+
+    for desc in vertex_desc {
+      match self.get_vertex_attrib_location(&desc.name) {
+        Some(_) => {
+          let index = desc.index as GLuint;
+
+          // we are not interested in the location as we’re about to change it to what we’ve
+          // decided in the semantics
+          let c_name = CString::new(desc.name.as_bytes()).unwrap();
+          unsafe { gl::BindAttribLocation(self.handle, index, c_name.as_ptr() as *const GLchar) };
+        }
+
+        None => warnings.push(format!("{} vertex attribute has no location", desc.name)),
+      }
+    }
+
+    // we must link again after binding attribute location (yeah it sucks)
+    self.link()
+  }
+
+  fn get_vertex_attrib_location(&self, name: &str) -> Option<GLuint> {
+    let location = {
+      let c_name = CString::new(name.as_bytes()).unwrap();
+      unsafe { gl::GetAttribLocation(self.handle, c_name.as_ptr() as *const GLchar) }
+    };
+
+    if location < 0 {
+      return None;
+    }
+    Some(location as _)
+  }
+
+  fn ask_uniform<T>(handle: GLuint, name: &str) -> Option<Uni<T>>
+  where
+    T: Uniform,
+  {
+    let location = {
+      let c_name = CString::new(name.as_bytes()).unwrap();
+      unsafe { gl::GetUniformLocation(handle, c_name.as_ptr() as *const GLchar) }
+    };
+
+    // ensure the location smells good
+    if location < 0 {
+      return None;
+    }
+
+    let uni = unsafe { Uni::new(location as _) };
+
+    Some(uni)
+  }
+}
 
 #[derive(Debug)]
 pub struct GL33 {
@@ -1349,7 +1450,7 @@ pub struct GL33 {
 impl GL33 {
   pub fn new(state: StateRef) -> Self {
     // some initialization things
-    init();
+    Self::init();
     Self { state }
   }
 
@@ -2252,6 +2353,9 @@ unsafe impl FramebufferBackend for GL33 {
   }
 }
 
+// a cache for implementors needing to switch from [bool; N] to [u32; N]
+static mut BOOL_CACHE: Vec<u32> = Vec::new();
+
 unsafe impl ShaderBackend for GL33 {
   unsafe fn new_program<V, P, S, E>(
     &mut self,
@@ -2263,7 +2367,7 @@ unsafe impl ShaderBackend for GL33 {
     V: Vertex,
     P: Primitive,
     S: RenderSlots,
-    E: FromUni,
+    E: Uniforms,
   {
     // create the shader stages first
     let vertex_stage = StageHandle::new_stage(gl::VERTEX_SHADER, &vertex_code)?;
@@ -2290,34 +2394,41 @@ unsafe impl ShaderBackend for GL33 {
 
     gl::AttachShader(handle, fragment_stage.handle);
 
-    gl::LinkProgram(handle);
-
-    let mut linked: GLint = gl::FALSE.into();
-    gl::GetProgramiv(handle, gl::LINK_STATUS, &mut linked);
-
-    if linked == gl::FALSE.into() {
-      let mut log_len: GLint = 0;
-      gl::GetProgramiv(handle, gl::INFO_LOG_LENGTH, &mut log_len);
-
-      let mut log: Vec<u8> = Vec::with_capacity(log_len as usize);
-      gl::GetProgramInfoLog(handle, log_len, null_mut(), log.as_mut_ptr() as *mut GLchar);
-
-      log.set_len(log_len as usize);
-
-      return Err(ProgramError::LinkFailed {
-        handle: handle as _,
-        reason: String::from_utf8(log).unwrap(),
-      });
-    }
+    let data = ProgramData { handle };
+    data.link()?;
+    data.bind_vertex_attribs(V::vertex_desc())?;
 
     // everything went okay, just track the program and let’s gooooooo
+    let handle = handle as usize;
+    self.state.borrow_mut().programs.insert(handle, data);
+
+    let state = self.state.clone();
+    let dropper = Box::new(move |handle| {
+      state.borrow_mut().drop_program(handle);
+    });
+
+    // build the uniforms
+    let uniforms = E::build_uniforms(self, handle)?;
+
+    Ok(Program::new(handle, uniforms, dropper))
   }
 
   unsafe fn new_shader_uni<T>(&mut self, handle: usize, name: &str) -> Result<Uni<T>, ShaderError>
   where
     T: Uniform,
   {
-    todo!()
+    // TODO: pattern match for buffer bindings / that kind of stuff
+    ProgramData::ask_uniform(handle as GLuint, name).ok_or_else(|| ShaderError::UniCreation {
+      name: name.to_owned(),
+      cause: None,
+    })
+  }
+
+  unsafe fn new_shader_uni_unbound<T>(&mut self, _: usize) -> Result<Uni<T>, ShaderError>
+  where
+    T: Uniform,
+  {
+    Ok(Uni::new(0))
   }
 
   unsafe fn set_shader_uni<T>(
@@ -2332,14 +2443,243 @@ unsafe impl ShaderBackend for GL33 {
     todo!()
   }
 
-  unsafe fn new_shader_uni_buffer<T>(
+  fn visit_i32(&mut self, uni: &Uni<i32>, value: &i32) -> Result<(), ShaderError> {
+    unsafe {
+      gl::Uniform1i(uni.handle() as GLint, *value);
+    }
+
+    Ok(())
+  }
+
+  fn visit_u32(&mut self, uni: &Uni<u32>, value: &u32) -> Result<(), ShaderError> {
+    unsafe {
+      gl::Uniform1ui(uni.handle() as GLint, *value);
+    }
+
+    Ok(())
+  }
+
+  fn visit_f32(&mut self, uni: &Uni<f32>, value: &f32) -> Result<(), ShaderError> {
+    unsafe {
+      gl::Uniform1f(uni.handle() as GLint, *value);
+    }
+
+    Ok(())
+  }
+
+  fn visit_bool(&mut self, uni: &Uni<bool>, value: &bool) -> Result<(), ShaderError> {
+    unsafe {
+      gl::Uniform1ui(uni.handle() as GLint, *value as u32);
+    }
+
+    Ok(())
+  }
+
+  fn visit_i32_array<const N: usize>(
     &mut self,
-    handle: usize,
-    name: &str,
-  ) -> Result<UniBuffer<T>, ShaderError>
-  where
-    T: luminance::shader::UniformBuffer,
-  {
+    uni: &Uni<[i32; N]>,
+    value: &[i32; N],
+  ) -> Result<(), ShaderError> {
+    unsafe {
+      gl::Uniform1iv(uni.handle() as GLint, N as GLsizei, value.as_ptr());
+    }
+
+    Ok(())
+  }
+
+  fn visit_u32_array<const N: usize>(
+    &mut self,
+    uni: &Uni<[u32; N]>,
+    value: &[u32; N],
+  ) -> Result<(), ShaderError> {
+    unsafe {
+      gl::Uniform1uiv(uni.handle() as GLint, N as GLsizei, value.as_ptr());
+    }
+
+    Ok(())
+  }
+
+  fn visit_f32_array<const N: usize>(
+    &mut self,
+    uni: &Uni<[f32; N]>,
+    value: &[f32; N],
+  ) -> Result<(), ShaderError> {
     todo!()
+  }
+
+  fn visit_bool_array<const N: usize>(
+    &mut self,
+    uni: &Uni<[bool; N]>,
+    value: &[bool; N],
+  ) -> Result<(), ShaderError> {
+    unsafe {
+      BOOL_CACHE.clear();
+      BOOL_CACHE.extend(value.iter().map(|x| *x as u32));
+
+      gl::Uniform1uiv(uni.handle() as GLint, N as GLsizei, BOOL_CACHE.as_ptr());
+    }
+
+    Ok(())
+  }
+
+  fn visit_ivec2(&mut self, uni: &Uni<[i32; 2]>, value: &[i32; 2]) -> Result<(), ShaderError> {
+    unsafe {
+      gl::Uniform2i(uni.handle() as GLint, value[0], value[1]);
+    }
+
+    Ok(())
+  }
+
+  fn visit_uvec2(&mut self, uni: &Uni<[u32; 2]>, value: &[u32; 2]) -> Result<(), ShaderError> {
+    unsafe {
+      gl::Uniform2ui(uni.handle() as GLint, value[0], value[1]);
+    }
+
+    Ok(())
+  }
+
+  fn visit_vec2(&mut self, uni: &Uni<[f32; 2]>, value: &[f32; 2]) -> Result<(), ShaderError> {
+    unsafe {
+      gl::Uniform2f(uni.handle() as GLint, value[0], value[1]);
+    }
+
+    Ok(())
+  }
+
+  fn visit_bvec2(&mut self, uni: &Uni<[bool; 2]>, value: &[bool; 2]) -> Result<(), ShaderError> {
+    unsafe {
+      gl::Uniform2ui(uni.handle() as GLint, value[0] as u32, value[1] as u32);
+    }
+
+    Ok(())
+  }
+
+  fn visit_ivec3(&mut self, uni: &Uni<[i32; 3]>, value: &[i32; 3]) -> Result<(), ShaderError> {
+    unsafe {
+      gl::Uniform3i(uni.handle() as GLint, value[0], value[1], value[2]);
+    }
+
+    Ok(())
+  }
+
+  fn visit_uvec3(&mut self, uni: &Uni<[u32; 3]>, value: &[u32; 3]) -> Result<(), ShaderError> {
+    unsafe {
+      gl::Uniform3ui(uni.handle() as GLint, value[0], value[1], value[2]);
+    }
+
+    Ok(())
+  }
+
+  fn visit_vec3(&mut self, uni: &Uni<[f32; 3]>, value: &[f32; 3]) -> Result<(), ShaderError> {
+    unsafe {
+      gl::Uniform3f(uni.handle() as GLint, value[0], value[1], value[2]);
+    }
+
+    Ok(())
+  }
+
+  fn visit_bvec3(&mut self, uni: &Uni<[bool; 3]>, value: &[bool; 3]) -> Result<(), ShaderError> {
+    unsafe {
+      gl::Uniform3ui(
+        uni.handle() as GLint,
+        value[0] as u32,
+        value[1] as u32,
+        value[2] as u32,
+      );
+    }
+
+    Ok(())
+  }
+
+  fn visit_ivec4(&mut self, uni: &Uni<[i32; 4]>, value: &[i32; 4]) -> Result<(), ShaderError> {
+    unsafe {
+      gl::Uniform4i(
+        uni.handle() as GLint,
+        value[0],
+        value[1],
+        value[2],
+        value[3],
+      );
+    }
+
+    Ok(())
+  }
+
+  fn visit_uvec4(&mut self, uni: &Uni<[u32; 4]>, value: &[u32; 4]) -> Result<(), ShaderError> {
+    unsafe {
+      gl::Uniform4ui(
+        uni.handle() as GLint,
+        value[0],
+        value[1],
+        value[2],
+        value[3],
+      );
+    }
+
+    Ok(())
+  }
+
+  fn visit_vec4(&mut self, uni: &Uni<[f32; 4]>, value: &[f32; 4]) -> Result<(), ShaderError> {
+    unsafe {
+      gl::Uniform4f(
+        uni.handle() as GLint,
+        value[0],
+        value[1],
+        value[2],
+        value[3],
+      );
+    }
+
+    Ok(())
+  }
+
+  fn visit_bvec4(&mut self, uni: &Uni<[bool; 4]>, value: &[bool; 4]) -> Result<(), ShaderError> {
+    unsafe {
+      gl::Uniform4ui(
+        uni.handle() as GLint,
+        value[0] as u32,
+        value[1] as u32,
+        value[2] as u32,
+        value[3] as u32,
+      );
+    }
+
+    Ok(())
+  }
+
+  fn visit_mat22(
+    &mut self,
+    uni: &Uni<[[f32; 2]; 2]>,
+    value: &[[f32; 2]; 2],
+  ) -> Result<(), ShaderError> {
+    unsafe {
+      gl::UniformMatrix2fv(uni.handle() as GLint, 1, gl::FALSE, value.as_ptr() as _);
+    }
+
+    Ok(())
+  }
+
+  fn visit_mat33(
+    &mut self,
+    uni: &Uni<[[f32; 3]; 3]>,
+    value: &[[f32; 3]; 3],
+  ) -> Result<(), ShaderError> {
+    unsafe {
+      gl::UniformMatrix3fv(uni.handle() as GLint, 1, gl::FALSE, value.as_ptr() as _);
+    }
+
+    Ok(())
+  }
+
+  fn visit_mat44(
+    &mut self,
+    uni: &Uni<[[f32; 4]; 4]>,
+    value: &[[f32; 4]; 4],
+  ) -> Result<(), ShaderError> {
+    unsafe {
+      gl::UniformMatrix4fv(uni.handle() as GLint, 1, gl::FALSE, value.as_ptr() as _);
+    }
+
+    Ok(())
   }
 }

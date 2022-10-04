@@ -7,7 +7,7 @@ use crate::{
   render_channel::{DepthChannel, RenderChannel},
   render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
   render_state::RenderState,
-  shader::{FromUni, Program, Uni, UniBuffer, Uniform, UniformBuffer},
+  shader::{Program, Uni, Uniform, Uniforms},
   vertex::Vertex,
   vertex_entity::{VertexEntity, VertexEntityView},
   vertex_storage::AsVertexStorage,
@@ -250,12 +250,12 @@ impl fmt::Display for PipelineError {
         vertex_count,
         instance_count,
         cause,
-       } => write!(
-      f,
+      } => write!(
+        f,
         "error in render vertex entity pipeline: {}; start_vertex={}, vertex_count={}, instance_count={}",
-         cause.as_ref().map(|cause| cause.to_string()).unwrap_or_else(|| "unknown cause".to_string()),
+        cause.as_ref().map(|cause| cause.to_string()).unwrap_or_else(|| "unknown cause".to_string()),
         start_vertex, vertex_count, instance_count,
-    )
+      )
     }
   }
 }
@@ -526,6 +526,16 @@ pub unsafe trait FramebufferBackend {
     DS: DepthRenderSlot;
 }
 
+macro_rules! mk_uniform_visit {
+  ($( $name:ident, $t:ty, )*) => {
+    $( fn $name(&mut self, uni: &Uni<$t>, value: &$t) -> Result<(), ShaderError>; )*
+  };
+
+  ($( array $name:ident, $t:ty, )*) => {
+    $( fn $name<const N: usize>(&mut self, uni: &Uni<[$t; N]>, value: &[$t; N]) -> Result<(), ShaderError>; )*
+  };
+}
+
 pub unsafe trait ShaderBackend {
   unsafe fn new_program<V, P, S, E>(
     &mut self,
@@ -537,9 +547,13 @@ pub unsafe trait ShaderBackend {
     V: Vertex,
     P: Primitive,
     S: RenderSlots,
-    E: FromUni;
+    E: Uniforms;
 
   unsafe fn new_shader_uni<T>(&mut self, handle: usize, name: &str) -> Result<Uni<T>, ShaderError>
+  where
+    T: Uniform;
+
+  unsafe fn new_shader_uni_unbound<T>(&mut self, handle: usize) -> Result<Uni<T>, ShaderError>
   where
     T: Uniform;
 
@@ -552,13 +566,40 @@ pub unsafe trait ShaderBackend {
   where
     T: Uniform;
 
-  unsafe fn new_shader_uni_buffer<T>(
-    &mut self,
-    handle: usize,
-    name: &str,
-  ) -> Result<UniBuffer<T>, ShaderError>
-  where
-    T: UniformBuffer;
+  mk_uniform_visit! {
+    visit_i32, i32,
+    visit_u32, u32,
+    visit_f32, f32,
+    visit_bool, bool,
+  }
+
+  mk_uniform_visit! {
+    array visit_i32_array, i32,
+    array visit_u32_array, u32,
+    array visit_f32_array, f32,
+    array visit_bool_array, bool,
+  }
+
+  mk_uniform_visit! {
+    visit_ivec2, [i32; 2],
+    visit_uvec2, [u32; 2],
+    visit_vec2, [f32; 2],
+    visit_bvec2, [bool; 2],
+
+    visit_ivec3, [i32; 3],
+    visit_uvec3, [u32; 3],
+    visit_vec3, [f32; 3],
+    visit_bvec3, [bool; 3],
+
+    visit_ivec4, [i32; 4],
+    visit_uvec4, [u32; 4],
+    visit_vec4, [f32; 4],
+    visit_bvec4, [bool; 4],
+
+    visit_mat22, [[f32; 2]; 2],
+    visit_mat33, [[f32; 3]; 3],
+    visit_mat44, [[f32; 4]; 4],
+  }
 }
 
 pub unsafe trait PipelineBackend:
@@ -587,7 +628,7 @@ pub unsafe trait PipelineBackend:
     V: Vertex,
     P: Primitive,
     S: RenderSlots,
-    E: FromUni,
+    E: Uniforms,
     Err: From<PipelineError>;
 
   unsafe fn with_render_state<'a, V, P, Err>(

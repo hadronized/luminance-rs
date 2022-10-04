@@ -1,7 +1,7 @@
 pub mod types;
 
 use crate::{
-  backend::{Backend, ShaderBackend, ShaderError},
+  backend::{ShaderBackend, ShaderError},
   primitive::Primitive,
   render_slots::RenderSlots,
   vertex::Vertex,
@@ -69,7 +69,7 @@ impl<V, W, S, E> ProgramBuilder<V, W, (), (), S, E> {
 }
 
 impl<V, W, P, Q, E> ProgramBuilder<V, W, P, Q, (), E> {
-  pub fn add_shading_code<S>(
+  pub fn add_shading_stage<S>(
     self,
     stage: Stage<Q::Vertex, S, E>,
   ) -> ProgramBuilder<V, W, P, Q, S, E>
@@ -107,7 +107,7 @@ impl<I, O, E> Stage<I, O, E> {
 
 pub struct Program<V, P, S, E> {
   handle: usize,
-  pub(crate) environment: E,
+  pub(crate) uniforms: E,
   dropper: Box<dyn FnMut(usize)>,
   _phantom: PhantomData<*const (V, P, S, E)>,
 }
@@ -118,10 +118,10 @@ where
   P: Primitive,
   S: RenderSlots,
 {
-  pub unsafe fn new(handle: usize, environment: E, dropper: Box<dyn FnMut(usize)>) -> Self {
+  pub unsafe fn new(handle: usize, uniforms: E, dropper: Box<dyn FnMut(usize)>) -> Self {
     Self {
       handle,
-      environment,
+      uniforms,
       dropper,
       _phantom: PhantomData,
     }
@@ -207,91 +207,224 @@ pub enum UniSamplerDim {
 }
 
 pub trait Uniform {
+  type UniType;
+
   const UNI_TY: UniType;
+  const LEN: usize;
+
+  fn set(
+    &self,
+    backend: &mut impl ShaderBackend,
+    uni: &Uni<Self::UniType>,
+  ) -> Result<(), ShaderError>;
 }
 
 macro_rules! impl_Uniform {
-  // scalar / vectors / matrices
-  ($t:ty, $v:ident $(, $dim:path)?) => {
+  // scalar
+  ($t:ty, $v:ident, $visit_fn:ident $(, $dim:path)?) => {
     impl Uniform for $t {
+      type UniType = Self;
+
       const UNI_TY: UniType = UniType::$v $(($dim))?;
+      const LEN: usize = 1;
+
+      fn set(&self, backend: &mut impl ShaderBackend, uni: &Uni<Self::UniType>) -> Result<(), ShaderError> {
+        backend.$visit_fn(uni, self)
+      }
     }
-  }
+  };
+
+  // via as_ref (vec, matrix)
+  (as_ref $t:ty, $q:ty, $v:ident, $visit_fn:ident $(, $dim:path)?) => {
+    impl Uniform for $t where $t: AsRef<$q> {
+      type UniType = $q;
+
+      const UNI_TY: UniType = UniType::$v $(($dim))?;
+      const LEN: usize = 1;
+
+      fn set(&self, backend: &mut impl ShaderBackend, uni: &Uni<Self::UniType>) -> Result<(), ShaderError> {
+        backend.$visit_fn(uni, self.as_ref())
+      }
+    }
+  };
+
+  // array version
+  (array $t:ty, $visit_fn:ident) => {
+    impl<const N: usize> Uniform for [$t; N] {
+      type UniType = Self;
+
+      const UNI_TY: UniType = <$t>::UNI_TY;
+      const LEN: usize = N;
+
+      fn set(&self, backend: &mut impl ShaderBackend, uni: &Uni<Self::UniType>) -> Result<(), ShaderError> {
+        backend.$visit_fn(uni, self.into())
+      }
+    }
+  };
 }
 
-impl_Uniform!(i32, Integral, UniDim::Dim1);
-impl_Uniform!(u32, Unsigned, UniDim::Dim1);
-impl_Uniform!(f32, Floating, UniDim::Dim1);
-impl_Uniform!(bool, Boolean, UniDim::Dim1);
+impl_Uniform!(i32, Integral, visit_i32, UniDim::Dim1);
+impl_Uniform!(u32, Unsigned, visit_u32, UniDim::Dim1);
+impl_Uniform!(f32, Floating, visit_f32, UniDim::Dim1);
+impl_Uniform!(bool, Boolean, visit_bool, UniDim::Dim1);
+impl_Uniform!(array i32, visit_i32_array);
+impl_Uniform!(array u32, visit_u32_array);
+impl_Uniform!(array f32, visit_f32_array);
+impl_Uniform!(array bool, visit_bool_array);
 
 #[cfg(feature = "mint")]
-impl_Uniform!(mint::Vector2<i32>, Integral, UniDim::Dim2);
+impl_Uniform!(
+  as_ref
+  mint::Vector2<i32>,
+  [i32; 2],
+  Integral,
+  visit_ivec2,
+  UniDim::Dim2
+);
 #[cfg(feature = "mint")]
-impl_Uniform!(mint::Vector2<u32>, Unsigned, UniDim::Dim2);
+impl_Uniform!(
+  as_ref
+  mint::Vector2<u32>,
+  [u32; 2],
+  Unsigned,
+  visit_uvec2,
+  UniDim::Dim2
+);
 #[cfg(feature = "mint")]
-impl_Uniform!(mint::Vector2<f32>, Floating, UniDim::Dim2);
+impl_Uniform!(
+  as_ref
+  mint::Vector2<f32>,
+  [f32; 2],
+  Floating,
+  visit_vec2,
+  UniDim::Dim2
+);
 #[cfg(feature = "mint")]
-impl_Uniform!(mint::Vector2<bool>, Boolean, UniDim::Dim2);
+impl_Uniform!(
+  as_ref
+  mint::Vector2<bool>,
+  [bool; 2],
+  Boolean,
+  visit_bvec2,
+  UniDim::Dim2
+);
 #[cfg(feature = "mint")]
-impl_Uniform!(mint::Vector3<i32>, Integral, UniDim::Dim3);
+impl_Uniform!(
+  as_ref
+  mint::Vector3<i32>,
+  [i32; 3],
+  Integral,
+  visit_ivec3,
+  UniDim::Dim3
+);
 #[cfg(feature = "mint")]
-impl_Uniform!(mint::Vector3<u32>, Unsigned, UniDim::Dim3);
+impl_Uniform!(
+  as_ref
+  mint::Vector3<u32>,
+  [u32; 3],
+  Unsigned,
+  visit_uvec3,
+  UniDim::Dim3
+);
 #[cfg(feature = "mint")]
-impl_Uniform!(mint::Vector3<f32>, Floating, UniDim::Dim3);
+impl_Uniform!(
+  as_ref
+  mint::Vector3<f32>,
+  [f32; 3],
+  Floating,
+  visit_vec3,
+  UniDim::Dim3
+);
 #[cfg(feature = "mint")]
-impl_Uniform!(mint::Vector3<bool>, Boolean, UniDim::Dim3);
+impl_Uniform!(
+  as_ref
+  mint::Vector3<bool>,
+  [bool; 3],
+  Boolean,
+  visit_bvec3,
+  UniDim::Dim3
+);
 #[cfg(feature = "mint")]
-impl_Uniform!(mint::Vector4<i32>, Integral, UniDim::Dim4);
+impl_Uniform!(
+  as_ref
+  mint::Vector4<i32>,
+  [i32; 4],
+  Integral,
+  visit_ivec4,
+  UniDim::Dim4
+);
 #[cfg(feature = "mint")]
-impl_Uniform!(mint::Vector4<u32>, Unsigned, UniDim::Dim4);
+impl_Uniform!(
+  as_ref
+  mint::Vector4<u32>,
+  [u32; 4],
+  Unsigned,
+  visit_uvec4,
+  UniDim::Dim4
+);
 #[cfg(feature = "mint")]
-impl_Uniform!(mint::Vector4<f32>, Floating, UniDim::Dim4);
+impl_Uniform!(
+  as_ref
+  mint::Vector4<f32>,
+  [f32; 4],
+  Floating,
+  visit_vec4,
+  UniDim::Dim4
+);
 #[cfg(feature = "mint")]
-impl_Uniform!(mint::Vector4<bool>, Boolean, UniDim::Dim4);
+impl_Uniform!(
+  as_ref
+  mint::Vector4<bool>,
+  [bool; 4],
+  Boolean,
+  visit_bvec4,
+  UniDim::Dim4
+);
 
 #[cfg(feature = "mint")]
-impl_Uniform!(mint::ColumnMatrix2<f32>, Matrix, UniMatDim::Mat22);
+impl_Uniform!(
+  as_ref
+  mint::ColumnMatrix2<f32>,
+  [[f32; 2]; 2],
+  Matrix,
+  visit_mat22,
+  UniMatDim::Mat22
+);
 #[cfg(feature = "mint")]
-impl_Uniform!(mint::ColumnMatrix3<f32>, Matrix, UniMatDim::Mat33);
+impl_Uniform!(
+  as_ref
+  mint::ColumnMatrix3<f32>,
+  [[f32; 3]; 3],
+  Matrix,
+  visit_mat33,
+  UniMatDim::Mat33
+);
 #[cfg(feature = "mint")]
-impl_Uniform!(mint::ColumnMatrix4<f32>, Matrix, UniMatDim::Mat44);
+impl_Uniform!(
+  as_ref
+  mint::ColumnMatrix4<f32>,
+  [[f32; 4]; 4],
+  Matrix,
+  visit_mat44,
+  UniMatDim::Mat44
+);
 
 // TODO: samplers
 
-pub trait FromUni: Sized {
-  fn from_env<B>(backend: &mut B, program_handle: usize) -> Result<Self, ShaderError>
+pub trait Uniforms: Sized {
+  fn build_uniforms<B>(backend: &mut B, program_handle: usize) -> Result<Self, ShaderError>
   where
-    B: Backend;
+    B: ShaderBackend;
 }
 
-impl FromUni for () {
-  fn from_env<B>(_: &mut B, _: usize) -> Result<Self, ShaderError>
+impl Uniforms for () {
+  fn build_uniforms<B>(_: &mut B, _: usize) -> Result<Self, ShaderError>
   where
-    B: Backend,
+    B: ShaderBackend,
   {
     Ok(())
   }
 }
-
-pub struct UniBuffer<T> {
-  handle: usize,
-  _phantom: PhantomData<*const T>,
-}
-
-impl<T> UniBuffer<T> {
-  pub unsafe fn new(handle: usize) -> Self {
-    Self {
-      handle,
-      _phantom: PhantomData,
-    }
-  }
-
-  pub fn handle(&self) -> usize {
-    self.handle
-  }
-}
-
-pub trait UniformBuffer {}
 
 #[derive(Debug)]
 pub struct ProgramUpdate<'a, B> {

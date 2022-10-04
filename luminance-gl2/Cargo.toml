@@ -26,3 +26,4 @@ GL_ARB_gpu_shader_fp64 = []
 gl = "0.14"
 luminance = { version = "0.48.0-dev", path = "../luminance" }
 # luminance-std140 = { version = "0.2", path = "../luminance-std140" }
+mint = { version = "0.5.9", optional = true }

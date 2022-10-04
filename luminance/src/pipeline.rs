@@ -6,7 +6,7 @@ use crate::{
   render_slots::{CompatibleRenderSlots, RenderSlots},
   render_state::RenderState,
   scissor::Scissor,
-  shader::{FromUni, Program},
+  shader::{Program, Uniforms},
   vertex::{CompatibleVertex, Vertex},
   vertex_entity::VertexEntityView,
 };
@@ -207,7 +207,7 @@ where
     P: Primitive,
     S: CompatibleRenderSlots<T>,
     T: RenderSlots,
-    E: FromUni,
+    E: Uniforms,
     Err: From<PipelineError>,
   {
     unsafe { self.backend.with_program(program, f) }
