@@ -1,8 +1,9 @@
 use core::fmt;
-use gl::types::{GLboolean, GLenum, GLfloat, GLint, GLsizei, GLubyte, GLuint};
+use gl::types::{GLboolean, GLchar, GLenum, GLfloat, GLint, GLsizei, GLubyte, GLuint};
 use luminance::{
   backend::{
-    FramebufferBackend, FramebufferError, TextureError, VertexEntityBackend, VertexEntityError,
+    FramebufferBackend, FramebufferError, ShaderBackend, ShaderError, TextureError,
+    VertexEntityBackend, VertexEntityError,
   },
   blending::{Equation, Factor},
   context::ContextActive,
@@ -14,6 +15,7 @@ use luminance::{
   primitive::{Connector, Primitive},
   render_channel::{DepthChannel, RenderChannel},
   render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
+  shader::{FromUni, Program, Stage, Uni, UniBuffer, Uniform},
   texture::{MagFilter, MinFilter, Sampler, TexelUpload, Wrap},
   vertex::{
     Normalized, Vertex, VertexAttribDesc, VertexAttribDim, VertexAttribType, VertexBufferDesc,
@@ -24,12 +26,12 @@ use luminance::{
 };
 use std::{
   cell::RefCell,
-  collections::HashMap,
-  ffi::c_void,
+  collections::{HashMap, HashSet},
+  ffi::{c_void, CString},
   marker::PhantomData,
   mem,
   ops::{Deref, DerefMut},
-  ptr,
+  ptr::{self, null, null_mut},
   rc::Rc,
 };
 
@@ -108,6 +110,7 @@ pub struct State {
   framebuffers: HashMap<usize, FramebufferData>,
   textures: HashMap<usize, TextureData>,
   texture_units: TextureUnits,
+  programs: HashSet<usize>,
 
   // viewport
   viewport: Cached<[GLint; 4]>,
@@ -213,6 +216,7 @@ impl State {
     let framebuffers = HashMap::new();
     let textures = HashMap::new();
     let texture_units = TextureUnits::new();
+    let programs = HashSet::new();
     let viewport = Cached::empty();
     let clear_color = Cached::empty();
     let clear_depth = Cached::empty();
@@ -263,6 +267,7 @@ impl State {
       framebuffers,
       textures,
       texture_units,
+      programs,
       context_active,
       viewport,
       clear_color,
@@ -1201,6 +1206,141 @@ impl Drop for TextureData {
   }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum StageError {
+  /// Occurs when a shader fails to compile.
+  CompilationFailed { ty: GLenum, reason: String },
+
+  /// Occurs when you try to create a shader which type is not supported on the current hardware.
+  UnsupportedType(GLenum),
+}
+
+impl fmt::Display for StageError {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match self {
+      StageError::CompilationFailed { ty, reason } => write!(
+        f,
+        "stage compilation failed: type={}, reason={}",
+        ty, reason
+      ),
+      StageError::UnsupportedType(ty) => write!(f, "unsupported stage type: {}", ty),
+    }
+  }
+}
+
+impl std::error::Error for StageError {}
+
+impl From<StageError> for ShaderError {
+  fn from(e: StageError) -> Self {
+    ShaderError::Creation {
+      cause: Some(Box::new(e)),
+    }
+  }
+}
+
+#[derive(Debug)]
+pub struct StageHandle {
+  handle: GLuint,
+}
+
+impl StageHandle {
+  fn new_stage(ty: GLenum, code: &str) -> Result<Self, StageError> {
+    let handle = unsafe { gl::CreateShader(ty) };
+
+    if handle == 0 {
+      return Err(StageError::CompilationFailed {
+        ty,
+        reason: "unable to create shader stage".to_owned(),
+      });
+    }
+
+    unsafe {
+      let c_code = CString::new(Self::glsl_pragma_src(code).as_bytes()).unwrap();
+      gl::ShaderSource(handle, 1, [c_code.as_ptr()].as_ptr(), null());
+      gl::CompileShader(handle);
+
+      let mut compiled: GLint = gl::FALSE.into();
+      gl::GetShaderiv(handle, gl::COMPILE_STATUS, &mut compiled);
+
+      // if compilation failed, retrieve the log to insert it into the error
+      if compiled == gl::FALSE.into() {
+        let mut log_len: GLint = 0;
+        gl::GetShaderiv(handle, gl::INFO_LOG_LENGTH, &mut log_len);
+
+        let mut log: Vec<u8> = Vec::with_capacity(log_len as usize);
+        gl::GetShaderInfoLog(handle, log_len, null_mut(), log.as_mut_ptr() as *mut GLchar);
+
+        gl::DeleteShader(handle);
+
+        log.set_len(log_len as usize);
+
+        return Err(StageError::CompilationFailed {
+          ty,
+          reason: String::from_utf8(log).unwrap(),
+        });
+      }
+
+      Ok(StageHandle { handle })
+    }
+  }
+
+  #[cfg(feature = "GL_ARB_gpu_shader_fp64")]
+  const GLSL_PRAGMA: &str = "#version 330 core\n\
+                           #extension GL_ARB_separate_shader_objects : require\n
+                           #extension GL_ARB_gpu_shader_fp64 : require\n\
+                           layout(std140) uniform;\n";
+  #[cfg(not(feature = "GL_ARB_gpu_shader_fp64"))]
+  const GLSL_PRAGMA: &str = "#version 330 core\n\
+                           #extension GL_ARB_separate_shader_objects : require\n\
+                           layout(std140) uniform;\n";
+
+  fn glsl_pragma_src(src: &str) -> String {
+    let mut pragma = String::from(Self::GLSL_PRAGMA);
+    pragma.push_str(src);
+    pragma
+  }
+}
+
+impl Drop for StageHandle {
+  fn drop(&mut self) {
+    unsafe {
+      gl::DeleteShader(self.handle);
+    }
+  }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ProgramError {
+  LinkFailed { handle: usize, reason: String },
+}
+
+impl fmt::Display for ProgramError {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match self {
+      ProgramError::LinkFailed { handle, reason } => {
+        write!(f, "program {} failed to link: {}", handle, reason)
+      }
+    }
+  }
+}
+
+impl std::error::Error for ProgramError {}
+
+impl From<ProgramError> for ShaderError {
+  fn from(e: ProgramError) -> Self {
+    ShaderError::Creation {
+      cause: Some(Box::new(e)),
+    }
+  }
+}
+
+#[derive(Debug)]
+struct ProgramData {
+  handle: usize,
+}
+
+impl ProgramData {}
+
 #[derive(Debug)]
 pub struct GL33 {
   state: StateRef,
@@ -2109,5 +2249,97 @@ unsafe impl FramebufferBackend for GL33 {
     DS: DepthRenderSlot,
   {
     Ok(Framebuffer::new(0, size, (), (), Box::new(|_| {})))
+  }
+}
+
+unsafe impl ShaderBackend for GL33 {
+  unsafe fn new_program<V, P, S, E>(
+    &mut self,
+    vertex_code: String,
+    primitive_code: String,
+    shading_code: String,
+  ) -> Result<Program<V, P, S, E>, ShaderError>
+  where
+    V: Vertex,
+    P: Primitive,
+    S: RenderSlots,
+    E: FromUni,
+  {
+    // create the shader stages first
+    let vertex_stage = StageHandle::new_stage(gl::VERTEX_SHADER, &vertex_code)?;
+
+    let primitive_stage = if primitive_code.is_empty() {
+      None
+    } else {
+      Some(StageHandle::new_stage(
+        gl::GEOMETRY_SHADER,
+        &primitive_code,
+      )?)
+    };
+
+    let fragment_stage = StageHandle::new_stage(gl::FRAGMENT_SHADER, &shading_code)?;
+
+    // then attach and link them all
+    let handle = gl::CreateProgram();
+
+    gl::AttachShader(handle, vertex_stage.handle);
+
+    if let Some(primitive_stage) = primitive_stage {
+      gl::AttachShader(handle, primitive_stage.handle);
+    }
+
+    gl::AttachShader(handle, fragment_stage.handle);
+
+    gl::LinkProgram(handle);
+
+    let mut linked: GLint = gl::FALSE.into();
+    gl::GetProgramiv(handle, gl::LINK_STATUS, &mut linked);
+
+    if linked == gl::FALSE.into() {
+      let mut log_len: GLint = 0;
+      gl::GetProgramiv(handle, gl::INFO_LOG_LENGTH, &mut log_len);
+
+      let mut log: Vec<u8> = Vec::with_capacity(log_len as usize);
+      gl::GetProgramInfoLog(handle, log_len, null_mut(), log.as_mut_ptr() as *mut GLchar);
+
+      log.set_len(log_len as usize);
+
+      return Err(ProgramError::LinkFailed {
+        handle: handle as _,
+        reason: String::from_utf8(log).unwrap(),
+      });
+    }
+
+    // everything went okay, just track the program and let’s gooooooo
+  }
+
+  unsafe fn new_shader_uni<T>(&mut self, handle: usize, name: &str) -> Result<Uni<T>, ShaderError>
+  where
+    T: Uniform,
+  {
+    todo!()
+  }
+
+  unsafe fn set_shader_uni<T>(
+    &mut self,
+    handle: usize,
+    uni: &Uni<T>,
+    value: T,
+  ) -> Result<(), ShaderError>
+  where
+    T: Uniform,
+  {
+    todo!()
+  }
+
+  unsafe fn new_shader_uni_buffer<T>(
+    &mut self,
+    handle: usize,
+    name: &str,
+  ) -> Result<UniBuffer<T>, ShaderError>
+  where
+    T: luminance::shader::UniformBuffer,
+  {
+    todo!()
   }
 }

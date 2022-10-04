@@ -291,7 +291,7 @@ impl<T> UniBuffer<T> {
   }
 }
 
-pub trait IsUniBuffer {}
+pub trait UniformBuffer {}
 
 #[derive(Debug)]
 pub struct ProgramUpdate<'a, B> {

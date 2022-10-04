@@ -7,7 +7,7 @@ use crate::{
   render_channel::{DepthChannel, RenderChannel},
   render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
   render_state::RenderState,
-  shader::{FromUni, IsUniBuffer, Program, Uni, UniBuffer, Uniform},
+  shader::{FromUni, Program, Uni, UniBuffer, Uniform, UniformBuffer},
   vertex::Vertex,
   vertex_entity::{VertexEntity, VertexEntityView},
   vertex_storage::AsVertexStorage,
@@ -120,9 +120,6 @@ impl fmt::Display for FramebufferError {
 #[derive(Debug)]
 pub enum ShaderError {
   Creation {
-    vertex_code: String,
-    primitive_code: String,
-    shading_code: String,
     cause: Option<Box<dyn ErrorTrait>>,
   },
 
@@ -144,24 +141,14 @@ pub enum ShaderError {
 impl fmt::Display for ShaderError {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
-      ShaderError::Creation {
-        vertex_code,
-        primitive_code,
-        shading_code,
-        cause,
-      } => {
-        writeln!(
-          f,
-          "cannot create shader program: {}",
-          cause
-            .as_ref()
-            .map(|cause| cause.to_string())
-            .unwrap_or_else(|| "unknown cause".to_string())
-        )?;
-        writeln!(f, "vertex stage:\n{}", vertex_code)?;
-        writeln!(f, "primitive stage:\n{}", primitive_code)?;
-        writeln!(f, "shading stage:\n{}", shading_code)
-      }
+      ShaderError::Creation { cause } => writeln!(
+        f,
+        "cannot create shader program: {}",
+        cause
+          .as_ref()
+          .map(|cause| cause.to_string())
+          .unwrap_or_else(|| "unknown cause".to_string())
+      ),
 
       ShaderError::UniCreation { name, cause } => write!(
         f,
@@ -571,7 +558,7 @@ pub unsafe trait ShaderBackend {
     name: &str,
   ) -> Result<UniBuffer<T>, ShaderError>
   where
-    T: IsUniBuffer;
+    T: UniformBuffer;
 }
 
 pub unsafe trait PipelineBackend:
