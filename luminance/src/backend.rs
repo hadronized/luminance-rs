@@ -66,6 +66,8 @@ impl fmt::Display for VertexEntityError {
   }
 }
 
+impl ErrorTrait for VertexEntityError {}
+
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum FramebufferError {
@@ -455,7 +457,7 @@ pub unsafe trait VertexEntityBackend {
     S: AsVertexStorage<V>,
     I: Into<Vec<u32>>;
 
-  unsafe fn vertex_entity_render<V, P, S>(
+  unsafe fn vertex_entity_render<V, P>(
     &self,
     handle: usize,
     start_index: usize,
@@ -465,8 +467,7 @@ pub unsafe trait VertexEntityBackend {
   ) -> Result<(), VertexEntityError>
   where
     V: Vertex,
-    P: Primitive,
-    S: AsVertexStorage<V>;
+    P: Primitive;
 
   unsafe fn vertex_entity_update_vertices<V, S>(
     &mut self,
@@ -606,9 +607,9 @@ pub unsafe trait PipelineBackend:
   FramebufferBackend + ShaderBackend + VertexEntityBackend
 {
   unsafe fn with_framebuffer<'a, D, CS, DS, Err>(
-    &mut self,
+    &'a mut self,
     framebuffer: &Framebuffer<D, CS, DS>,
-    state: &PipelineState,
+    pipeline_state: &PipelineState,
     f: impl FnOnce(WithFramebuffer<'a, Self, CS>) -> Result<(), Err>,
   ) -> Result<(), Err>
   where
@@ -619,7 +620,7 @@ pub unsafe trait PipelineBackend:
     Err: From<PipelineError>;
 
   unsafe fn with_program<'a, V, P, S, E, Err>(
-    &mut self,
+    &'a mut self,
     program: &Program<V, P, S, E>,
     f: impl FnOnce(WithProgram<'a, Self, V, P, S, E>) -> Result<(), Err>,
   ) -> Result<(), Err>
@@ -632,7 +633,7 @@ pub unsafe trait PipelineBackend:
     Err: From<PipelineError>;
 
   unsafe fn with_render_state<'a, V, P, Err>(
-    &mut self,
+    &'a mut self,
     render_state: &RenderState,
     f: impl FnOnce(WithRenderState<'a, Self, V, P>) -> Result<(), Err>,
   ) -> Result<(), Err>

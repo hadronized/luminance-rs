@@ -1,30 +1,29 @@
 use core::fmt;
-use gl::{
-  types::{GLboolean, GLchar, GLenum, GLfloat, GLint, GLsizei, GLubyte, GLuint},
-  DeleteProgram,
-};
+use gl::types::{GLboolean, GLchar, GLenum, GLfloat, GLint, GLsizei, GLubyte, GLuint};
 use luminance::{
   backend::{
-    FramebufferBackend, FramebufferError, ShaderBackend, ShaderError, TextureError,
-    VertexEntityBackend, VertexEntityError,
+    FramebufferBackend, FramebufferError, PipelineBackend, PipelineError, ShaderBackend,
+    ShaderError, TextureError, VertexEntityBackend, VertexEntityError,
   },
-  blending::{Equation, Factor},
+  blending::{BlendingMode, Equation, Factor},
   context::ContextActive,
-  depth_stencil::{Comparison, StencilOp},
+  depth_stencil::{Comparison, DepthTest, DepthWrite, StencilOp, StencilTest},
   dim::{Dim, Dimensionable},
-  face_culling::{FaceCullingFace, FaceCullingOrder},
+  face_culling::{FaceCulling, FaceCullingFace, FaceCullingOrder},
   framebuffer::{Back, Framebuffer},
+  pipeline::{PipelineState, Viewport, WithFramebuffer, WithProgram, WithRenderState},
   pixel::{Format, Pixel, PixelFormat, Size, Type},
   primitive::{Connector, Primitive},
   render_channel::{DepthChannel, RenderChannel},
   render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
-  shader::{Program, Stage, Uni, Uniform, Uniforms},
+  scissor::Scissor,
+  shader::{Program, Uni, Uniform, Uniforms},
   texture::{MagFilter, MinFilter, Sampler, TexelUpload, Wrap},
   vertex::{
     Normalized, Vertex, VertexAttribDesc, VertexAttribDim, VertexAttribType, VertexBufferDesc,
     VertexDesc, VertexInstancing,
   },
-  vertex_entity::VertexEntity,
+  vertex_entity::{VertexEntity, VertexEntityView},
   vertex_storage::{AsVertexStorage, Deinterleaved, Interleaved, VertexStorage},
 };
 use std::{
@@ -124,27 +123,19 @@ pub struct State {
   clear_stencil: Cached<GLint>,
 
   // blending
-  blending_state: Cached<GLboolean>,
-  blending_rgb_equation: Cached<Equation>,
-  blending_alpha_equation: Cached<Equation>,
-  blending_rgb_src: Cached<Factor>,
-  blending_rgb_dst: Cached<Factor>,
-  blending_alpha_src: Cached<Factor>,
-  blending_alpha_dst: Cached<Factor>,
+  blending_state: Cached<bool>,
+  blending_equations: Cached<[Equation; 2]>,
+  blending_factors: Cached<[Factor; 4]>,
 
   // depth test
-  depth_test: Cached<GLboolean>,
+  depth_test: Cached<bool>,
   depth_test_comparison: Cached<Comparison>,
-  depth_write: Cached<GLboolean>,
+  depth_write: Cached<DepthWrite>,
 
   // stencil test
-  stencil_test: Cached<GLboolean>,
-  stencil_test_comparison: Cached<Comparison>,
-  stencil_test_reference: Cached<GLubyte>,
-  stencil_test_mask: Cached<GLubyte>,
-  stencil_test_depth_passes_stencil_fails: Cached<StencilOp>,
-  stencil_test_depth_fails_stencil_passes: Cached<StencilOp>,
-  stencil_test_depth_pass: Cached<StencilOp>,
+  stencil_test: Cached<bool>,
+  stencil_func: Cached<(Comparison, GLubyte, GLubyte)>,
+  stencil_ops: Cached<[StencilOp; 3]>,
 
   // face culling
   face_culling: Cached<bool>,
@@ -153,10 +144,7 @@ pub struct State {
 
   // scissor
   scissor: Cached<bool>,
-  scissor_x: Cached<u32>,
-  scissor_y: Cached<u32>,
-  scissor_width: Cached<u32>,
-  scissor_height: Cached<u32>,
+  scissor_region: Cached<[GLint; 4]>,
 
   // vertex restart
   primitive_restart: Cached<bool>,
@@ -225,31 +213,20 @@ impl State {
     let clear_depth = Cached::empty();
     let clear_stencil = Cached::empty();
     let blending_state = Cached::empty();
-    let blending_rgb_equation = Cached::empty();
-    let blending_alpha_equation = Cached::empty();
-    let blending_rgb_src = Cached::empty();
-    let blending_rgb_dst = Cached::empty();
-    let blending_alpha_src = Cached::empty();
-    let blending_alpha_dst = Cached::empty();
+    let blending_equations = Cached::empty();
+    let blending_factors = Cached::empty();
     let depth_test = Cached::empty();
     let depth_test_comparison = Cached::empty();
     let depth_write = Cached::empty();
     let stencil_test = Cached::empty();
-    let stencil_test_comparison = Cached::empty();
-    let stencil_test_reference = Cached::empty();
-    let stencil_test_mask = Cached::empty();
-    let stencil_test_depth_passes_stencil_fails = Cached::empty();
-    let stencil_test_depth_fails_stencil_passes = Cached::empty();
-    let stencil_test_depth_pass = Cached::empty();
+    let stencil_func = Cached::empty();
+    let stencil_ops = Cached::empty();
     let face_culling = Cached::empty();
     let face_culling_order = Cached::empty();
     let face_culling_face = Cached::empty();
     let scissor = Cached::empty();
-    let scissor_x = Cached::empty();
-    let scissor_y = Cached::empty();
-    let scissor_width = Cached::empty();
-    let scissor_height = Cached::empty();
-    let vertex_restart = Cached::empty();
+    let scissor_region = Cached::empty();
+    let primitive_restart = Cached::empty();
     let patch_vertex_nb = Cached::empty();
     let bound_array_buffer = Cached::empty();
     let bound_element_array_buffer = Cached::empty();
@@ -277,31 +254,20 @@ impl State {
       clear_depth,
       clear_stencil,
       blending_state,
-      blending_rgb_equation,
-      blending_alpha_equation,
-      blending_rgb_src,
-      blending_rgb_dst,
-      blending_alpha_src,
-      blending_alpha_dst,
+      blending_equations,
+      blending_factors,
       depth_test,
       depth_test_comparison,
       depth_write,
       stencil_test,
-      stencil_test_comparison,
-      stencil_test_reference,
-      stencil_test_mask,
-      stencil_test_depth_passes_stencil_fails,
-      stencil_test_depth_fails_stencil_passes,
-      stencil_test_depth_pass,
+      stencil_func,
+      stencil_ops,
       face_culling,
       face_culling_order,
       face_culling_face,
       scissor,
-      scissor_x,
-      scissor_y,
-      scissor_width,
-      scissor_height,
-      primitive_restart: vertex_restart,
+      scissor_region,
+      primitive_restart,
       patch_vertex_nb,
       bound_array_buffer,
       bound_element_array_buffer,
@@ -1776,6 +1742,41 @@ impl GL33 {
     }
   }
 
+  fn opengl_depth_write(dw: DepthWrite) -> GLboolean {
+    match dw {
+      DepthWrite::On => gl::TRUE,
+      DepthWrite::Off => gl::FALSE,
+    }
+  }
+
+  fn opengl_stencil_op(op: StencilOp) -> GLenum {
+    match op {
+      StencilOp::Keep => gl::KEEP,
+      StencilOp::Zero => gl::ZERO,
+      StencilOp::Replace => gl::REPLACE,
+      StencilOp::Increment => gl::INCR,
+      StencilOp::IncrementWrap => gl::INCR_WRAP,
+      StencilOp::Decrement => gl::DECR,
+      StencilOp::DecrementWrap => gl::DECR_WRAP,
+      StencilOp::Invert => gl::INVERT,
+    }
+  }
+
+  fn opengl_face_culling_order(order: FaceCullingOrder) -> GLenum {
+    match order {
+      FaceCullingOrder::CW => gl::CW,
+      FaceCullingOrder::CCW => gl::CCW,
+    }
+  }
+
+  fn opengl_face_culling_face(face: FaceCullingFace) -> GLenum {
+    match face {
+      FaceCullingFace::Front => gl::FRONT,
+      FaceCullingFace::Back => gl::BACK,
+      FaceCullingFace::Both => gl::FRONT_AND_BACK,
+    }
+  }
+
   // OpenGL format, internal sized-format and type.
   fn opengl_pixel_format(pf: PixelFormat) -> Option<(GLenum, GLenum, GLenum)> {
     match (pf.format, pf.encoding) {
@@ -1977,6 +1978,32 @@ impl GL33 {
       _ => None,
     }
   }
+
+  fn opengl_blending_equation(equation: &Equation) -> GLenum {
+    match equation {
+      Equation::Additive => gl::FUNC_ADD,
+      Equation::Subtract => gl::FUNC_SUBTRACT,
+      Equation::ReverseSubtract => gl::FUNC_REVERSE_SUBTRACT,
+      Equation::Min => gl::MIN,
+      Equation::Max => gl::MAX,
+    }
+  }
+
+  fn opengl_blending_factor(factor: &Factor) -> GLenum {
+    match factor {
+      Factor::One => gl::ONE,
+      Factor::Zero => gl::ZERO,
+      Factor::SrcColor => gl::SRC_COLOR,
+      Factor::SrcColorComplement => gl::ONE_MINUS_SRC_COLOR,
+      Factor::DestColor => gl::DST_COLOR,
+      Factor::DestColorComplement => gl::ONE_MINUS_DST_COLOR,
+      Factor::SrcAlpha => gl::SRC_ALPHA,
+      Factor::SrcAlphaComplement => gl::ONE_MINUS_SRC_ALPHA,
+      Factor::DstAlpha => gl::DST_ALPHA,
+      Factor::DstAlphaComplement => gl::ONE_MINUS_DST_ALPHA,
+      Factor::SrcAlphaSaturate => gl::SRC_ALPHA_SATURATE,
+    }
+  }
 }
 
 unsafe impl VertexEntityBackend for GL33 {
@@ -2030,7 +2057,7 @@ unsafe impl VertexEntityBackend for GL33 {
     ))
   }
 
-  unsafe fn vertex_entity_render<V, P, S>(
+  unsafe fn vertex_entity_render<V, P>(
     &self,
     handle: usize,
     start_index: usize,
@@ -2041,7 +2068,6 @@ unsafe impl VertexEntityBackend for GL33 {
   where
     V: Vertex,
     P: Primitive,
-    S: AsVertexStorage<V>,
   {
     // early return if we want zero instance
     if inst_count == 0 {
@@ -2681,5 +2707,348 @@ unsafe impl ShaderBackend for GL33 {
     }
 
     Ok(())
+  }
+}
+
+unsafe impl PipelineBackend for GL33 {
+  unsafe fn with_framebuffer<'a, D, CS, DS, Err>(
+    &'a mut self,
+    framebuffer: &Framebuffer<D, CS, DS>,
+    pipeline_state: &PipelineState,
+    f: impl FnOnce(WithFramebuffer<'a, Self, CS>) -> Result<(), Err>,
+  ) -> Result<(), Err>
+  where
+    Self: 'a,
+    D: Dimensionable,
+    CS: RenderSlots,
+    DS: DepthRenderSlot,
+    Err: From<PipelineError>,
+  {
+    let mut st = self.state.borrow_mut();
+
+    let framebuffer_handle = framebuffer.handle() as GLuint;
+    st.bound_draw_framebuffer
+      .set_if_invalid(framebuffer_handle, || {
+        gl::BindFramebuffer(gl::DRAW_FRAMEBUFFER, framebuffer_handle);
+      });
+
+    match pipeline_state.viewport {
+      Viewport::Whole => {
+        let size = framebuffer.size();
+        let viewport @ [x, y, width, height] =
+          [0, 0, D::width(size) as GLint, D::height(size) as GLint];
+        st.viewport.set_if_invalid(viewport, || {
+          gl::Viewport(x, y, width, height);
+        });
+      }
+      Viewport::Specific {
+        x,
+        y,
+        width,
+        height,
+      } => {
+        st.viewport.set_if_invalid(
+          [x as GLint, y as GLint, width as GLint, height as GLint],
+          || {
+            gl::Viewport(x as GLint, y as GLint, width as GLint, height as GLint);
+          },
+        );
+      }
+    }
+
+    let mut clear_buffer_bits = 0;
+    if let Some(clear_color) = pipeline_state.clear_color() {
+      st.clear_color.set_if_invalid(*clear_color, || {
+        gl::ClearColor(
+          clear_color[0],
+          clear_color[1],
+          clear_color[2],
+          clear_color[3],
+        );
+      });
+
+      clear_buffer_bits |= gl::COLOR_BUFFER_BIT;
+    }
+
+    if let Some(clear_depth) = pipeline_state.clear_depth {
+      st.clear_depth.set_if_invalid(clear_depth, || {
+        gl::ClearDepth(clear_depth as _);
+      });
+
+      st.depth_write.set_if_invalid(DepthWrite::On, || {
+        gl::DepthMask(gl::TRUE);
+      });
+
+      clear_buffer_bits |= gl::DEPTH_BUFFER_BIT;
+    }
+
+    if let Some(clear_stencil) = pipeline_state.clear_stencil {
+      st.clear_stencil.set_if_invalid(clear_stencil, || {
+        gl::ClearStencil(clear_stencil);
+      });
+
+      clear_buffer_bits |= gl::STENCIL_BUFFER_BIT;
+    }
+
+    match pipeline_state.scissor() {
+      Scissor::Off => {
+        st.scissor.set_if_invalid(false, || {
+          gl::Disable(gl::SCISSOR_TEST);
+        });
+      }
+
+      Scissor::On {
+        x,
+        y,
+        width,
+        height,
+      } => {
+        st.scissor.set_if_invalid(true, || {
+          gl::Enable(gl::SCISSOR_TEST);
+        });
+
+        let region = [*x as GLint, *y as GLint, *width as GLint, *height as GLint];
+        st.scissor_region.set_if_invalid(region, || {
+          gl::Scissor(region[0], region[1], region[2], region[3]);
+        });
+      }
+    }
+
+    if clear_buffer_bits != 0 {
+      gl::Clear(clear_buffer_bits);
+    }
+
+    let srgb_enabled = pipeline_state.srgb_enabled;
+    st.srgb_framebuffer_enabled
+      .set_if_invalid(srgb_enabled, || {
+        if srgb_enabled {
+          gl::Enable(gl::FRAMEBUFFER_SRGB);
+        } else {
+          gl::Disable(gl::FRAMEBUFFER_SRGB);
+        }
+      });
+
+    drop(st);
+
+    f(WithFramebuffer::new(self))
+  }
+
+  unsafe fn with_program<'a, V, P, S, E, Err>(
+    &'a mut self,
+    program: &Program<V, P, S, E>,
+    f: impl FnOnce(luminance::pipeline::WithProgram<'a, Self, V, P, S, E>) -> Result<(), Err>,
+  ) -> Result<(), Err>
+  where
+    Self: 'a,
+    V: Vertex,
+    P: Primitive,
+    S: RenderSlots,
+    E: Uniforms,
+    Err: From<PipelineError>,
+  {
+    let program_handle = program.handle() as GLuint;
+    self
+      .state
+      .borrow_mut()
+      .current_program
+      .set_if_invalid(program_handle, || {
+        gl::UseProgram(program_handle);
+      });
+
+    f(WithProgram::new(self))
+  }
+
+  unsafe fn with_render_state<'a, V, P, Err>(
+    &'a mut self,
+    render_state: &luminance::render_state::RenderState,
+    f: impl FnOnce(luminance::pipeline::WithRenderState<'a, Self, V, P>) -> Result<(), Err>,
+  ) -> Result<(), Err>
+  where
+    Self: 'a,
+    V: Vertex,
+    P: Primitive,
+    Err: From<PipelineError>,
+  {
+    let mut st = self.state.borrow_mut();
+
+    st.blending_state.set_if_invalid(true, || {
+      gl::Enable(gl::BLEND);
+    });
+
+    match render_state.blending {
+      BlendingMode::Combined(blending) => {
+        st.blending_equations
+          .set_if_invalid([blending.equation, blending.equation], || {
+            gl::BlendEquation(Self::opengl_blending_equation(&blending.equation));
+          });
+
+        st.blending_factors.set_if_invalid(
+          [blending.src, blending.dst, blending.src, blending.dst],
+          || {
+            gl::BlendFunc(
+              Self::opengl_blending_factor(&blending.src),
+              Self::opengl_blending_factor(&blending.dst),
+            );
+          },
+        );
+      }
+
+      BlendingMode::Separate { rgb, alpha } => {
+        st.blending_equations
+          .set_if_invalid([rgb.equation, alpha.equation], || {
+            gl::BlendEquationSeparate(
+              Self::opengl_blending_equation(&rgb.equation),
+              Self::opengl_blending_equation(&alpha.equation),
+            );
+          });
+
+        st.blending_factors
+          .set_if_invalid([rgb.src, rgb.dst, alpha.src, alpha.dst], || {
+            gl::BlendFuncSeparate(
+              Self::opengl_blending_factor(&rgb.src),
+              Self::opengl_blending_factor(&rgb.dst),
+              Self::opengl_blending_factor(&alpha.src),
+              Self::opengl_blending_factor(&alpha.dst),
+            );
+          });
+      }
+    }
+
+    match render_state.depth_test {
+      DepthTest::Off => {
+        st.depth_test.set_if_invalid(false, || {
+          gl::Disable(gl::DEPTH_TEST);
+        });
+      }
+      DepthTest::On(comparison) => {
+        st.depth_test.set_if_invalid(true, || {
+          gl::Enable(gl::DEPTH_TEST);
+        });
+
+        st.depth_test_comparison.set_if_invalid(comparison, || {
+          gl::DepthFunc(Self::opengl_comparison(comparison));
+        });
+      }
+    }
+
+    st.depth_write.set_if_invalid(render_state.depth_write, || {
+      gl::DepthMask(Self::opengl_depth_write(render_state.depth_write));
+    });
+
+    match render_state.stencil_test {
+      StencilTest::Off => {
+        st.stencil_test.set_if_invalid(false, || {
+          gl::Disable(gl::STENCIL_TEST);
+        });
+      }
+
+      StencilTest::On {
+        comparison,
+        reference,
+        mask,
+        depth_passes_stencil_fails,
+        depth_fails_stencil_passes,
+        depth_stencil_pass,
+      } => {
+        st.stencil_test.set_if_invalid(true, || {
+          gl::Enable(gl::STENCIL_TEST);
+        });
+
+        let func = (comparison, reference, mask);
+        st.stencil_func.set_if_invalid(func, || {
+          gl::StencilFunc(
+            Self::opengl_comparison(comparison),
+            reference as GLint,
+            mask as GLuint,
+          );
+        });
+
+        let ops = [
+          depth_passes_stencil_fails,
+          depth_fails_stencil_passes,
+          depth_stencil_pass,
+        ];
+        st.stencil_ops.set_if_invalid(ops, || {
+          gl::StencilOp(
+            Self::opengl_stencil_op(depth_passes_stencil_fails),
+            Self::opengl_stencil_op(depth_fails_stencil_passes),
+            Self::opengl_stencil_op(depth_stencil_pass),
+          );
+        });
+      }
+    }
+
+    match render_state.face_culling {
+      FaceCulling::Off => {
+        st.face_culling.set_if_invalid(false, || {
+          gl::Disable(gl::CULL_FACE);
+        });
+      }
+
+      FaceCulling::On { order, face } => {
+        st.face_culling.set_if_invalid(true, || {
+          gl::Enable(gl::CULL_FACE);
+        });
+
+        st.face_culling_order.set_if_invalid(order, || {
+          gl::FrontFace(Self::opengl_face_culling_order(order));
+        });
+
+        st.face_culling_face.set_if_invalid(face, || {
+          gl::CullFace(Self::opengl_face_culling_face(face));
+        });
+      }
+    }
+
+    match render_state.scissor {
+      Scissor::Off => {
+        st.scissor.set_if_invalid(false, || {
+          gl::Disable(gl::SCISSOR_TEST);
+        });
+      }
+      Scissor::On {
+        x,
+        y,
+        width,
+        height,
+      } => {
+        st.scissor.set_if_invalid(true, || {
+          gl::Enable(gl::SCISSOR_TEST);
+        });
+
+        let region = [x as GLint, y as GLint, width as GLint, height as GLint];
+        st.scissor_region.set_if_invalid(region, || {
+          gl::Scissor(region[0], region[1], region[2], region[3]);
+        });
+      }
+    }
+
+    drop(st);
+
+    f(WithRenderState::new(self))
+  }
+
+  unsafe fn render_vertex_entity<V, P>(
+    &mut self,
+    view: VertexEntityView<V, P>,
+  ) -> Result<(), PipelineError>
+  where
+    V: Vertex,
+    P: Primitive,
+  {
+    self
+      .vertex_entity_render::<V, P>(
+        view.handle(),
+        view.start_vertex(),
+        view.vertex_count(),
+        view.instance_count(),
+        view.primitive_restart(),
+      )
+      .map_err(|e| PipelineError::RenderVertexEntity {
+        start_vertex: view.start_vertex(),
+        vertex_count: view.vertex_count(),
+        instance_count: view.instance_count(),
+        cause: Some(Box::new(e)),
+      })
   }
 }

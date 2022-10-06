@@ -198,7 +198,7 @@ where
   }
 
   pub fn with_program<V, P, T, E, Err>(
-    &mut self,
+    &'a mut self,
     program: &Program<V, P, T, E>,
     f: impl FnOnce(WithProgram<'a, B, V, P, T, E>) -> Result<(), Err>,
   ) -> Result<(), Err>
@@ -237,7 +237,7 @@ where
   }
 
   pub fn with_render_state<Err>(
-    &mut self,
+    &'a mut self,
     render_state: &RenderState,
     f: impl FnOnce(WithRenderState<'a, B, V, P>) -> Result<(), Err>,
   ) -> Result<(), Err>

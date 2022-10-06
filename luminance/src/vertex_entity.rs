@@ -85,6 +85,8 @@ pub struct VertexEntityView<V, P> {
   /// How many instances to render.
   instance_count: usize,
 
+  primitive_restart: bool,
+
   _phantom: PhantomData<*const (V, P)>,
 }
 
@@ -92,28 +94,55 @@ impl<'a, V, P> VertexEntityView<V, P> {
   pub fn new<S>(vertex_entity: &VertexEntity<V, P, S>) -> Self {
     let handle = vertex_entity.handle;
     let vertex_count = vertex_entity.vertex_count;
+    let primitive_restart = vertex_entity.primitive_restart;
 
     Self {
       handle,
       start_vertex: 0,
       vertex_count,
       instance_count: 1,
+      primitive_restart,
       _phantom: PhantomData,
     }
   }
 
-  pub fn start_vertex(mut self, start_vertex: usize) -> Self {
+  pub fn handle(&self) -> usize {
+    self.handle
+  }
+
+  pub fn start_vertex(&self) -> usize {
+    self.start_vertex
+  }
+
+  pub fn set_start_vertex(mut self, start_vertex: usize) -> Self {
     self.start_vertex = start_vertex;
     self
   }
 
-  pub fn vertex_count(mut self, count: usize) -> Self {
+  pub fn vertex_count(&self) -> usize {
+    self.vertex_count
+  }
+
+  pub fn set_vertex_count(mut self, count: usize) -> Self {
     self.vertex_count = count;
     self
   }
 
-  pub fn instance_count(mut self, count: usize) -> Self {
+  pub fn instance_count(&self) -> usize {
+    self.instance_count
+  }
+
+  pub fn set_instance_count(mut self, count: usize) -> Self {
     self.instance_count = count;
+    self
+  }
+
+  pub fn primitive_restart(&self) -> bool {
+    self.primitive_restart
+  }
+
+  pub fn set_primitive_restart(mut self, primitive_restart: bool) -> Self {
+    self.primitive_restart = primitive_restart;
     self
   }
 }
