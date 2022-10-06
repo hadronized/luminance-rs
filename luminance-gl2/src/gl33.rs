@@ -2,8 +2,8 @@ use core::fmt;
 use gl::types::{GLboolean, GLchar, GLenum, GLfloat, GLint, GLsizei, GLubyte, GLuint};
 use luminance::{
   backend::{
-    FramebufferBackend, FramebufferError, PipelineBackend, PipelineError, ShaderBackend,
-    ShaderError, TextureError, VertexEntityBackend, VertexEntityError,
+    FramebufferBackend, FramebufferError, PipelineBackend, PipelineError, QueryBackend, QueryError,
+    ShaderBackend, ShaderError, TextureError, VertexEntityBackend, VertexEntityError,
   },
   blending::{BlendingMode, Equation, Factor},
   context::ContextActive,
@@ -29,7 +29,7 @@ use luminance::{
 use std::{
   cell::RefCell,
   collections::HashMap,
-  ffi::{c_void, CString},
+  ffi::{c_char, c_void, CStr, CString},
   marker::PhantomData,
   mem,
   ops::{Deref, DerefMut},
@@ -171,19 +171,16 @@ pub struct State {
   srgb_framebuffer_enabled: Cached<bool>,
 
   // vendor name
-  vendor_name: Cached<String>,
+  vendor_name: Option<String>,
 
   // renderer name
-  renderer_name: Cached<String>,
+  renderer_name: Option<String>,
 
   // OpenGL version
-  gl_version: Cached<String>,
+  gl_version: Option<String>,
 
   // GLSL version;
-  glsl_version: Cached<String>,
-
-  /// maximum number of elements a texture array can hold.
-  max_texture_array_elements: Cached<usize>,
+  glsl_version: Option<String>,
 }
 
 // TLS synchronization barrier for `GLState`.
@@ -234,11 +231,10 @@ impl State {
     let bound_vertex_array = Cached::empty();
     let current_program = Cached::empty();
     let srgb_framebuffer_enabled = Cached::empty();
-    let vendor_name = Cached::empty();
-    let renderer_name = Cached::empty();
-    let gl_version = Cached::empty();
-    let glsl_version = Cached::empty();
-    let max_texture_array_elements = Cached::empty();
+    let vendor_name = None;
+    let renderer_name = None;
+    let gl_version = None;
+    let glsl_version = None;
 
     State {
       _phantom: PhantomData,
@@ -279,7 +275,6 @@ impl State {
       renderer_name,
       gl_version,
       glsl_version,
-      max_texture_array_elements,
     }
   }
 
@@ -2004,6 +1999,17 @@ impl GL33 {
       Factor::SrcAlphaSaturate => gl::SRC_ALPHA_SATURATE,
     }
   }
+
+  /// Marshal a string represented as `*const c_uchar`, represented by the input argument, into a `&str`.
+  ///
+  /// The string is returned in a lossy way, which means that non-unicode characters go wheeeeeeeeeeee.
+  fn opengl_get_string(repr: GLenum) -> String {
+    unsafe {
+      let name_ptr = gl::GetString(repr);
+      let name = CStr::from_ptr(name_ptr as *const c_char);
+      name.to_string_lossy().into_owned()
+    }
+  }
 }
 
 unsafe impl VertexEntityBackend for GL33 {
@@ -3050,5 +3056,47 @@ unsafe impl PipelineBackend for GL33 {
         instance_count: view.instance_count(),
         cause: Some(Box::new(e)),
       })
+  }
+}
+
+unsafe impl QueryBackend for GL33 {
+  fn backend_author(&self) -> Result<String, QueryError> {
+    let mut st = self.state.borrow_mut();
+
+    Ok(st.vendor_name.clone().unwrap_or_else(move || {
+      let name = Self::opengl_get_string(gl::VENDOR);
+      st.vendor_name = Some(name.clone());
+      name
+    }))
+  }
+
+  fn backend_name(&self) -> Result<String, QueryError> {
+    let mut st = self.state.borrow_mut();
+
+    Ok(st.vendor_name.clone().unwrap_or_else(move || {
+      let name = Self::opengl_get_string(gl::RENDERER);
+      st.vendor_name = Some(name.clone());
+      name
+    }))
+  }
+
+  fn backend_version(&self) -> Result<String, QueryError> {
+    let mut st = self.state.borrow_mut();
+
+    Ok(st.vendor_name.clone().unwrap_or_else(move || {
+      let name = Self::opengl_get_string(gl::VERSION);
+      st.vendor_name = Some(name.clone());
+      name
+    }))
+  }
+
+  fn backend_shading_lang_version(&self) -> Result<String, QueryError> {
+    let mut st = self.state.borrow_mut();
+
+    Ok(st.vendor_name.clone().unwrap_or_else(move || {
+      let name = Self::opengl_get_string(gl::SHADING_LANGUAGE_VERSION);
+      st.vendor_name = Some(name.clone());
+      name
+    }))
   }
 }

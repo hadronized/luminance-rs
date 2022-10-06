@@ -660,6 +660,4 @@ pub unsafe trait QueryBackend {
   fn backend_version(&self) -> Result<String, QueryError>;
 
   fn backend_shading_lang_version(&self) -> Result<String, QueryError>;
-
-  fn max_texture_array_elements(&self) -> Result<usize, QueryError>;
 }
