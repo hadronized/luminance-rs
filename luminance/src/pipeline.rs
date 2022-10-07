@@ -198,9 +198,9 @@ where
   }
 
   pub fn with_program<V, P, T, E, Err>(
-    &'a mut self,
+    &mut self,
     program: &Program<V, P, T, E>,
-    f: impl FnOnce(WithProgram<'a, B, V, P, T, E>) -> Result<(), Err>,
+    f: impl for<'b> FnOnce(WithProgram<'b, B, V, P, T, E>) -> Result<(), Err>,
   ) -> Result<(), Err>
   where
     V: Vertex,
@@ -237,9 +237,9 @@ where
   }
 
   pub fn with_render_state<Err>(
-    &'a mut self,
+    &mut self,
     render_state: &RenderState,
-    f: impl FnOnce(WithRenderState<'a, B, V, P>) -> Result<(), Err>,
+    f: impl for<'b> FnOnce(WithRenderState<'b, B, V, P>) -> Result<(), Err>,
   ) -> Result<(), Err>
   where
     Err: From<PipelineError>,

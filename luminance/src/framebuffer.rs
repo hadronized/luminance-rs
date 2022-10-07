@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use crate::{
   dim::Dimensionable,
-  render_slots::{DepthRenderSlot, RenderSlots},
+  render_slots::{CompatibleRenderSlots, DepthRenderSlot, RenderSlots},
 };
 
 pub struct Framebuffer<D, RS, DS>
@@ -68,6 +68,8 @@ where
   }
 }
 
-pub struct Back<T> {
-  _phantom: PhantomData<*const T>,
+pub struct Back<S> {
+  _phantom: PhantomData<*const S>,
 }
+
+impl<S> CompatibleRenderSlots<S> for Back<S> {}

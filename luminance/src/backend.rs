@@ -606,39 +606,36 @@ pub unsafe trait ShaderBackend {
 pub unsafe trait PipelineBackend:
   FramebufferBackend + ShaderBackend + VertexEntityBackend
 {
-  unsafe fn with_framebuffer<'a, D, CS, DS, Err>(
-    &'a mut self,
+  unsafe fn with_framebuffer<D, CS, DS, Err>(
+    &mut self,
     framebuffer: &Framebuffer<D, CS, DS>,
     pipeline_state: &PipelineState,
-    f: impl FnOnce(WithFramebuffer<'a, Self, CS>) -> Result<(), Err>,
+    f: impl for<'a> FnOnce(WithFramebuffer<'a, Self, CS>) -> Result<(), Err>,
   ) -> Result<(), Err>
   where
-    Self: 'a,
     D: Dimensionable,
     CS: RenderSlots,
     DS: DepthRenderSlot,
     Err: From<PipelineError>;
 
-  unsafe fn with_program<'a, V, P, S, E, Err>(
-    &'a mut self,
+  unsafe fn with_program<V, P, S, E, Err>(
+    &mut self,
     program: &Program<V, P, S, E>,
-    f: impl FnOnce(WithProgram<'a, Self, V, P, S, E>) -> Result<(), Err>,
+    f: impl for<'a> FnOnce(WithProgram<'a, Self, V, P, S, E>) -> Result<(), Err>,
   ) -> Result<(), Err>
   where
-    Self: 'a,
     V: Vertex,
     P: Primitive,
     S: RenderSlots,
     E: Uniforms,
     Err: From<PipelineError>;
 
-  unsafe fn with_render_state<'a, V, P, Err>(
-    &'a mut self,
+  unsafe fn with_render_state<V, P, Err>(
+    &mut self,
     render_state: &RenderState,
-    f: impl FnOnce(WithRenderState<'a, Self, V, P>) -> Result<(), Err>,
+    f: impl for<'a> FnOnce(WithRenderState<'a, Self, V, P>) -> Result<(), Err>,
   ) -> Result<(), Err>
   where
-    Self: 'a,
     V: Vertex,
     P: Primitive,
     Err: From<PipelineError>;

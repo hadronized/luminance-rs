@@ -12,7 +12,7 @@ use luminance::{
   backend::Backend,
   context::Context,
   dim::{Dim2, Size2},
-  framebuffer::Framebuffer,
+  framebuffer::{Back, Framebuffer},
   namespace,
   pipeline::PipelineState,
   primitive::Triangle,
@@ -180,13 +180,13 @@ impl Method {
 
 /// Local example; this will be picked by the example runner.
 pub struct LocalExample {
-  back_buffer: Framebuffer<Dim2, Slots, ()>,
+  back_buffer: Framebuffer<Dim2, Back<Slots>, Back<()>>,
   // the program will render by mapping our Vertex type as triangles to the color slot, containing a single color
   program: Program<Vertex, Triangle<Vertex>, Slots, ()>,
-  direct_triangles: VertexEntity<Vertex, Interleaved<Vertex>>,
-  indexed_triangles: VertexEntity<Vertex, Interleaved<Vertex>>,
-  direct_deinterleaved_triangles: VertexEntity<Vertex, Deinterleaved<Vertex>>,
-  indexed_deinterleaved_triangles: VertexEntity<Vertex, Deinterleaved<Vertex>>,
+  direct_triangles: VertexEntity<Vertex, Triangle<Vertex>, Interleaved<Vertex>>,
+  indexed_triangles: VertexEntity<Vertex, Triangle<Vertex>, Interleaved<Vertex>>,
+  direct_deinterleaved_triangles: VertexEntity<Vertex, Triangle<Vertex>, Deinterleaved<Vertex>>,
+  indexed_deinterleaved_triangles: VertexEntity<Vertex, Triangle<Vertex>, Deinterleaved<Vertex>>,
   method: Method,
 }
 

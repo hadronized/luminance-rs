@@ -4,10 +4,10 @@
 
 use crate::{Example, InputAction, LoopFeedback, PlatformServices};
 use luminance::{
-  backend::Backend,
+  backend::{Backend, PipelineError},
   context::Context,
   dim::{Dim2, Size2},
-  framebuffer::Framebuffer,
+  framebuffer::{Back, Framebuffer},
   namespace,
   pipeline::PipelineState,
   primitive::Triangle,
@@ -117,10 +117,10 @@ pub struct Slots {
 
 /// Local example; this will be picked by the example runner.
 pub struct LocalExample {
-  back_buffer: Framebuffer<Dim2, Slots, ()>,
+  back_buffer: Framebuffer<Dim2, Back<Slots>, Back<()>>,
   // the program will render by mapping our Vertex type as triangles to the color slot, containing a single color
   program: Program<Vertex, Triangle<Vertex>, Slots, ()>,
-  triangles: VertexEntity<Vertex, Interleaved<Vertex>>,
+  triangles: VertexEntity<Vertex, Triangle<Vertex>, Interleaved<Vertex>>,
 }
 
 impl Example for LocalExample {
