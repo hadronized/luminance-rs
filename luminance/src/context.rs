@@ -17,7 +17,7 @@ use crate::{
 pub struct ContextActive(Rc<RefCell<bool>>);
 
 impl ContextActive {
-  pub fn new() -> Self {
+  fn new() -> Self {
     Self(Rc::new(RefCell::new(true)))
   }
 
@@ -36,9 +36,10 @@ impl<B> Context<B>
 where
   B: Backend,
 {
-  pub unsafe fn new(builder: impl FnOnce(ContextActive) -> B) -> Option<Self> {
+  pub fn new(builder: impl FnOnce(ContextActive) -> Option<B>) -> Option<Self> {
     let context_active = ContextActive::new();
-    let backend = builder(context_active.clone());
+    let backend = builder(context_active.clone())?;
+
     Some(Self {
       backend,
       context_active,

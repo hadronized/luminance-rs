@@ -356,15 +356,15 @@ impl State {
 #[derive(Debug)]
 pub struct StateRef(Rc<RefCell<State>>);
 
-impl Clone for StateRef {
-  fn clone(&self) -> Self {
-    StateRef(self.0.clone())
-  }
-}
-
 impl StateRef {
   pub fn new(context_active: ContextActive) -> Option<Self> {
     Some(StateRef(Rc::new(RefCell::new(State::new(context_active)?))))
+  }
+}
+
+impl Clone for StateRef {
+  fn clone(&self) -> Self {
+    StateRef(self.0.clone())
   }
 }
 
@@ -1409,10 +1409,13 @@ pub struct GL33 {
 }
 
 impl GL33 {
-  pub fn new(state: StateRef) -> Self {
+  pub fn new(context_active: ContextActive) -> Option<Self> {
+    let state = StateRef::new(context_active)?;
+
     // some initialization things
     Self::init();
-    Self { state }
+
+    Some(Self { state })
   }
 
   fn init() {
