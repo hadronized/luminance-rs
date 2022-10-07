@@ -47,26 +47,26 @@ jobs:
           cargo build
           cargo test
 
-  build-wasm:
-    strategy:
-      matrix:
-        rustc: ["1.56.0"]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install rustup WASM toolchain
-        run: |
-          rustup default ${{ matrix.rustc }}
-          rustup target install wasm32-unknown-unknown
-      - uses: actions/checkout@v2
-      - name: Build
-        run: |
-          cd $GITHUB_WORKSPACE/luminance-webgl
-          cargo build
-          cd $GITHUB_WORKSPACE/luminance-web-sys
-          cargo build
-          cd $GITHUB_WORKSPACE/examples/web
-          yarn install
-          yarn build
+  # build-wasm:
+  #   strategy:
+  #     matrix:
+  #       rustc: ["1.56.0"]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Install rustup WASM toolchain
+  #       run: |
+  #         rustup default ${{ matrix.rustc }}
+  #         rustup target install wasm32-unknown-unknown
+  #     - uses: actions/checkout@v2
+  #     - name: Build
+  #       run: |
+  #         cd $GITHUB_WORKSPACE/luminance-webgl
+  #         cargo build
+  #         cd $GITHUB_WORKSPACE/luminance-web-sys
+  #         cargo build
+  #         cd $GITHUB_WORKSPACE/examples/web
+  #         yarn install
+  #         yarn build
 
   functional-tests-desktop:
     strategy:
