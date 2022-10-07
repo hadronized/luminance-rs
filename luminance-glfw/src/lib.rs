@@ -1,14 +1,9 @@
 //! [GLFW](https://crates.io/crates/glfw) backend for [luminance](https://crates.io/crates/luminance).
 
 use glfw::{self, Glfw, InitError, Window, WindowEvent};
-use luminance::{backend::Backend, context::Context};
+use luminance::context::Context;
 use luminance_gl2::GL33;
-use std::{
-  error, fmt,
-  ops::{Deref, DerefMut},
-  os::raw::c_void,
-  sync::mpsc::Receiver,
-};
+use std::{error, fmt, os::raw::c_void, sync::mpsc::Receiver};
 
 /// Error that can be risen while creating a surface.
 #[non_exhaustive]
@@ -66,14 +61,17 @@ where
 pub struct GlfwSurface {
   /// Wrapped GLFW events queue.
   pub events_rx: Receiver<(f64, WindowEvent)>,
+  ///
+  /// Wrapped GLFW window.
+  pub window: Window,
 
   /// Wrapped luminance context.
-  pub ctx: GL33Context,
+  pub ctx: Context<GL33>,
 }
 
 impl GlfwSurface {
-  /// Initialize GLFW to provide a luminance environment.
-  pub fn new<E>(
+  /// Initialize GLFW to provide a luminance context.
+  pub fn new_gl33<E>(
     create_window: impl FnOnce(
       &mut Glfw,
     )
@@ -99,41 +97,14 @@ impl GlfwSurface {
     // init OpenGL
     gl::load_with(|s| window.get_proc_address(s) as *const c_void);
 
-    let gl = Context::new(GL33::new)
+    let ctx = Context::new(GL33::new)
       .ok_or_else(|| GlfwSurfaceError::BackendError("unavailable OpenGL 3.3 state".to_owned()))?;
-    let ctx = GL33Context { window, gl };
-    let surface = GlfwSurface { events_rx, ctx };
+    let surface = GlfwSurface {
+      events_rx,
+      window,
+      ctx,
+    };
 
     Ok(surface)
-  }
-
-  pub fn ctx(&mut self) -> &mut Context<impl Backend> {
-    &mut self.ctx.gl
-  }
-}
-
-/// Luminance OpenGL 3.3 context.
-///
-/// This type also re-exports the GLFW window, if you need access to it.
-#[derive(Debug)]
-pub struct GL33Context {
-  /// Wrapped GLFW window.
-  pub window: Window,
-
-  /// OpenGL 3.3 context.
-  gl: Context<GL33>,
-}
-
-impl Deref for GL33Context {
-  type Target = Context<GL33>;
-
-  fn deref(&self) -> &Self::Target {
-    &self.gl
-  }
-}
-
-impl DerefMut for GL33Context {
-  fn deref_mut(&mut self) -> &mut Self::Target {
-    &mut self.gl
   }
 }

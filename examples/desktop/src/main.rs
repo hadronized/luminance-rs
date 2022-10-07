@@ -1,13 +1,12 @@
 mod platform;
 
+use crate::platform::DesktopPlatformServices;
 use glfw::{
   Action, Context as _, Key, Modifiers, MouseButton, SwapInterval, WindowEvent, WindowMode,
 };
 use luminance_examples::{Example, InputAction, LoopFeedback};
-use luminance_gl::GL33;
 use luminance_glfw::{GlfwSurface, GlfwSurfaceError};
-use platform::DesktopPlatformServices;
-use std::{iter, time::Instant};
+use std::time::Instant;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -27,15 +26,11 @@ pub struct CLIOpts {
 /// Macro to declaratively add examples.
 macro_rules! examples {
   (examples: $($ex_name:literal, $test_ident:ident),* ,
-   polymorphic examples: $($poly_ex_name:literal, $poly_test_ident:ident),* ,
    funtests: $($fun_name:literal $(if $fun_feature_gate:literal)?, $fun_ident:ident),* $(,)?
   ) => {
     fn show_available_examples() {
       println!("simple examples:");
       $( println!("  - {}", $ex_name); )*
-
-      println!("\npolymorphic examples:");
-      $( println!("  - {}", $poly_ex_name); )*
 
       #[cfg(feature = "funtest")]
       {
@@ -57,25 +52,19 @@ macro_rules! examples {
       match example_name {
         $(
           Some($ex_name) => {
-            run_example::<luminance_examples::$test_ident::LocalExample>(cli_opts, $ex_name)
+            run_example::<luminance_examples::$test_ident::LocalExample>(cli_opts)
           }
         ),*
 
         $(
-          Some($poly_ex_name) => {
-            run_example::<luminance_examples::$poly_test_ident::LocalExample<GL33>>(cli_opts, $poly_ex_name)
-          }
-        ),*
-
-        $(
-          #[cfg(all(feature = "funtest"$(, feature = $fun_feature_gate)?))]
+          #[cfg(all(feature = "funtest" $(, feature = $fun_feature_gate)?))]
           Some($fun_name) => {
-            run_example::<luminance_examples::$fun_ident::LocalExample>(cli_opts, $fun_name)
+            run_example::<luminance_examples::$fun_ident::LocalExample>(cli_opts)
           }
         ),*
 
         _ => {
-          log::error!("no example found");
+          log::warn!("no example found");
           show_available_examples();
         }
       }
@@ -89,17 +78,21 @@ pub enum PlatformError {
 }
 
 // Run an example.
-fn run_example<E>(cli_opts: CLIOpts, name: &str)
+fn run_example<E>(cli_opts: CLIOpts)
 where
-  E: Example<GL33>,
+  E: Example,
 {
   // Check the features so that we know what we need to load.
   let mut services = DesktopPlatformServices::new(cli_opts);
 
   // First thing first: we create a new surface to render to and get events from.
-  let surface = GlfwSurface::new(|glfw| {
+  let GlfwSurface {
+    events_rx,
+    mut window,
+    mut ctx,
+  } = GlfwSurface::new_gl33(|glfw| {
     let (mut window, events) = glfw
-      .create_window(960, 540, name, WindowMode::Windowed)
+      .create_window(960, 540, E::TITLE, WindowMode::Windowed)
       .ok_or_else(|| GlfwSurfaceError::UserError(PlatformError::CannotCreateWindow))?;
 
     window.make_current();
@@ -110,48 +103,37 @@ where
   })
   .expect("GLFW surface creation");
 
-  let mut context = surface.context;
-  let events = surface.events_rx;
+  let (fb_w, fb_h) = window.get_framebuffer_size();
 
-  let example = E::bootstrap(&mut services, &mut context);
-  let start_t = Instant::now();
-
-  // render a dummy frame to pass a single action containing the initial framebuffer size; some examples will use a
-  // default size that is not correct, and this will allow them to bootstrap correctly
-  let (fb_w, fb_h) = context.window.get_framebuffer_size();
-  let feedback = example.render_frame(
-    0.,
-    context.back_buffer().unwrap(),
-    iter::once(InputAction::Resized {
-      width: fb_w as _,
-      height: fb_h as _,
-    }),
-    &mut context,
-  );
-  let mut example = match feedback {
-    LoopFeedback::Exit => return,
-    LoopFeedback::Continue(example) => example,
+  let mut example = match E::bootstrap([fb_w as _, fb_h as _], &mut services, &mut ctx) {
+    Ok(example) => example,
+    Err(e) => {
+      log::error!("cannot bootstrap example: {}", e);
+      return;
+    }
   };
 
+  let start_t = Instant::now();
   'app: loop {
     // handle events
-    context.window.glfw.poll_events();
-    let actions = glfw::flush_messages(&events).flat_map(|(_, event)| adapt_events(event));
+    window.glfw.poll_events();
+    let actions = glfw::flush_messages(&events_rx).flat_map(|(_, event)| adapt_events(event));
 
-    let elapsed = start_t.elapsed();
-    let t = elapsed.as_secs() as f64 + (elapsed.subsec_millis() as f64 * 1e-3);
-    let feedback = example.render_frame(
-      t as _,
-      context.back_buffer().unwrap(),
-      actions,
-      &mut context,
-    );
+    let t = start_t.elapsed().as_millis() as f32;
+    let feedback = example.render_frame(t, actions, &mut ctx);
 
-    if let LoopFeedback::Continue(stepped) = feedback {
-      example = stepped;
-      context.window.swap_buffers();
-    } else {
-      break 'app;
+    match feedback {
+      Ok(LoopFeedback::Continue(stepped)) => {
+        example = stepped;
+        window.swap_buffers();
+      }
+
+      Ok(LoopFeedback::Exit) => break 'app,
+
+      Err(e) => {
+        log::error!("error while rendering a frame: {}", e);
+        break 'app;
+      }
     }
   }
 }
@@ -212,37 +194,34 @@ fn adapt_events(event: WindowEvent) -> Option<InputAction> {
 examples! {
   examples:
   "hello-world", hello_world,
-  "render-state", render_state,
-  "sliced-tess", sliced_tess,
-  "shader-uniforms", shader_uniforms,
-  "attributeless", attributeless,
-  "texture", texture,
-  "offscreen", offscreen,
-  "shader-uniform-adapt", shader_uniform_adapt,
-  "dynamic-uniform-interface", dynamic_uniform_interface,
-  "vertex-instancing", vertex_instancing,
-  "query-texture-texels", query_texture_texels,
-  "displacement-map", displacement_map,
-  "interactive-triangle", interactive_triangle,
-  "query-info", query_info,
-  "mrt", mrt,
-  "skybox", skybox,
-  "shader-data", shader_data,
-  "stencil", stencil,
-
-  // examples that do not use luminance-front but luminance polymorphic interface directly
-  polymorphic examples:
-  "polymorphic-hello-world", polymorphic_hello_world,
+  "hello-world-more", hello_world_more,
+  // "render-state", render_state,
+  // "sliced-tess", sliced_tess,
+  // "shader-uniforms", shader_uniforms,
+  // "attributeless", attributeless,
+  // "texture", texture,
+  // "offscreen", offscreen,
+  // "shader-uniform-adapt", shader_uniform_adapt,
+  // "dynamic-uniform-interface", dynamic_uniform_interface,
+  // "vertex-instancing", vertex_instancing,
+  // "query-texture-texels", query_texture_texels,
+  // "displacement-map", displacement_map,
+  // "interactive-triangle", interactive_triangle,
+  // "query-info", query_info,
+  // "mrt", mrt,
+  // "skybox", skybox,
+  // "shader-data", shader_data,
+  // "stencil", stencil,
 
   // functional tests
   funtests:
-  "funtest-tess-no-data", funtest_tess_no_data,
-  "funtest-gl33-f64-uniform" if "funtest-gl33-f64-uniform", funtest_gl33_f64_uniform,
-  "funtest-scissor-test", funtest_scissor_test,
-  "funtest-360-manually-drop-framebuffer", funtest_360_manually_drop_framebuffer,
-  "funtest-flatten-slice", funtest_flatten_slice,
-  "funtest-pixel-array-encoding", funtest_pixel_array_encoding,
-  "funtest-483-indices-mut-corruption", funtest_483_indices_mut_corruption,
+  // "funtest-tess-no-data", funtest_tess_no_data,
+  // "funtest-gl33-f64-uniform" if "funtest-gl33-f64-uniform", funtest_gl33_f64_uniform,
+  // "funtest-scissor-test", funtest_scissor_test,
+  // "funtest-360-manually-drop-framebuffer", funtest_360_manually_drop_framebuffer,
+  // "funtest-flatten-slice", funtest_flatten_slice,
+  // "funtest-pixel-array-encoding", funtest_pixel_array_encoding,
+  // "funtest-483-indices-mut-corruption", funtest_483_indices_mut_corruption,
 }
 
 fn main() {

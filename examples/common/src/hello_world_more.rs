@@ -193,13 +193,13 @@ pub struct LocalExample {
 impl Example for LocalExample {
   type Err = luminance::backend::Error;
 
+  const TITLE: &'static str = "Hello, world! (more)";
+
   fn bootstrap(
+    [width, height]: [u32; 2],
     _platform: &mut impl PlatformServices,
     context: &mut Context<impl Backend>,
-  ) -> Result<Self, Self::Err>
-  where
-    Self::Err: From<luminance::backend::Error>,
-  {
+  ) -> Result<Self, Self::Err> {
     // We need a program to “shade” our triangles
     let program = context
       .new_program(
@@ -249,7 +249,7 @@ impl Example for LocalExample {
 
     let method = Method::Direct;
 
-    let back_buffer = context.back_buffer(Size2::new(800, 600)).unwrap();
+    let back_buffer = context.back_buffer(Size2::new(width, height)).unwrap();
 
     Ok(Self {
       back_buffer,

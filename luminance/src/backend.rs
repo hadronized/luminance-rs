@@ -411,6 +411,18 @@ pub enum Error {
   Query(QueryError),
 }
 
+impl fmt::Display for Error {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match self {
+      Error::VertexEntity(e) => write!(f, "vertex entity error: {}", e),
+      Error::Framebuffer(e) => write!(f, "framebuffer error: {}", e),
+      Error::Shader(e) => write!(f, "shader error: {}", e),
+      Error::Pipeline(e) => write!(f, "pipeline error: {}", e),
+      Error::Query(e) => write!(f, "query error: {}", e),
+    }
+  }
+}
+
 impl From<VertexEntityError> for Error {
   fn from(e: VertexEntityError) -> Self {
     Error::VertexEntity(e)

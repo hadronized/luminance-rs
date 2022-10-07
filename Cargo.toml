@@ -2,7 +2,7 @@
 
 members = [
   "examples/common",
-  # "examples/desktop",
+  "examples/desktop",
   # "examples/web",
   "luminance",
   "luminance-derive",
@@ -18,7 +18,7 @@ members = [
 
 default-members = [
   "examples/common",
-  # "examples/desktop",
+  "examples/desktop",
   "luminance",
   "luminance-derive",
   # "luminance-front",

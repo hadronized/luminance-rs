@@ -21,8 +21,9 @@
 //! - If you want to write solid and smart Rust code, you want to handle errors, not rely on panics.
 //! - This is example code, so don’t blindly copy it, try to understand it first.
 
+use std::fmt::Display;
+
 use luminance::{backend::Backend, context::Context};
-use std::error::Error;
 
 // examples
 // pub mod attributeless;
@@ -65,15 +66,16 @@ pub mod shared;
 
 /// Example interface.
 pub trait Example: Sized {
-  type Err;
+  type Err: From<luminance::backend::Error> + Display;
+
+  const TITLE: &'static str;
 
   /// Bootstrap the example.
   fn bootstrap(
+    frame_size: [u32; 2],
     platform: &mut impl PlatformServices,
     context: &mut Context<impl Backend>,
-  ) -> Result<Self, Self::Err>
-  where
-    Self::Err: From<luminance::backend::Error>;
+  ) -> Result<Self, Self::Err>;
 
   /// Render a frame of the example.
   fn render_frame(
@@ -81,9 +83,7 @@ pub trait Example: Sized {
     time: f32,
     actions: impl Iterator<Item = InputAction>,
     context: &mut Context<impl Backend>,
-  ) -> Result<LoopFeedback<Self>, Self::Err>
-  where
-    Self::Err: From<luminance::backend::Error>;
+  ) -> Result<LoopFeedback<Self>, Self::Err>;
 }
 
 /// A type used to pass “inputs” to examples.
@@ -143,7 +143,7 @@ pub enum LoopFeedback<T> {
 
 /// Various services provided by the platform.
 pub trait PlatformServices {
-  type FetchError: Error;
+  type FetchError: std::error::Error;
 
   /// Fetch the next texture, if available.
   fn fetch_texture(&mut self) -> Result<image::RgbImage, Self::FetchError>;

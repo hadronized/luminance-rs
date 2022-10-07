@@ -199,6 +199,12 @@ pub enum VertexAttribDim {
   Dim4,
 }
 
+impl VertexAttribDim {
+  pub fn size(&self) -> usize {
+    *self as usize + 1
+  }
+}
+
 /// Class of vertex attributes.
 ///
 /// A vertex attribute type is always associated with a single constant of type [`VertexAttribDesc`],

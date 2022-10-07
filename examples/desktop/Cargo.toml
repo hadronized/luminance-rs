@@ -27,6 +27,6 @@ image = "0.24.1"
 log = "0.4.11"
 luminance = { version = "0.48.0-dev", path = "../../luminance", features = ["mint"] }
 luminance-examples = { version = "0.1", path = "../common" }
-luminance-gl2 = { version = "0.20.0-dev", path = "../../luminance-gl" }
+luminance-gl2 = { version = "0.20.0-dev", path = "../../luminance-gl2" }
 luminance-glfw = { version = "0.19.0-dev", path = "../../luminance-glfw" }
 structopt = "0.3.21"

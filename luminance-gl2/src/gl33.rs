@@ -1476,10 +1476,11 @@ impl GL33 {
       .zip(V::vertex_desc())
       .map(|(vertices, fmt)| {
         let buffer = Buffer::from_vec(&self.state, vertices);
+        let field_len = fmt.attrib_desc.unit_size * fmt.attrib_desc.dim.size();
 
         if len == 0 {
-          len = vertices.len();
-        } else if vertices.len() != len {
+          len = vertices.len() / field_len;
+        } else if vertices.len() / field_len != len {
           return Err(VertexEntityError::Creation { cause: None });
         }
 
@@ -2103,6 +2104,7 @@ unsafe impl VertexEntityBackend for GL33 {
       // indexed render
       let first = (mem::size_of::<u32>() * start_index) as *const c_void;
 
+      drop(st);
       self
         .state
         .borrow_mut()
