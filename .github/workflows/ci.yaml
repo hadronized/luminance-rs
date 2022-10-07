@@ -68,38 +68,38 @@ jobs:
   #         yarn install
   #         yarn build
 
-  functional-tests-desktop:
-    strategy:
-      matrix:
-        rustc: ["1.56.0"]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libxrandr-dev xorg-dev libsdl2-dev
-      - uses: actions/checkout@v2
-      - name: Functional testing
-        run: |
-          rustup default ${{ matrix.rustc }}
-          cd examples/desktop
-          cargo check --features funtest,funtest-gl33-f64-uniform
-
-  functional-tests-web:
-    strategy:
-      matrix:
-        rustc: ["1.56.0"]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install rustup WASM toolchain
-        run: |
-          rustup default ${{ matrix.rustc }}
-          rustup target install wasm32-unknown-unknown
-      - uses: actions/checkout@v2
-      - name: Functional testing
-        run: |
-          cd examples/web
-          cargo check --features funtest
+  # functional-tests-desktop:
+  #   strategy:
+  #     matrix:
+  #       rustc: ["1.56.0"]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Install dependencies
+  #       run: |
+  #         sudo apt-get update
+  #         sudo apt-get install -y libxrandr-dev xorg-dev libsdl2-dev
+  #     - uses: actions/checkout@v2
+  #     - name: Functional testing
+  #       run: |
+  #         rustup default ${{ matrix.rustc }}
+  #         cd examples/desktop
+  #         cargo check --features funtest,funtest-gl33-f64-uniform
+  #
+  # functional-tests-web:
+  #   strategy:
+  #     matrix:
+  #       rustc: ["1.56.0"]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Install rustup WASM toolchain
+  #       run: |
+  #         rustup default ${{ matrix.rustc }}
+  #         rustup target install wasm32-unknown-unknown
+  #     - uses: actions/checkout@v2
+  #     - name: Functional testing
+  #       run: |
+  #         cd examples/web
+  #         cargo check --features funtest
 
   quality:
     strategy:
