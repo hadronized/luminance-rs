@@ -1,4 +1,7 @@
-use std::marker::PhantomData;
+use std::{
+  marker::PhantomData,
+  ops::{Range, RangeFrom, RangeFull, RangeTo, RangeToInclusive},
+};
 
 use crate::{primitive::Primitive, vertex::Vertex, vertex_storage::AsVertexStorage};
 
@@ -59,10 +62,6 @@ where
 
   pub fn indices(&mut self) -> &mut Vec<u32> {
     &mut self.indices
-  }
-
-  pub fn view(&self) -> VertexEntityView<V, P> {
-    VertexEntityView::new(self)
   }
 }
 
@@ -144,5 +143,113 @@ impl<'a, V, P> VertexEntityView<V, P> {
   pub fn set_primitive_restart(mut self, primitive_restart: bool) -> Self {
     self.primitive_restart = primitive_restart;
     self
+  }
+}
+
+pub trait View<R> {
+  type Vertex: Vertex;
+  type Primitive: Primitive<Vertex = Self::Vertex>;
+
+  fn view(&self, range: R) -> VertexEntityView<Self::Vertex, Self::Primitive>;
+}
+
+impl<V, P, S> View<RangeFull> for VertexEntity<V, P, S>
+where
+  V: Vertex,
+  P: Primitive<Vertex = V>,
+  S: AsVertexStorage<V>,
+{
+  type Vertex = V;
+  type Primitive = P;
+
+  fn view(&self, _: RangeFull) -> VertexEntityView<Self::Vertex, Self::Primitive> {
+    VertexEntityView::new(self)
+  }
+}
+
+impl<V, P, S> View<Range<usize>> for VertexEntity<V, P, S>
+where
+  V: Vertex,
+  P: Primitive<Vertex = V>,
+  S: AsVertexStorage<V>,
+{
+  type Vertex = V;
+  type Primitive = P;
+
+  fn view(&self, range: Range<usize>) -> VertexEntityView<Self::Vertex, Self::Primitive> {
+    VertexEntityView {
+      handle: self.handle(),
+      start_vertex: range.start,
+      vertex_count: range.end,
+      instance_count: 1,
+      primitive_restart: false,
+      _phantom: PhantomData,
+    }
+  }
+}
+
+impl<V, P, S> View<RangeFrom<usize>> for VertexEntity<V, P, S>
+where
+  V: Vertex,
+  P: Primitive<Vertex = V>,
+  S: AsVertexStorage<V>,
+{
+  type Vertex = V;
+  type Primitive = P;
+
+  fn view(&self, range: RangeFrom<usize>) -> VertexEntityView<Self::Vertex, Self::Primitive> {
+    VertexEntityView {
+      handle: self.handle(),
+      start_vertex: range.start,
+      vertex_count: self.vertex_count,
+      instance_count: 1,
+      primitive_restart: false,
+      _phantom: PhantomData,
+    }
+  }
+}
+
+impl<V, P, S> View<RangeTo<usize>> for VertexEntity<V, P, S>
+where
+  V: Vertex,
+  P: Primitive<Vertex = V>,
+  S: AsVertexStorage<V>,
+{
+  type Vertex = V;
+  type Primitive = P;
+
+  fn view(&self, range: RangeTo<usize>) -> VertexEntityView<Self::Vertex, Self::Primitive> {
+    VertexEntityView {
+      handle: self.handle(),
+      start_vertex: 0,
+      vertex_count: range.end,
+      instance_count: 1,
+      primitive_restart: false,
+      _phantom: PhantomData,
+    }
+  }
+}
+
+impl<V, P, S> View<RangeToInclusive<usize>> for VertexEntity<V, P, S>
+where
+  V: Vertex,
+  P: Primitive<Vertex = V>,
+  S: AsVertexStorage<V>,
+{
+  type Vertex = V;
+  type Primitive = P;
+
+  fn view(
+    &self,
+    range: RangeToInclusive<usize>,
+  ) -> VertexEntityView<Self::Vertex, Self::Primitive> {
+    VertexEntityView {
+      handle: self.handle(),
+      start_vertex: 0,
+      vertex_count: range.end + 1,
+      instance_count: 1,
+      primitive_restart: false,
+      _phantom: PhantomData,
+    }
   }
 }

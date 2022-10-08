@@ -18,7 +18,7 @@ use luminance::{
   primitive::Triangle,
   render_state::RenderState,
   shader::{Program, ProgramBuilder, Stage},
-  vertex_entity::VertexEntity,
+  vertex_entity::{VertexEntity, View},
   vertex_storage::{Deinterleaved, Interleaved},
   RenderSlots, Vertex,
 };
@@ -290,17 +290,16 @@ impl Example for LocalExample {
             &RenderState::default(),
             |mut with_render_state| match self.method {
               Method::Direct => {
-                with_render_state.render_vertex_entity(self.direct_triangles.view())
+                with_render_state.render_vertex_entity(self.direct_triangles.view(..))
               }
               Method::Indexed => {
-                with_render_state.render_vertex_entity(self.indexed_triangles.view())
+                with_render_state.render_vertex_entity(self.indexed_triangles.view(..))
               }
               Method::DirectDeinterleaved => {
-                with_render_state.render_vertex_entity(self.direct_deinterleaved_triangles.view())
+                with_render_state.render_vertex_entity(self.direct_deinterleaved_triangles.view(..))
               }
-              Method::IndexedDeinterleaved => {
-                with_render_state.render_vertex_entity(self.indexed_deinterleaved_triangles.view())
-              }
+              Method::IndexedDeinterleaved => with_render_state
+                .render_vertex_entity(self.indexed_deinterleaved_triangles.view(..)),
             },
           )
         })

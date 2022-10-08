@@ -19,7 +19,7 @@ use luminance::{
   primitive::Triangle,
   render_state::RenderState,
   shader::{Program, ProgramBuilder, Stage},
-  vertex_entity::VertexEntity,
+  vertex_entity::{VertexEntity, View},
   vertex_storage::Interleaved,
 };
 use mint::{Vector2, Vector3};
@@ -207,13 +207,13 @@ impl Example for LocalExample {
       frame.with_program(program, |mut frame| {
         frame.with_render_state(&render_state, |mut frame| match depth_method {
           DepthMethod::Under => {
-            frame.render_vertex_entity(red_triangle.view())?;
-            frame.render_vertex_entity(blue_triangle.view())
+            frame.render_vertex_entity(red_triangle.view(..))?;
+            frame.render_vertex_entity(blue_triangle.view(..))
           }
 
           DepthMethod::Atop => {
-            frame.render_vertex_entity(blue_triangle.view())?;
-            frame.render_vertex_entity(red_triangle.view())
+            frame.render_vertex_entity(blue_triangle.view(..))?;
+            frame.render_vertex_entity(red_triangle.view(..))
           }
         })
       })

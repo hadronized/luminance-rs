@@ -13,7 +13,7 @@ use luminance::{
   primitive::Triangle,
   render_state::RenderState,
   shader::{Program, ProgramBuilder, Stage},
-  vertex_entity::VertexEntity,
+  vertex_entity::{VertexEntity, View},
   vertex_storage::Interleaved,
   RenderSlots, Vertex,
 };
@@ -176,7 +176,7 @@ impl Example for LocalExample {
       |mut with_framebuffer| {
         with_framebuffer.with_program(&self.program, |mut with_program| {
           with_program.with_render_state(&RenderState::default(), |mut with_render_state| {
-            with_render_state.render_vertex_entity(self.triangles.view())
+            with_render_state.render_vertex_entity(self.triangles.view(..))
           })
         })
       },
