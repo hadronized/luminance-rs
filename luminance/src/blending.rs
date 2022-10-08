@@ -80,6 +80,9 @@ pub struct Blending {
 /// Blending configuration to represent combined or separate options.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum BlendingMode {
+  /// Blending is disabled.
+  Off,
+
   /// Blending with combined RGBA.
   Combined(Blending),
 

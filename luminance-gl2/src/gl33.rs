@@ -2879,12 +2879,18 @@ unsafe impl PipelineBackend for GL33 {
   {
     let mut st = self.state.borrow_mut();
 
-    st.blending_state.set_if_invalid(true, || {
-      gl::Enable(gl::BLEND);
-    });
-
     match render_state.blending {
+      BlendingMode::Off => {
+        st.blending_state.set_if_invalid(false, || {
+          gl::Disable(gl::BLEND);
+        });
+      }
+
       BlendingMode::Combined(blending) => {
+        st.blending_state.set_if_invalid(true, || {
+          gl::Enable(gl::BLEND);
+        });
+
         st.blending_equations
           .set_if_invalid([blending.equation, blending.equation], || {
             gl::BlendEquation(Self::opengl_blending_equation(&blending.equation));
