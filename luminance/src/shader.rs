@@ -42,7 +42,7 @@ impl<P, Q, S, E> ProgramBuilder<(), (), P, Q, S, E> {
 }
 
 impl<V, W, S, E> ProgramBuilder<V, W, (), (), S, E> {
-  pub fn add_primitive_code<P, Q>(self, stage: Stage<P, Q, E>) -> ProgramBuilder<V, W, P, Q, S, E>
+  pub fn add_primitive_stage<P, Q>(self, stage: Stage<P, Q, E>) -> ProgramBuilder<V, W, P, Q, S, E>
   where
     P: Primitive<Vertex = W>,
     Q: Primitive,

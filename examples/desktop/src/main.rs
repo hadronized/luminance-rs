@@ -195,7 +195,7 @@ examples! {
   examples:
   "hello-world", hello_world,
   "hello-world-more", hello_world_more,
-  // "render-state", render_state,
+  "render-state", render_state,
   // "sliced-tess", sliced_tess,
   // "shader-uniforms", shader_uniforms,
   // "attributeless", attributeless,

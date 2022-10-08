@@ -35,6 +35,38 @@ pub struct RenderState {
   pub scissor: Scissor,
 }
 
+impl RenderState {
+  pub fn set_blending(mut self, blending: BlendingMode) -> Self {
+    self.blending = blending;
+    self
+  }
+
+  pub fn set_depth_test(mut self, depth_test: DepthTest) -> Self {
+    self.depth_test = depth_test;
+    self
+  }
+
+  pub fn set_depth_write(mut self, depth_write: DepthWrite) -> Self {
+    self.depth_write = depth_write;
+    self
+  }
+
+  pub fn set_stencil_test(mut self, stencil_test: StencilTest) -> Self {
+    self.stencil_test = stencil_test;
+    self
+  }
+
+  pub fn set_face_culling(mut self, face_culling: FaceCulling) -> Self {
+    self.face_culling = face_culling;
+    self
+  }
+
+  pub fn set_scissor(mut self, scissor: Scissor) -> Self {
+    self.scissor = scissor;
+    self
+  }
+}
+
 impl Default for RenderState {
   /// The default `RenderState`.
   ///

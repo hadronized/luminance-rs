@@ -8,20 +8,25 @@
 //!
 //! <https://docs.rs/luminance>
 
-use crate::{
-  shared::{Semantics, Vertex, VertexColor, VertexPosition},
-  Example, InputAction, LoopFeedback, PlatformServices,
-};
-use luminance_front::{
-  blending::{Blending, Equation, Factor},
-  context::GraphicsContext,
-  framebuffer::Framebuffer,
+use luminance::{
+  backend::Backend,
+  blending::{Blending, BlendingMode, Equation, Factor},
+  context::Context,
+  depth_stencil::DepthTest,
+  dim::{Dim2, Size2},
+  framebuffer::{Back, Framebuffer},
   pipeline::PipelineState,
+  primitive::Triangle,
   render_state::RenderState,
-  shader::Program,
-  tess::{Mode, Tess},
-  texture::Dim2,
-  Backend,
+  shader::{Program, ProgramBuilder, Stage},
+  vertex_entity::VertexEntity,
+  vertex_storage::Interleaved,
+};
+use mint::{Vector2, Vector3};
+
+use crate::{
+  shared::{FragSlot, Vertex},
+  Example, InputAction, LoopFeedback, PlatformServices,
 };
 
 const VS: &'static str = include_str!("simple-vs.glsl");
@@ -29,31 +34,55 @@ const FS: &'static str = include_str!("simple-fs.glsl");
 
 pub const TRI_RED_BLUE_VERTICES: [Vertex; 6] = [
   // first triangle – a red one
-  Vertex {
-    pos: VertexPosition::new([0.5, -0.5]),
-    rgb: VertexColor::new([1., 0., 0.]),
-  },
-  Vertex {
-    pos: VertexPosition::new([0.0, 0.5]),
-    rgb: VertexColor::new([1., 0., 0.]),
-  },
-  Vertex {
-    pos: VertexPosition::new([-0.5, -0.5]),
-    rgb: VertexColor::new([1., 0., 0.]),
-  },
+  Vertex::new(
+    Vector2 { x: 0.5, y: -0.5 },
+    Vector3 {
+      x: 1.,
+      y: 0.,
+      z: 0.,
+    },
+  ),
+  Vertex::new(
+    Vector2 { x: 0.0, y: 0.5 },
+    Vector3 {
+      x: 1.,
+      y: 0.,
+      z: 0.,
+    },
+  ),
+  Vertex::new(
+    Vector2 { x: -0.5, y: -0.5 },
+    Vector3 {
+      x: 1.,
+      y: 0.,
+      z: 0.,
+    },
+  ),
   // second triangle, a blue one
-  Vertex {
-    pos: VertexPosition::new([-0.5, 0.5]),
-    rgb: VertexColor::new([0., 0., 1.]),
-  },
-  Vertex {
-    pos: VertexPosition::new([0.0, -0.5]),
-    rgb: VertexColor::new([0., 0., 1.]),
-  },
-  Vertex {
-    pos: VertexPosition::new([0.5, 0.5]),
-    rgb: VertexColor::new([0., 0., 1.]),
-  },
+  Vertex::new(
+    Vector2 { x: -0.5, y: 0.5 },
+    Vector3 {
+      x: 0.,
+      y: 0.,
+      z: 1.,
+    },
+  ),
+  Vertex::new(
+    Vector2 { x: 0.0, y: -0.5 },
+    Vector3 {
+      x: 0.,
+      y: 0.,
+      z: 1.,
+    },
+  ),
+  Vertex::new(
+    Vector2 { x: 0.5, y: 0.5 },
+    Vector3 {
+      x: 0.,
+      y: 0.,
+      z: 1.,
+    },
+  ),
 ];
 
 // Convenience type to demonstrate how the depth test influences the rendering of two triangles.
@@ -73,72 +102,78 @@ impl DepthMethod {
 }
 
 // toggle between no blending and additive blending
-fn toggle_blending(blending: Option<Blending>) -> Option<Blending> {
+fn toggle_blending(blending: BlendingMode) -> BlendingMode {
   match blending {
-    None => Some(Blending {
+    BlendingMode::Off => BlendingMode::Combined(Blending {
       equation: Equation::Additive,
       src: Factor::One,
       dst: Factor::One,
     }),
-    _ => None,
+
+    _ => BlendingMode::Off,
   }
 }
 
 pub struct LocalExample {
-  program: Program<Semantics, (), ()>,
-  red_triangle: Tess<Vertex>,
-  blue_triangle: Tess<Vertex>,
-  blending: Option<Blending>,
+  program: Program<Vertex, Triangle<Vertex>, FragSlot, ()>,
+  red_triangle: VertexEntity<Vertex, Triangle<Vertex>, Interleaved<Vertex>>,
+  blue_triangle: VertexEntity<Vertex, Triangle<Vertex>, Interleaved<Vertex>>,
+  blending: BlendingMode,
   depth_method: DepthMethod,
+  back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }
 
 impl Example for LocalExample {
+  type Err = luminance::backend::Error;
+
+  const TITLE: &'static str = "Render State";
+
   fn bootstrap(
+    [width, height]: [u32; 2],
     _platform: &mut impl PlatformServices,
-    context: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> Self {
-    let program = context
-      .new_shader_program::<Semantics, (), ()>()
-      .from_strings(VS, None, None, FS)
-      .expect("program creation")
-      .ignore_warnings();
+    ctx: &mut Context<impl Backend>,
+  ) -> Result<Self, Self::Err> {
+    let program = ctx.new_program(
+      ProgramBuilder::new()
+        .add_vertex_stage(Stage::<Vertex, Vertex, ()>::new(VS))
+        .no_primitive_stage::<Triangle<Vertex>>()
+        .add_shading_stage(Stage::<Vertex, FragSlot, ()>::new(FS)),
+    )?;
 
     // create a red and blue triangles
-    let red_triangle = context
-      .new_tess()
-      .set_vertices(&TRI_RED_BLUE_VERTICES[0..3])
-      .set_mode(Mode::Triangle)
-      .build()
-      .unwrap();
-    let blue_triangle = context
-      .new_tess()
-      .set_vertices(&TRI_RED_BLUE_VERTICES[3..6])
-      .set_mode(Mode::Triangle)
-      .build()
-      .unwrap();
+    let red_triangle = ctx.new_vertex_entity(
+      Interleaved::new().set_vertices(&TRI_RED_BLUE_VERTICES[0..3]),
+      [],
+    )?;
 
-    let blending = None;
+    let blue_triangle = ctx.new_vertex_entity(
+      Interleaved::new().set_vertices(&TRI_RED_BLUE_VERTICES[3..6]),
+      [],
+    )?;
+
+    let blending = BlendingMode::Off;
     let depth_method = DepthMethod::Under;
+    let back_buffer = ctx.back_buffer(Size2::new(width, height))?;
 
-    Self {
+    Ok(Self {
       program,
       red_triangle,
       blue_triangle,
       blending,
       depth_method,
-    }
+      back_buffer,
+    })
   }
 
   fn render_frame(
     mut self,
     _time: f32,
-    back_buffer: Framebuffer<Dim2, (), ()>,
     actions: impl Iterator<Item = InputAction>,
-    context: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> LoopFeedback<Self> {
+    ctx: &mut Context<impl Backend>,
+  ) -> Result<LoopFeedback<Self>, Self::Err> {
     for action in actions {
       match action {
-        InputAction::Quit => return LoopFeedback::Exit,
+        InputAction::Quit => return Ok(LoopFeedback::Exit),
 
         InputAction::MainToggle => {
           self.depth_method = self.depth_method.toggle();
@@ -154,46 +189,36 @@ impl Example for LocalExample {
       }
     }
 
+    let back_buffer = &self.back_buffer;
     let program = &mut self.program;
     let red_triangle = &self.red_triangle;
     let blue_triangle = &self.blue_triangle;
     let blending = self.blending;
     let depth_method = self.depth_method;
 
-    let render = context
-      .new_pipeline_gate()
-      .pipeline(
-        &back_buffer,
-        &PipelineState::default(),
-        |_, mut shd_gate| {
-          shd_gate.shade(program, |_, _, mut rdr_gate| {
-            let render_state = RenderState::default()
+    let render_state = RenderState::default()
             // let’s disable the depth test so that every fragment (i.e. pixels) will be rendered to every
             // time we have to draw a part of a triangle
-            .set_depth_test(None)
+            .set_depth_test(DepthTest::Off)
             // set the blending we decided earlier
             .set_blending(blending);
 
-            rdr_gate.render(&render_state, |mut tess_gate| match depth_method {
-              DepthMethod::Under => {
-                tess_gate.render(red_triangle)?;
-                tess_gate.render(blue_triangle)
-              }
+    ctx.with_framebuffer(back_buffer, &PipelineState::default(), |mut frame| {
+      frame.with_program(program, |mut frame| {
+        frame.with_render_state(&render_state, |mut frame| match depth_method {
+          DepthMethod::Under => {
+            frame.render_vertex_entity(red_triangle.view())?;
+            frame.render_vertex_entity(blue_triangle.view())
+          }
 
-              DepthMethod::Atop => {
-                tess_gate.render(blue_triangle)?;
-                tess_gate.render(red_triangle)
-              }
-            })
-          })
-        },
-      )
-      .assume();
+          DepthMethod::Atop => {
+            frame.render_vertex_entity(blue_triangle.view())?;
+            frame.render_vertex_entity(red_triangle.view())
+          }
+        })
+      })
+    })?;
 
-    if render.is_ok() {
-      LoopFeedback::Continue(self)
-    } else {
-      LoopFeedback::Exit
-    }
+    Ok(LoopFeedback::Continue(self))
   }
 }

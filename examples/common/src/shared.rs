@@ -1,4 +1,15 @@
-use luminance::{namespace, Vertex};
+use luminance::{namespace, RenderSlots, Vertex};
+use mint::{Vector2, Vector3};
+
+// Render slots.
+//
+// A render slot represents the channels the end stage of a shader program is going to end up writing to. In our case,
+// since we are only interested in rendering the color of each pixel, we will just have one single channel for the
+// color.
+#[derive(Clone, Copy, Debug, PartialEq, RenderSlots)]
+pub struct FragSlot {
+  frag: Vector3<f32>,
+}
 
 namespace! {
   Namespace = {
@@ -15,8 +26,14 @@ namespace! {
 #[derive(Clone, Copy, Debug, PartialEq, Vertex)]
 #[vertex(namespace = "Namespace")]
 pub struct Vertex {
-  pub co: mint::Vector2<f32>,
-  pub color: mint::Vector3<f32>,
+  pub co: Vector2<f32>,
+  pub color: Vector3<f32>,
+}
+
+impl Vertex {
+  pub const fn new(co: Vector2<f32>, color: Vector3<f32>) -> Self {
+    Self { co, color }
+  }
 }
 
 // definition of a single instance
@@ -24,20 +41,26 @@ pub struct Vertex {
 #[derive(Clone, Copy, Debug, PartialEq, Vertex)]
 #[vertex(namespace = "Namespace")]
 pub struct Instance {
-  pub position: mint::Vector2<f32>,
+  pub position: Vector2<f32>,
   pub weight: f32,
+}
+
+impl Instance {
+  pub const fn new(position: Vector2<f32>, weight: f32) -> Self {
+    Self { position, weight }
+  }
 }
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Vertex)]
 #[vertex(namespace = "Namespace")]
 pub struct CubeVertex {
-  pub co3: mint::Vector3<f32>,
-  pub nor: mint::Vector3<f32>,
+  pub co3: Vector3<f32>,
+  pub nor: Vector3<f32>,
 }
 
 impl CubeVertex {
-  pub fn new(co3: mint::Vector3<f32>, nor: mint::Vector3<f32>) -> Self {
+  pub const fn new(co3: Vector3<f32>, nor: Vector3<f32>) -> Self {
     Self { co3, nor }
   }
 }

@@ -37,7 +37,7 @@ pub mod hello_world_more;
 // pub mod polymorphic_hello_world;
 // pub mod query_info;
 // pub mod query_texture_texels;
-// pub mod render_state;
+pub mod render_state;
 // pub mod shader_data;
 // pub mod shader_uniform_adapt;
 // pub mod shader_uniforms;
@@ -74,7 +74,7 @@ pub trait Example: Sized {
   fn bootstrap(
     frame_size: [u32; 2],
     platform: &mut impl PlatformServices,
-    context: &mut Context<impl Backend>,
+    ctx: &mut Context<impl Backend>,
   ) -> Result<Self, Self::Err>;
 
   /// Render a frame of the example.
@@ -82,7 +82,7 @@ pub trait Example: Sized {
     self,
     time: f32,
     actions: impl Iterator<Item = InputAction>,
-    context: &mut Context<impl Backend>,
+    ctx: &mut Context<impl Backend>,
   ) -> Result<LoopFeedback<Self>, Self::Err>;
 }
 
