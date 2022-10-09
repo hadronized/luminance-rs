@@ -198,7 +198,7 @@ examples! {
   "render-state", render_state,
   "sliced-vertex-entity", sliced_vertex_entity,
   "shader-uniforms", shader_uniforms,
-  // "attributeless", attributeless,
+  "attributeless", attributeless,
   // "texture", texture,
   // "offscreen", offscreen,
   // "shader-uniform-adapt", shader_uniform_adapt,

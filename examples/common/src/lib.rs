@@ -26,7 +26,7 @@ use std::fmt::Display;
 use luminance::{backend::Backend, context::Context};
 
 // examples
-// pub mod attributeless;
+pub mod attributeless;
 // pub mod displacement_map;
 // pub mod dynamic_uniform_interface;
 pub mod hello_world;
