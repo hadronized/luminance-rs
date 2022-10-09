@@ -119,7 +119,7 @@ where
     window.glfw.poll_events();
     let actions = glfw::flush_messages(&events_rx).flat_map(|(_, event)| adapt_events(event));
 
-    let t = start_t.elapsed().as_millis() as f32;
+    let t = start_t.elapsed().as_secs_f32();
     let feedback = example.render_frame(t, actions, &mut ctx);
 
     match feedback {
@@ -197,7 +197,7 @@ examples! {
   "hello-world-more", hello_world_more,
   "render-state", render_state,
   "sliced-vertex-entity", sliced_vertex_entity,
-  // "shader-uniforms", shader_uniforms,
+  "shader-uniforms", shader_uniforms,
   // "attributeless", attributeless,
   // "texture", texture,
   // "offscreen", offscreen,

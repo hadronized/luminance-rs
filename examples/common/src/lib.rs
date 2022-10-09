@@ -40,7 +40,7 @@ pub mod hello_world_more;
 pub mod render_state;
 // pub mod shader_data;
 // pub mod shader_uniform_adapt;
-// pub mod shader_uniforms;
+pub mod shader_uniforms;
 pub mod shared;
 // pub mod skybox;
 pub mod sliced_vertex_entity;

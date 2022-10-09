@@ -80,11 +80,11 @@ pub(crate) fn generate_uniforms_impl(
         // renaming
         let build_call = if unbound {
           quote! {
-            backend.new_shader_uni(handle, #name).or_else(|| backend.new_shader_uni_unbound(handle))?
+            backend.new_shader_uni(program_handle, #name).or_else(|| backend.new_shader_uni_unbound(handle))?
           }
         } else {
           quote! {
-            backend.new_shader_uni(handle, #name)
+            backend.new_shader_uni(program_handle, #name)?
           }
         };
 
@@ -92,10 +92,10 @@ pub(crate) fn generate_uniforms_impl(
           extract_uniform_type(&field.ty).ok_or(UniformsError::IncorrectlyWrappedType(field.ty))?;
         field_names.push(field_ident.clone());
         field_decls.push(quote! {
-          let #field_ident = #build_call;
+          let #field_ident = unsafe { #build_call };
         });
         field_where_clause.push(quote! {
-          B: luminance::backend::shader::Uniform<#field_ty>
+          #field_ty: luminance::shader::Uniform
         });
       }
 
@@ -104,8 +104,8 @@ pub(crate) fn generate_uniforms_impl(
         where
           #(#field_where_clause),*,
         {
-          fn build_uniforms<B>(backend: &mut B, program_hande: usize) -> Result<Self, luminance::shader::ShaderError>
-          where B: luminance::shader::ShaderBackend {
+          fn build_uniforms<B>(backend: &mut B, program_handle: usize) -> Result<Self, luminance::backend::ShaderError>
+          where B: luminance::backend::ShaderBackend {
             #(#field_decls)*
 
             Ok( #ident { #(#field_names,)* })

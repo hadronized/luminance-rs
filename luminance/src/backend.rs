@@ -207,6 +207,14 @@ pub enum PipelineError {
     instance_count: usize,
     cause: Option<Box<dyn ErrorTrait>>,
   },
+
+  ShaderError(ShaderError),
+}
+
+impl From<ShaderError> for PipelineError {
+  fn from(e: ShaderError) -> Self {
+    PipelineError::ShaderError(e)
+  }
 }
 
 impl fmt::Display for PipelineError {
@@ -257,7 +265,9 @@ impl fmt::Display for PipelineError {
         "error in render vertex entity pipeline: {}; start_vertex={}, vertex_count={}, instance_count={}",
         cause.as_ref().map(|cause| cause.to_string()).unwrap_or_else(|| "unknown cause".to_string()),
         start_vertex, vertex_count, instance_count,
-      )
+      ),
+
+      PipelineError::ShaderError(e) => write!(f, "shader error in pipeline: {}", e),
     }
   }
 }
@@ -573,7 +583,7 @@ pub unsafe trait ShaderBackend {
   unsafe fn set_shader_uni<T>(
     &mut self,
     handle: usize,
-    uni: &Uni<T>,
+    uni: &Uni<T::UniType>,
     value: T,
   ) -> Result<(), ShaderError>
   where

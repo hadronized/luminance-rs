@@ -436,7 +436,7 @@ impl<'a, B> ProgramUpdate<'a, B>
 where
   B: ShaderBackend,
 {
-  pub fn set<T>(&mut self, uni: &Uni<T>, value: T) -> Result<(), ShaderError>
+  pub fn set<T>(&mut self, uni: &Uni<T::UniType>, value: T) -> Result<(), ShaderError>
   where
     T: Uniform,
   {

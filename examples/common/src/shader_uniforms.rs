@@ -11,20 +11,24 @@
 //!
 //! <https://docs.rs/luminance>
 
-use crate::{
-  shared::{Semantics, Vertex, VertexColor, VertexPosition},
-  Example, InputAction, LoopFeedback, PlatformServices,
-};
-use luminance::UniformInterface;
-use luminance_front::{
-  context::GraphicsContext,
-  framebuffer::Framebuffer,
+use luminance::{
+  backend::Backend,
+  context::Context,
+  dim::{Dim2, Size2},
+  framebuffer::{Back, Framebuffer},
   pipeline::PipelineState,
+  primitive::Triangle,
   render_state::RenderState,
-  shader::{types::Vec2, Program, Uniform},
-  tess::{Mode, Tess},
-  texture::Dim2,
-  Backend,
+  shader::{Program, ProgramBuilder, Stage, Uni},
+  vertex_entity::{VertexEntity, View},
+  vertex_storage::Interleaved,
+  Uniforms,
+};
+use mint::{Vector2, Vector3};
+
+use crate::{
+  shared::{FragSlot, Vertex},
+  Example, InputAction, LoopFeedback, PlatformServices,
 };
 
 const VS: &'static str = include_str!("displacement-vs.glsl");
@@ -32,109 +36,112 @@ const FS: &'static str = include_str!("displacement-fs.glsl");
 
 // Only one triangle this time.
 const TRI_VERTICES: [Vertex; 3] = [
-  Vertex {
-    pos: VertexPosition::new([0.5, -0.5]),
-    rgb: VertexColor::new([1., 0., 0.]),
-  },
-  Vertex {
-    pos: VertexPosition::new([0.0, 0.5]),
-    rgb: VertexColor::new([0., 1., 0.]),
-  },
-  Vertex {
-    pos: VertexPosition::new([-0.5, -0.5]),
-    rgb: VertexColor::new([0., 0., 1.]),
-  },
+  Vertex::new(
+    Vector2 { x: 0.5, y: -0.5 },
+    Vector3 {
+      x: 1.,
+      y: 0.,
+      z: 0.,
+    },
+  ),
+  Vertex::new(
+    Vector2 { x: 0.0, y: 0.5 },
+    Vector3 {
+      x: 0.,
+      y: 1.,
+      z: 0.,
+    },
+  ),
+  Vertex::new(
+    Vector2 { x: -0.5, y: -0.5 },
+    Vector3 {
+      x: 0.,
+      y: 0.,
+      z: 1.,
+    },
+  ),
 ];
 
 // Create a uniform interface. This is a type that will be used to customize the shader. In our
 // case, we just want to pass the time and the position of the triangle, for instance.
 //
 // This macro only supports structs for now; you cannot use enums as uniform interfaces.
-#[derive(Debug, UniformInterface)]
-struct ShaderInterface {
+#[derive(Debug, Uniforms)]
+struct ShaderUniforms {
   #[uniform(name = "t")]
-  time: Uniform<f32>,
-  triangle_pos: Uniform<Vec2<f32>>,
+  time: Uni<f32>,
+  triangle_pos: Uni<[f32; 2]>,
 }
 
 pub struct LocalExample {
-  program: Program<Semantics, (), ShaderInterface>,
-  triangle: Tess<Vertex>,
-  triangle_pos: Vec2<f32>,
+  program: Program<Vertex, Triangle<Vertex>, FragSlot, ShaderUniforms>,
+  triangle: VertexEntity<Vertex, Triangle<Vertex>, Interleaved<Vertex>>,
+  triangle_pos: Vector2<f32>,
+  back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }
 
 impl Example for LocalExample {
-  fn bootstrap(
-    _platform: &mut impl PlatformServices,
-    context: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> Self {
-    let program = context
-      .new_shader_program()
-      .from_strings(VS, None, None, FS)
-      .expect("program creation")
-      .ignore_warnings();
-    let triangle = context
-      .new_tess()
-      .set_vertices(&TRI_VERTICES[..])
-      .set_mode(Mode::Triangle)
-      .build()
-      .unwrap();
-    let triangle_pos = Vec2::new(0., 0.);
+  type Err = luminance::backend::Error;
 
-    Self {
+  const TITLE: &'static str = "Shader Uniforms";
+
+  fn bootstrap(
+    [width, height]: [u32; 2],
+    _platform: &mut impl PlatformServices,
+    ctx: &mut Context<impl Backend>,
+  ) -> Result<Self, Self::Err> {
+    let program = ctx.new_program(
+      ProgramBuilder::new()
+        .add_vertex_stage(Stage::<Vertex, Vertex, ShaderUniforms>::new(VS))
+        .no_primitive_stage::<Triangle<Vertex>>()
+        .add_shading_stage(Stage::<Vertex, FragSlot, ShaderUniforms>::new(FS)),
+    )?;
+    let triangle = ctx.new_vertex_entity(Interleaved::new().set_vertices(&TRI_VERTICES[..]), [])?;
+    let triangle_pos = Vector2 { x: 0., y: 0. };
+    let back_buffer = ctx.back_buffer(Size2::new(width, height))?;
+
+    Ok(Self {
       program,
       triangle,
       triangle_pos,
-    }
+      back_buffer,
+    })
   }
 
   fn render_frame(
     mut self,
     t: f32,
-    back_buffer: Framebuffer<Dim2, (), ()>,
     actions: impl Iterator<Item = InputAction>,
-    context: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> LoopFeedback<Self> {
+    ctx: &mut Context<impl Backend>,
+  ) -> Result<LoopFeedback<Self>, Self::Err> {
     for action in actions {
       match action {
-        InputAction::Quit => return LoopFeedback::Exit,
-        InputAction::Left => self.triangle_pos[0] -= 0.1,
-        InputAction::Right => self.triangle_pos[0] += 0.1,
-        InputAction::Forward => self.triangle_pos[1] += 0.1,
-        InputAction::Backward => self.triangle_pos[1] -= 0.1,
+        InputAction::Quit => return Ok(LoopFeedback::Exit),
+        InputAction::Left => self.triangle_pos.x -= 0.1,
+        InputAction::Right => self.triangle_pos.x += 0.1,
+        InputAction::Forward => self.triangle_pos.y += 0.1,
+        InputAction::Backward => self.triangle_pos.y -= 0.1,
         _ => (),
       }
     }
 
-    let program = &mut self.program;
+    let program = &self.program;
     let triangle = &self.triangle;
     let triangle_pos = self.triangle_pos;
 
-    let render = context
-      .new_pipeline_gate()
-      .pipeline(
-        &back_buffer,
-        &PipelineState::default(),
-        |_, mut shd_gate| {
-          // notice the iface free variable, which type is &ShaderInterface
-          shd_gate.shade(program, |mut iface, uni, mut rdr_gate| {
-            // update the time and triangle position on the GPU shader program
-            iface.set(&uni.time, t);
-            iface.set(&uni.triangle_pos, triangle_pos);
+    ctx.with_framebuffer(&self.back_buffer, &PipelineState::default(), |mut frame| {
+      frame.with_program(program, |mut frame| {
+        frame.update(|mut program, unis| {
+          program.set(&unis.time, t)?;
+          program.set(&unis.triangle_pos, triangle_pos)
+        })?;
 
-            rdr_gate.render(&RenderState::default(), |mut tess_gate| {
-              // render the dynamically selected slice
-              tess_gate.render(triangle)
-            })
-          })
-        },
-      )
-      .assume();
+        frame.with_render_state(&RenderState::default(), |mut frame| {
+          frame.render_vertex_entity(triangle.view(..))
+        })
+      })
+    })?;
 
-    if render.is_ok() {
-      LoopFeedback::Continue(self)
-    } else {
-      LoopFeedback::Exit
-    }
+    Ok(LoopFeedback::Continue(self))
   }
 }

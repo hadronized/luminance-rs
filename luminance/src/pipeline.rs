@@ -1,12 +1,12 @@
 use std::marker::PhantomData;
 
 use crate::{
-  backend::{PipelineBackend, PipelineError},
+  backend::{PipelineBackend, PipelineError, ShaderError},
   primitive::Primitive,
   render_slots::{CompatibleRenderSlots, RenderSlots},
   render_state::RenderState,
   scissor::Scissor,
-  shader::{Program, Uniforms},
+  shader::{Program, ProgramUpdate, Uniforms},
   vertex::{CompatibleVertex, Vertex},
   vertex_entity::VertexEntityView,
 };
@@ -214,12 +214,12 @@ where
   }
 }
 
-#[derive(Debug)]
 pub struct WithProgram<'a, B, V, P, S, E>
 where
   B: 'a + ?Sized,
 {
   backend: &'a mut B,
+  program: &'a Program<V, P, S, E>,
   _phantom: PhantomData<*const (V, P, S, E)>,
 }
 
@@ -228,10 +228,12 @@ where
   B: 'a + PipelineBackend,
   V: Vertex,
   P: Primitive,
+  S: RenderSlots,
 {
-  pub unsafe fn new(backend: &'a mut B) -> Self {
+  pub unsafe fn new(backend: &'a mut B, program: &'a Program<V, P, S, E>) -> Self {
     Self {
       backend,
+      program,
       _phantom: PhantomData,
     }
   }
@@ -245,6 +247,18 @@ where
     Err: From<PipelineError>,
   {
     unsafe { self.backend.with_render_state(render_state, f) }
+  }
+
+  pub fn update(
+    &mut self,
+    f: impl for<'b> FnOnce(ProgramUpdate<'b, B>, &E) -> Result<(), ShaderError>,
+  ) -> Result<(), ShaderError> {
+    let program_update = ProgramUpdate {
+      backend: self.backend,
+      program_handle: self.program.handle(),
+    };
+
+    f(program_update, &self.program.uniforms)
   }
 }
 

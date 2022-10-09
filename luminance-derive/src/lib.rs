@@ -25,7 +25,7 @@ pub fn derive_vertex(input: TokenStream) -> TokenStream {
   }
 }
 
-#[proc_macro_derive(Environment, attributes(env))]
+#[proc_macro_derive(Uniforms, attributes(uniform))]
 pub fn derive_uniforms(input: TokenStream) -> TokenStream {
   let di: DeriveInput = parse_macro_input!(input);
 

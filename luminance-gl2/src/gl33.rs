@@ -2471,13 +2471,13 @@ unsafe impl ShaderBackend for GL33 {
   unsafe fn set_shader_uni<T>(
     &mut self,
     handle: usize,
-    uni: &Uni<T>,
+    uni: &Uni<T::UniType>,
     value: T,
   ) -> Result<(), ShaderError>
   where
     T: Uniform,
   {
-    todo!()
+    value.set(self, uni)
   }
 
   fn visit_i32(&mut self, uni: &Uni<i32>, value: &i32) -> Result<(), ShaderError> {
@@ -2864,7 +2864,7 @@ unsafe impl PipelineBackend for GL33 {
         gl::UseProgram(program_handle);
       });
 
-    f(WithProgram::new(self))
+    f(WithProgram::new(self, program))
   }
 
   unsafe fn with_render_state<V, P, Err>(
