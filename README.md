@@ -1,7 +1,7 @@
 <p align="center"><img src="https://github.com/phaazon/luminance-rs/blob/master/docs/imgs/luminance.svg" alt="luminance logo"/></p>
 <h1 align="right"><b>luminance</b>, the safe, type-driven, multi-backend <i>and simple</i> graphics crate</h1>
 
-[![Build Status](https://img.shields.io/travis/phaazon/luminance-rs?logo=travis)](https://travis-ci.org/phaazon/luminance-rs)
+![Build Status](https://github.com/phaazon/luminance-rs/actions/workflows/ci.yaml/badge.svg)]
 [![docs.rs](https://docs.rs/luminance/badge.svg)](https://docs.rs/luminance/)
 [![crates.io](https://img.shields.io/crates/v/luminance.svg?logo=rust)](https://crates.io/crates/luminance)
 ![License](https://img.shields.io/crates/l/luminance)
