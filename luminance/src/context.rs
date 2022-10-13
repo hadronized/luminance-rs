@@ -1,13 +1,17 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-  backend::{Backend, FramebufferError, PipelineError, ShaderError, VertexEntityError},
+  backend::{
+    Backend, FramebufferError, PipelineError, ShaderError, TextureError, VertexEntityError,
+  },
   dim::Dimensionable,
   framebuffer::{Back, Framebuffer},
   pipeline::{PipelineState, WithFramebuffer},
+  pixel::Pixel,
   primitive::Primitive,
   render_slots::{DepthRenderSlot, RenderSlots},
   shader::{Program, ProgramBuilder, ProgramUpdate, Uniforms},
+  texture::{Sampler, Texture},
   vertex::Vertex,
   vertex_entity::VertexEntity,
   vertex_storage::AsVertexStorage,
@@ -154,6 +158,63 @@ where
     };
 
     updater(program_update, &program.uniforms)
+  }
+
+  pub fn new_texture<D, P>(
+    &mut self,
+    size: D::Size,
+    sampler: Sampler,
+  ) -> Result<Texture<D, P>, TextureError>
+  where
+    D: Dimensionable,
+    P: Pixel,
+  {
+    unsafe { self.backend.new_texture(size, sampler) }
+  }
+
+  pub fn set_texture_data<D, P>(
+    &mut self,
+    texture: &Texture<D, P>,
+    offset: D::Offset,
+    size: D::Size,
+    texels: &[P::RawEncoding],
+  ) -> Result<(), TextureError>
+  where
+    D: Dimensionable,
+    P: Pixel,
+  {
+    unsafe {
+      self
+        .backend
+        .set_texture_data::<D, P>(texture.handle(), offset, size, texels)
+    }
+  }
+
+  pub fn clear_texture_data<D, P>(
+    &mut self,
+    texture: &Texture<D, P>,
+    clear_value: P::RawEncoding,
+  ) -> Result<(), TextureError>
+  where
+    D: Dimensionable,
+    P: Pixel,
+  {
+    unsafe {
+      self
+        .backend
+        .clear_texture_data::<P>(texture.handle(), clear_value)
+    }
+  }
+
+  pub fn get_texels<D, P>(
+    &mut self,
+    texture: &Texture<D, P>,
+  ) -> Result<Vec<P::RawEncoding>, TextureError>
+  where
+    D: Dimensionable,
+    P: Pixel,
+  {
+    unsafe { self.backend.get_texels::<P>(texture.handle()) }
   }
 
   pub fn with_framebuffer<D, CS, DS, Err>(

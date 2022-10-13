@@ -2,12 +2,13 @@ use crate::{
   dim::Dimensionable,
   framebuffer::{Back, Framebuffer},
   pipeline::{PipelineState, WithFramebuffer, WithProgram, WithRenderState},
-  pixel::PixelFormat,
+  pixel::{Pixel, PixelFormat},
   primitive::Primitive,
   render_channel::{DepthChannel, RenderChannel},
   render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
   render_state::RenderState,
   shader::{Program, Uni, Uniform, Uniforms},
+  texture::{Sampler, Texture},
   vertex::Vertex,
   vertex_entity::{VertexEntity, VertexEntityView},
   vertex_storage::AsVertexStorage,
@@ -285,7 +286,7 @@ pub enum TextureError {
   /// A texture’s storage failed to be created.
   ///
   /// The carried [`String`] gives the reason of the failure.
-  TextureStorageCreationFailed(String),
+  TextureStorageCreationFailed { cause: Option<Box<dyn ErrorTrait>> },
 
   /// Not enough pixel data provided for the given area asked.
   ///
@@ -294,8 +295,11 @@ pub enum TextureError {
   NotEnoughPixels {
     /// Expected number of pixels in bytes.
     expected_bytes: usize,
+
     /// Provided number of pixels in bytes.
     provided_bytes: usize,
+
+    cause: Option<Box<dyn ErrorTrait>>,
   },
 
   /// Unsupported pixel format.
@@ -308,45 +312,15 @@ pub enum TextureError {
   ///
   /// That error might happen on some hardware implementations if the user tries to retrieve
   /// texels from a texture that doesn’t support getting its texels retrieved.
-  CannotRetrieveTexels(String),
+  CannotRetrieveTexels { cause: Option<Box<dyn ErrorTrait>> },
 
   /// Failed to upload texels.
-  CannotUploadTexels(String),
-}
-
-impl TextureError {
-  /// A texture’s storage failed to be created.
-  pub fn texture_storage_creation_failed(reason: impl Into<String>) -> Self {
-    TextureError::TextureStorageCreationFailed(reason.into())
-  }
-
-  /// Not enough pixel data provided for the given area asked.
-  pub fn not_enough_pixels(expected_bytes: usize, provided_bytes: usize) -> Self {
-    TextureError::NotEnoughPixels {
-      expected_bytes,
-      provided_bytes,
-    }
-  }
-
-  /// Unsupported pixel format.
-  pub fn unsupported_pixel_format(pf: PixelFormat) -> Self {
-    TextureError::UnsupportedPixelFormat(pf)
-  }
-
-  /// Cannot retrieve texels from a texture.
-  pub fn cannot_retrieve_texels(reason: impl Into<String>) -> Self {
-    TextureError::CannotRetrieveTexels(reason.into())
-  }
-
-  /// Failed to upload texels.
-  pub fn cannot_upload_texels(reason: impl Into<String>) -> Self {
-    TextureError::CannotUploadTexels(reason.into())
-  }
+  CannotUploadTexels { cause: Option<Box<dyn ErrorTrait>> },
 }
 
 impl fmt::Display for TextureError {
   fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    match *self {
+    match self {
       TextureError::NoData { handle } => {
         write!(f, "texture {} has no data associated with", handle)
       }
@@ -355,29 +329,56 @@ impl fmt::Display for TextureError {
         write!(f, "not enough texture units (max = {})", max)
       }
 
-      TextureError::TextureStorageCreationFailed(ref e) => {
-        write!(f, "texture storage creation failed: {}", e)
+      TextureError::TextureStorageCreationFailed { cause } => {
+        write!(
+          f,
+          "texture storage creation failed; cause: {}",
+          cause
+            .as_ref()
+            .map(|cause| cause.to_string())
+            .unwrap_or("unknown cause".to_string())
+        )
       }
 
       TextureError::NotEnoughPixels {
-        ref expected_bytes,
-        ref provided_bytes,
+        expected_bytes,
+        provided_bytes,
+        cause,
       } => write!(
         f,
-        "not enough texels provided: expected {} bytes, provided {} bytes",
-        expected_bytes, provided_bytes
+        "not enough texels provided: expected {} bytes, provided {} bytes; cause: {}",
+        expected_bytes,
+        provided_bytes,
+        cause
+          .as_ref()
+          .map(|cause| cause.to_string())
+          .unwrap_or_else(|| "unknown".to_owned())
       ),
 
-      TextureError::UnsupportedPixelFormat(ref fmt) => {
+      TextureError::UnsupportedPixelFormat(fmt) => {
         write!(f, "unsupported pixel format: {:?}", fmt)
       }
 
-      TextureError::CannotRetrieveTexels(ref e) => {
-        write!(f, "cannot retrieve texture’s texels: {}", e)
+      TextureError::CannotRetrieveTexels { cause } => {
+        write!(
+          f,
+          "cannot retrieve texture’s texels; cause: {}",
+          cause
+            .as_ref()
+            .map(|cause| cause.to_string())
+            .unwrap_or_else(|| "unknown".to_owned())
+        )
       }
 
-      TextureError::CannotUploadTexels(ref e) => {
-        write!(f, "cannot upload texels to texture: {}", e)
+      TextureError::CannotUploadTexels { cause } => {
+        write!(
+          f,
+          "cannot upload texels to texture; cause: {}",
+          cause
+            .as_ref()
+            .map(|cause| cause.to_string())
+            .unwrap_or_else(|| "unknown".to_owned())
+        )
       }
     }
   }
@@ -417,6 +418,7 @@ pub enum Error {
   VertexEntity(VertexEntityError),
   Framebuffer(FramebufferError),
   Shader(ShaderError),
+  Texture(TextureError),
   Pipeline(PipelineError),
   Query(QueryError),
 }
@@ -428,6 +430,7 @@ impl fmt::Display for Error {
       Error::Framebuffer(e) => write!(f, "framebuffer error: {}", e),
       Error::Shader(e) => write!(f, "shader error: {}", e),
       Error::Pipeline(e) => write!(f, "pipeline error: {}", e),
+      Error::Texture(e) => write!(f, "texture error: {}", e),
       Error::Query(e) => write!(f, "query error: {}", e),
     }
   }
@@ -451,6 +454,12 @@ impl From<ShaderError> for Error {
   }
 }
 
+impl From<TextureError> for Error {
+  fn from(e: TextureError) -> Self {
+    Error::Texture(e)
+  }
+}
+
 impl From<PipelineError> for Error {
   fn from(e: PipelineError) -> Self {
     Error::Pipeline(e)
@@ -458,12 +467,22 @@ impl From<PipelineError> for Error {
 }
 
 pub trait Backend:
-  VertexEntityBackend + FramebufferBackend + ShaderBackend + PipelineBackend + QueryBackend
+  VertexEntityBackend
+  + FramebufferBackend
+  + ShaderBackend
+  + TextureBackend
+  + PipelineBackend
+  + QueryBackend
 {
 }
 
 impl<B> Backend for B where
-  B: VertexEntityBackend + FramebufferBackend + ShaderBackend + PipelineBackend + QueryBackend
+  B: VertexEntityBackend
+    + FramebufferBackend
+    + ShaderBackend
+    + TextureBackend
+    + PipelineBackend
+    + QueryBackend
 {
 }
 
@@ -623,6 +642,44 @@ pub unsafe trait ShaderBackend {
     visit_mat33, [[f32; 3]; 3],
     visit_mat44, [[f32; 4]; 4],
   }
+}
+
+pub unsafe trait TextureBackend {
+  unsafe fn new_texture<D, P>(
+    &mut self,
+    size: D::Size,
+    sampler: Sampler,
+  ) -> Result<Texture<D, P>, TextureError>
+  where
+    D: Dimensionable,
+    P: Pixel;
+
+  unsafe fn resize_texture<D>(&mut self, handle: usize, size: D::Size) -> Result<(), TextureError>
+  where
+    D: Dimensionable;
+
+  unsafe fn set_texture_data<D, P>(
+    &mut self,
+    handle: usize,
+    offset: D::Offset,
+    size: D::Size,
+    texels: &[P::RawEncoding],
+  ) -> Result<(), TextureError>
+  where
+    D: Dimensionable,
+    P: Pixel;
+
+  unsafe fn clear_texture_data<P>(
+    &mut self,
+    handle: usize,
+    clear_value: P::RawEncoding,
+  ) -> Result<(), TextureError>
+  where
+    P: Pixel;
+
+  unsafe fn get_texels<P>(&mut self, handle: usize) -> Result<Vec<P::RawEncoding>, TextureError>
+  where
+    P: Pixel;
 }
 
 pub unsafe trait PipelineBackend:

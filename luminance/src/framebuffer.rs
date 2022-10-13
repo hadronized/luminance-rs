@@ -44,8 +44,8 @@ where
     self.handle
   }
 
-  pub fn size(&self) -> D::Size {
-    self.size
+  pub fn size(&self) -> &D::Size {
+    &self.size
   }
 
   pub fn layers(&self) -> &RS::RenderLayers {
