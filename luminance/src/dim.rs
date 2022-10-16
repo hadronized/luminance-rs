@@ -18,28 +18,28 @@ pub trait Dimensionable {
   fn dim() -> Dim;
 
   /// Width of the associated [`Dimensionable::Size`].
-  fn width(size: Self::Size) -> u32;
+  fn width(size: &Self::Size) -> u32;
 
   /// Height of the associated [`Dimensionable::Size`]. If it doesn’t have one, set it to 1.
-  fn height(_: Self::Size) -> u32 {
+  fn height(_: &Self::Size) -> u32 {
     1
   }
 
   /// Depth of the associated [`Dimensionable::Size`]. If it doesn’t have one, set it to 1.
-  fn depth(_: Self::Size) -> u32 {
+  fn depth(_: &Self::Size) -> u32 {
     1
   }
 
   /// X offset.
-  fn x_offset(offset: Self::Offset) -> u32;
+  fn x_offset(offset: &Self::Offset) -> u32;
 
   /// Y offset. If it doesn’t have one, set it to 0.
-  fn y_offset(_: Self::Offset) -> u32 {
+  fn y_offset(_: &Self::Offset) -> u32 {
     1
   }
 
   /// Z offset. If it doesn’t have one, set it to 0.
-  fn z_offset(_: Self::Offset) -> u32 {
+  fn z_offset(_: &Self::Offset) -> u32 {
     1
   }
 
@@ -47,7 +47,7 @@ pub trait Dimensionable {
   ///
   /// For 2D sizes, it represents the area; for 3D sizes, the volume; etc.
   /// For cubemaps, it represents the side length of the cube.
-  fn count(size: Self::Size) -> usize;
+  fn count(size: &Self::Size) -> usize;
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -141,16 +141,16 @@ impl Dimensionable for Dim1 {
     Dim::Dim1
   }
 
-  fn width(w: Self::Size) -> u32 {
-    w
+  fn width(w: &Self::Size) -> u32 {
+    *w
   }
 
-  fn x_offset(off: Self::Offset) -> u32 {
-    off
+  fn x_offset(off: &Self::Offset) -> u32 {
+    *off
   }
 
-  fn count(size: Self::Size) -> usize {
-    size as usize
+  fn count(size: &Self::Size) -> usize {
+    *size as usize
   }
 }
 
@@ -168,23 +168,23 @@ impl Dimensionable for Dim2 {
     Dim::Dim2
   }
 
-  fn width(size: Self::Size) -> u32 {
+  fn width(size: &Self::Size) -> u32 {
     size.width
   }
 
-  fn height(size: Self::Size) -> u32 {
+  fn height(size: &Self::Size) -> u32 {
     size.height
   }
 
-  fn x_offset(off: Self::Offset) -> u32 {
+  fn x_offset(off: &Self::Offset) -> u32 {
     off.x
   }
 
-  fn y_offset(off: Self::Offset) -> u32 {
+  fn y_offset(off: &Self::Offset) -> u32 {
     off.y
   }
 
-  fn count(size: Self::Size) -> usize {
+  fn count(size: &Self::Size) -> usize {
     size.width as usize * size.height as usize
   }
 }
@@ -203,31 +203,31 @@ impl Dimensionable for Dim3 {
     Dim::Dim3
   }
 
-  fn width(size: Self::Size) -> u32 {
+  fn width(size: &Self::Size) -> u32 {
     size.width
   }
 
-  fn height(size: Self::Size) -> u32 {
+  fn height(size: &Self::Size) -> u32 {
     size.height
   }
 
-  fn depth(size: Self::Size) -> u32 {
+  fn depth(size: &Self::Size) -> u32 {
     size.depth
   }
 
-  fn x_offset(off: Self::Offset) -> u32 {
+  fn x_offset(off: &Self::Offset) -> u32 {
     off.x
   }
 
-  fn y_offset(off: Self::Offset) -> u32 {
+  fn y_offset(off: &Self::Offset) -> u32 {
     off.y
   }
 
-  fn z_offset(off: Self::Offset) -> u32 {
+  fn z_offset(off: &Self::Offset) -> u32 {
     off.z
   }
 
-  fn count(size: Self::Size) -> usize {
+  fn count(size: &Self::Size) -> usize {
     size.width as usize * size.height as usize * size.depth as usize
   }
 }
@@ -246,27 +246,27 @@ impl Dimensionable for Cubemap {
     Dim::Cubemap
   }
 
-  fn width(s: Self::Size) -> u32 {
-    s
+  fn width(s: &Self::Size) -> u32 {
+    *s
   }
 
-  fn height(s: Self::Size) -> u32 {
-    s
+  fn height(s: &Self::Size) -> u32 {
+    *s
   }
 
-  fn depth(_: Self::Size) -> u32 {
+  fn depth(_: &Self::Size) -> u32 {
     6
   }
 
-  fn x_offset(off: Self::Offset) -> u32 {
+  fn x_offset(off: &Self::Offset) -> u32 {
     off.0.x
   }
 
-  fn y_offset(off: Self::Offset) -> u32 {
+  fn y_offset(off: &Self::Offset) -> u32 {
     off.0.y
   }
 
-  fn z_offset(off: Self::Offset) -> u32 {
+  fn z_offset(off: &Self::Offset) -> u32 {
     match off.1 {
       CubeFace::PositiveX => 0,
       CubeFace::NegativeX => 1,
@@ -277,8 +277,8 @@ impl Dimensionable for Cubemap {
     }
   }
 
-  fn count(size: Self::Size) -> usize {
-    let size = size as usize;
+  fn count(size: &Self::Size) -> usize {
+    let size = *size as usize;
     size * size
   }
 }
@@ -314,23 +314,23 @@ impl Dimensionable for Dim1Array {
     Dim::Dim1Array
   }
 
-  fn width(size: Self::Size) -> u32 {
+  fn width(size: &Self::Size) -> u32 {
     size.0
   }
 
-  fn height(size: Self::Size) -> u32 {
+  fn height(size: &Self::Size) -> u32 {
     size.1
   }
 
-  fn x_offset(off: Self::Offset) -> u32 {
+  fn x_offset(off: &Self::Offset) -> u32 {
     off.0
   }
 
-  fn y_offset(off: Self::Offset) -> u32 {
+  fn y_offset(off: &Self::Offset) -> u32 {
     off.1
   }
 
-  fn count((width, layer): Self::Size) -> usize {
+  fn count(&(width, layer): &Self::Size) -> usize {
     width as usize * layer as usize
   }
 }
@@ -349,31 +349,31 @@ impl Dimensionable for Dim2Array {
     Dim::Dim2Array
   }
 
-  fn width(size: Self::Size) -> u32 {
+  fn width(size: &Self::Size) -> u32 {
     size.0.width
   }
 
-  fn height(size: Self::Size) -> u32 {
+  fn height(size: &Self::Size) -> u32 {
     size.0.height
   }
 
-  fn depth(size: Self::Size) -> u32 {
+  fn depth(size: &Self::Size) -> u32 {
     size.1
   }
 
-  fn x_offset(off: Self::Offset) -> u32 {
+  fn x_offset(off: &Self::Offset) -> u32 {
     off.0.x
   }
 
-  fn y_offset(off: Self::Offset) -> u32 {
+  fn y_offset(off: &Self::Offset) -> u32 {
     off.0.y
   }
 
-  fn z_offset(off: Self::Offset) -> u32 {
+  fn z_offset(off: &Self::Offset) -> u32 {
     off.1
   }
 
-  fn count((Size2 { width, height }, layer): Self::Size) -> usize {
+  fn count(&(Size2 { width, height }, layer): &Self::Size) -> usize {
     width as usize * height as usize * layer as usize
   }
 }

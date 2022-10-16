@@ -3,7 +3,8 @@ use gl::types::{GLboolean, GLchar, GLenum, GLfloat, GLint, GLsizei, GLubyte, GLu
 use luminance::{
   backend::{
     FramebufferBackend, FramebufferError, PipelineBackend, PipelineError, QueryBackend, QueryError,
-    ShaderBackend, ShaderError, TextureError, VertexEntityBackend, VertexEntityError,
+    ShaderBackend, ShaderError, TextureBackend, TextureError, VertexEntityBackend,
+    VertexEntityError,
   },
   blending::{BlendingMode, Equation, Factor},
   context::ContextActive,
@@ -18,7 +19,7 @@ use luminance::{
   render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
   scissor::Scissor,
   shader::{Program, Uni, Uniform, Uniforms},
-  texture::{MagFilter, MinFilter, Sampler, TexelUpload, Wrap},
+  texture::{MagFilter, MinFilter, Sampler, Texture, Wrap},
   vertex::{
     Normalized, Vertex, VertexAttribDesc, VertexAttribDim, VertexAttribType, VertexBufferDesc,
     VertexDesc, VertexInstancing,
@@ -349,6 +350,12 @@ impl State {
   fn drop_program(&mut self, handle: usize) {
     if self.is_context_active() {
       self.programs.remove(&handle);
+    }
+  }
+
+  fn drop_texture(&mut self, handle: usize) {
+    if self.is_context_active() {
+      self.textures.remove(&handle);
     }
   }
 }
@@ -700,7 +707,7 @@ impl TextureData {
 
     Self::set_texture_levels(target, mipmaps);
     Self::apply_sampler_to_texture(target, sampler);
-    Self::create_texture_storage::<D>(size, mipmaps + 1, pf)?;
+    Self::create_texture_storage::<D>(&size, mipmaps + 1, pf)?;
 
     state.borrow_mut().idle_texture(handle as _)?;
 
@@ -763,8 +770,8 @@ impl TextureData {
   }
 
   fn create_texture_storage<D>(
-    size: D::Size,
-    levels: usize,
+    size: &D::Size,
+    mipmaps: usize,
     pf: PixelFormat,
   ) -> Result<(), TextureError>
   where
@@ -777,7 +784,7 @@ impl TextureData {
         match D::dim() {
           // 1D texture
           Dim::Dim1 => {
-            Self::create_texture_1d_storage(format, iformat, encoding, D::width(size), levels);
+            Self::create_texture_1d_storage(format, iformat, encoding, D::width(size), mipmaps);
             Ok(())
           }
 
@@ -790,7 +797,7 @@ impl TextureData {
               encoding,
               D::width(size),
               D::height(size),
-              levels,
+              mipmaps,
             );
             Ok(())
           }
@@ -805,14 +812,14 @@ impl TextureData {
               D::width(size),
               D::height(size),
               D::depth(size),
-              levels,
+              mipmaps,
             );
             Ok(())
           }
 
           // cubemap
           Dim::Cubemap => {
-            Self::create_cubemap_storage(format, iformat, encoding, D::width(size), levels);
+            Self::create_cubemap_storage(format, iformat, encoding, D::width(size), mipmaps);
             Ok(())
           }
 
@@ -825,7 +832,7 @@ impl TextureData {
               encoding,
               D::width(size),
               D::height(size),
-              levels,
+              mipmaps,
             );
             Ok(())
           }
@@ -840,17 +847,14 @@ impl TextureData {
               D::width(size),
               D::height(size),
               D::depth(size),
-              levels,
+              mipmaps,
             );
             Ok(())
           }
         }
       }
 
-      None => Err(TextureError::texture_storage_creation_failed(format!(
-        "unsupported texture pixel format: {:?}",
-        pf
-      ))),
+      None => Err(TextureError::UnsupportedPixelFormat(pf)),
     }
   }
 
@@ -995,11 +999,12 @@ impl TextureData {
   }
 
   // Upload texels into the texture’s memory.
-  fn upload_texels<D, P, T>(
+  fn upload_texels<D, P>(
     target: GLenum,
-    off: D::Offset,
-    size: D::Size,
-    texels: TexelUpload<[T]>,
+    off: &D::Offset,
+    size: &D::Size,
+    texels: &[P::RawEncoding],
+    level: Option<usize>,
   ) -> Result<(), TextureError>
   where
     D: Dimensionable,
@@ -1009,14 +1014,15 @@ impl TextureData {
     let pf_size = pf.format.bytes_len();
     let expected_bytes = D::count(size) * pf_size;
 
-    if let Some(base_level_texels) = texels.get_base_level() {
-      // number of bytes in the input texels argument
-      let input_bytes = base_level_texels.len() * mem::size_of::<T>();
+    let provided_bytes = texels.len() * mem::size_of::<P::RawEncoding>();
 
-      if input_bytes < expected_bytes {
-        // potential segfault / overflow; abort
-        return Err(TextureError::not_enough_pixels(expected_bytes, input_bytes));
-      }
+    if provided_bytes < expected_bytes {
+      // potential segfault / overflow; abort
+      return Err(TextureError::NotEnoughPixels {
+        expected_bytes,
+        provided_bytes,
+        cause: None,
+      });
     }
 
     // set the pixel row alignment to the required value for uploading data according to the width
@@ -1024,31 +1030,7 @@ impl TextureData {
     // that will be skipped
     let skip_bytes = (D::width(size) as usize * pf_size) % 8;
     Self::set_unpack_alignment(skip_bytes);
-
-    // handle mipmaps
-    match texels {
-      TexelUpload::BaseLevel { texels, mipmaps } => {
-        Self::set_texels::<D, _>(target, pf, 0, size, off, texels)?;
-
-        if mipmaps > 0 {
-          unsafe { gl::GenerateMipmap(target) };
-        }
-      }
-
-      TexelUpload::Levels(levels) => {
-        for (i, &texels) in levels.into_iter().enumerate() {
-          Self::set_texels::<D, _>(target, pf, i as _, size, off, texels)?;
-        }
-      }
-
-      TexelUpload::Reserve { mipmaps } => {
-        if mipmaps > 0 {
-          unsafe { gl::GenerateMipmap(target) };
-        }
-      }
-    }
-
-    Ok(())
+    Self::set_texels::<D, _>(target, pf, level.unwrap_or(0) as GLint, size, off, texels)
   }
 
   // Set texels for a texture.
@@ -1056,8 +1038,8 @@ impl TextureData {
     target: GLenum,
     pf: PixelFormat,
     level: GLint,
-    size: D::Size,
-    off: D::Offset,
+    size: &D::Size,
+    off: &D::Offset,
     texels: &[T],
   ) -> Result<(), TextureError>
   where
@@ -1152,7 +1134,7 @@ impl TextureData {
         },
       },
 
-      None => return Err(TextureError::unsupported_pixel_format(pf)),
+      None => return Err(TextureError::UnsupportedPixelFormat(pf)),
     }
 
     Ok(())
@@ -2335,8 +2317,8 @@ unsafe impl FramebufferBackend for GL33 {
       gl::RenderbufferStorage(
         gl::RENDERBUFFER,
         gl::DEPTH_COMPONENT32F,
-        D::width(size) as GLsizei,
-        D::height(size) as GLsizei,
+        D::width(&size) as GLsizei,
+        D::height(&size) as GLsizei,
       );
 
       gl::FramebufferRenderbuffer(
@@ -2718,6 +2700,85 @@ unsafe impl ShaderBackend for GL33 {
     }
 
     Ok(())
+  }
+}
+
+unsafe impl TextureBackend for GL33 {
+  unsafe fn new_texture<D, P>(
+    &mut self,
+    size: D::Size,
+    mipmaps: usize,
+    sampler: Sampler,
+  ) -> Result<Texture<D, P>, TextureError>
+  where
+    D: Dimensionable,
+    P: Pixel,
+  {
+    let handle = TextureData::new::<D>(
+      &self.state,
+      GL33::opengl_target(D::dim()),
+      size,
+      mipmaps,
+      P::pixel_format(),
+      sampler,
+    )?;
+
+    let state = self.state.clone();
+    let dropper = Box::new(move |handle| {
+      state.borrow_mut().drop_texture(handle);
+    });
+
+    Ok(Texture::new(handle, dropper))
+  }
+
+  unsafe fn resize_texture<D, P>(
+    &mut self,
+    handle: usize,
+    size: D::Size,
+    mipmaps: usize,
+  ) -> Result<(), TextureError>
+  where
+    D: Dimensionable,
+    P: Pixel,
+  {
+    let target = GL33::opengl_target(D::dim());
+    self.state.borrow_mut().bind_texture(target, handle)?;
+    TextureData::create_texture_storage::<D>(&size, mipmaps + 1, P::pixel_format())
+  }
+
+  unsafe fn set_texture_data<D, P>(
+    &mut self,
+    handle: usize,
+    offset: D::Offset,
+    size: D::Size,
+    texels: &[P::RawEncoding],
+    level: Option<usize>,
+  ) -> Result<(), TextureError>
+  where
+    D: Dimensionable,
+    P: Pixel,
+  {
+    let target = GL33::opengl_target(D::dim());
+    self.state.borrow_mut().bind_texture(target, handle)?;
+    TextureData::upload_texels::<D, P>(target, &offset, &size, texels, level)
+  }
+
+  unsafe fn clear_texture_data<P>(
+    &mut self,
+    handle: usize,
+    clear_value: P::RawEncoding,
+  ) -> Result<(), TextureError>
+  where
+    P: Pixel,
+  {
+    todo!()
+  }
+
+  unsafe fn get_texels<P>(&mut self, handle: usize) -> Result<Vec<P::RawEncoding>, TextureError>
+  where
+    P: Pixel,
+  {
+    todo!()
   }
 }
 

@@ -160,19 +160,72 @@ where
     updater(program_update, &program.uniforms)
   }
 
-  pub fn new_texture<D, P>(
+  pub fn reserve_texture<D, P>(
     &mut self,
     size: D::Size,
+    mipmaps: usize,
     sampler: Sampler,
   ) -> Result<Texture<D, P>, TextureError>
   where
     D: Dimensionable,
     P: Pixel,
   {
-    unsafe { self.backend.new_texture(size, sampler) }
+    unsafe { self.backend.new_texture(size, mipmaps, sampler) }
   }
 
-  pub fn set_texture_data<D, P>(
+  pub fn new_texture<D, P>(
+    &mut self,
+    size: D::Size,
+    mipmaps: usize,
+    sampler: Sampler,
+    texels: &[P::RawEncoding],
+  ) -> Result<Texture<D, P>, TextureError>
+  where
+    D: Dimensionable,
+    P: Pixel,
+  {
+    unsafe {
+      let texture = self.backend.new_texture(size, mipmaps, sampler)?;
+      self.backend.set_texture_data::<D, P>(
+        texture.handle(),
+        D::ZERO_OFFSET,
+        size,
+        texels,
+        None,
+      )?;
+      Ok(texture)
+    }
+  }
+
+  pub fn new_texture_with_levels<D, P>(
+    &mut self,
+    size: D::Size,
+    mipmaps: usize,
+    sampler: Sampler,
+    levels: &[&[P::RawEncoding]],
+  ) -> Result<Texture<D, P>, TextureError>
+  where
+    D: Dimensionable,
+    P: Pixel,
+  {
+    unsafe {
+      let texture = self.backend.new_texture(size, mipmaps, sampler)?;
+
+      for level in 0..mipmaps {
+        self.backend.set_texture_data::<D, P>(
+          texture.handle(),
+          D::ZERO_OFFSET,
+          size,
+          &levels[level],
+          Some(level),
+        )?;
+      }
+
+      Ok(texture)
+    }
+  }
+
+  pub fn set_texture_base_level<D, P>(
     &mut self,
     texture: &Texture<D, P>,
     offset: D::Offset,
@@ -186,7 +239,26 @@ where
     unsafe {
       self
         .backend
-        .set_texture_data::<D, P>(texture.handle(), offset, size, texels)
+        .set_texture_data::<D, P>(texture.handle(), offset, size, texels, None)
+    }
+  }
+
+  pub fn set_texture_level<D, P>(
+    &mut self,
+    texture: &Texture<D, P>,
+    offset: D::Offset,
+    size: D::Size,
+    texels: &[P::RawEncoding],
+    level: usize,
+  ) -> Result<(), TextureError>
+  where
+    D: Dimensionable,
+    P: Pixel,
+  {
+    unsafe {
+      self
+        .backend
+        .set_texture_data::<D, P>(texture.handle(), offset, size, texels, Some(level))
     }
   }
 

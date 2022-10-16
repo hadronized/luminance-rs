@@ -648,15 +648,22 @@ pub unsafe trait TextureBackend {
   unsafe fn new_texture<D, P>(
     &mut self,
     size: D::Size,
+    mipmaps: usize,
     sampler: Sampler,
   ) -> Result<Texture<D, P>, TextureError>
   where
     D: Dimensionable,
     P: Pixel;
 
-  unsafe fn resize_texture<D>(&mut self, handle: usize, size: D::Size) -> Result<(), TextureError>
+  unsafe fn resize_texture<D, P>(
+    &mut self,
+    handle: usize,
+    size: D::Size,
+    mipmaps: usize,
+  ) -> Result<(), TextureError>
   where
-    D: Dimensionable;
+    D: Dimensionable,
+    P: Pixel;
 
   unsafe fn set_texture_data<D, P>(
     &mut self,
@@ -664,6 +671,7 @@ pub unsafe trait TextureBackend {
     offset: D::Offset,
     size: D::Size,
     texels: &[P::RawEncoding],
+    level: Option<usize>,
   ) -> Result<(), TextureError>
   where
     D: Dimensionable,
