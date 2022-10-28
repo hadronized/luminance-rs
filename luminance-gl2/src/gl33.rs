@@ -703,9 +703,11 @@ impl TextureData {
       pixels_count: D::count(&size),
       state: state.clone(),
     };
-    state.borrow_mut().textures.insert(handle, texture_data);
-
-    state.borrow_mut().bind_texture(target, handle as _)?;
+    {
+      let mut st = state.borrow_mut();
+      st.textures.insert(handle, texture_data);
+      st.bind_texture(target, handle as _)?;
+    }
 
     Self::set_texture_levels(target, mipmaps);
     Self::apply_sampler_to_texture(target, sampler);
