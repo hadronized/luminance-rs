@@ -672,6 +672,7 @@ struct TextureData {
   target: GLenum, // “type” of the texture; used for bindings
   mipmaps: usize,
   unit: Option<usize>, // texture unit the texture is bound to
+  pixels_count: usize, // number of pixels stored
   state: StateRef,
 }
 
@@ -699,6 +700,7 @@ impl TextureData {
       target,
       mipmaps,
       unit: None,
+      pixels_count: D::count(&size),
       state: state.clone(),
     };
     state.borrow_mut().textures.insert(handle, texture_data);
@@ -2213,7 +2215,7 @@ unsafe impl VertexEntityBackend for GL33 {
 unsafe impl FramebufferBackend for GL33 {
   unsafe fn new_render_layer<D, RC>(
     &mut self,
-    framebuffer_handle: usize,
+    _: usize,
     size: D::Size,
     mipmaps: usize,
     index: usize,
@@ -2249,7 +2251,7 @@ unsafe impl FramebufferBackend for GL33 {
 
   unsafe fn new_depth_render_layer<D, DC>(
     &mut self,
-    framebuffer_handle: usize,
+    _: usize,
     size: D::Size,
     mipmaps: usize,
   ) -> Result<RenderLayer<DC>, FramebufferError>
@@ -2452,7 +2454,7 @@ unsafe impl ShaderBackend for GL33 {
 
   unsafe fn set_shader_uni<T>(
     &mut self,
-    handle: usize,
+    _: usize,
     uni: &Uni<T::UniType>,
     value: T,
   ) -> Result<(), ShaderError>
@@ -2523,7 +2525,11 @@ unsafe impl ShaderBackend for GL33 {
     uni: &Uni<[f32; N]>,
     value: &[f32; N],
   ) -> Result<(), ShaderError> {
-    todo!()
+    unsafe {
+      gl::Uniform1fv(uni.handle() as GLint, N as GLsizei, value.as_ptr());
+    }
+
+    Ok(())
   }
 
   fn visit_bool_array<const N: usize>(
@@ -2763,22 +2769,54 @@ unsafe impl TextureBackend for GL33 {
     TextureData::upload_texels::<D, P>(target, &offset, &size, texels, level)
   }
 
-  unsafe fn clear_texture_data<P>(
+  unsafe fn clear_texture_data<D, P>(
     &mut self,
     handle: usize,
+    offset: D::Offset,
+    size: D::Size,
     clear_value: P::RawEncoding,
   ) -> Result<(), TextureError>
   where
+    D: Dimensionable,
     P: Pixel,
   {
-    todo!()
+    // OpenGL 3.3 doesn’t have a fast way to clear a texture, so we basically need to create a temporary texture with
+    // all texels set to the same clear value (it’s bad); another way would be to temporarily attach the texture to a
+    // framebuffer, but we can assume that clearing is not an operation that should be done in the rendering loop, only
+    // from time to time (like a reset operation), so we can just allocate; an optimization would be to allocate and
+    // keep the memory around for next clearing operations, but that would « waste » the memory when no clearing
+    // operations is done
+    let texels = vec![clear_value; D::count(&size)];
+    self.set_texture_data::<D, P>(handle, offset, size, &texels, None)
   }
 
-  unsafe fn get_texels<P>(&mut self, handle: usize) -> Result<Vec<P::RawEncoding>, TextureError>
+  unsafe fn get_texels<D, P>(&mut self, handle: usize) -> Result<Vec<P::RawEncoding>, TextureError>
   where
+    D: Dimensionable,
     P: Pixel,
   {
-    todo!()
+    let target = GL33::opengl_target(D::dim());
+    self.state.borrow_mut().bind_texture(target, handle)?;
+
+    // retrieve the size of the texture (w and h)
+    let mut w = 0;
+    let mut h = 0;
+    gl::GetTexLevelParameteriv(target, 0, gl::TEXTURE_WIDTH, &mut w);
+    gl::GetTexLevelParameteriv(target, 0, gl::TEXTURE_HEIGHT, &mut h);
+
+    // set the packing alignment based on the number of bytes to skip
+    let pf = P::pixel_format();
+    let skip_bytes = (pf.format.bytes_len() * w as usize) % 8;
+    TextureData::set_pack_alignment(skip_bytes);
+
+    // resize the vec to allocate enough space to host the returned texels
+    let mut texels = vec![Default::default(); (w * h) as usize * pf.channels_len()];
+
+    let (format, _, ty) =
+      GL33::opengl_pixel_format(pf).ok_or_else(|| TextureError::UnsupportedPixelFormat(pf))?;
+    gl::GetTexImage(target, 0, format, ty, texels.as_mut_ptr() as *mut c_void);
+
+    Ok(texels)
   }
 }
 

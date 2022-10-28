@@ -677,16 +677,20 @@ pub unsafe trait TextureBackend {
     D: Dimensionable,
     P: Pixel;
 
-  unsafe fn clear_texture_data<P>(
+  unsafe fn clear_texture_data<D, P>(
     &mut self,
     handle: usize,
+    offset: D::Offset,
+    size: D::Size,
     clear_value: P::RawEncoding,
   ) -> Result<(), TextureError>
   where
+    D: Dimensionable,
     P: Pixel;
 
-  unsafe fn get_texels<P>(&mut self, handle: usize) -> Result<Vec<P::RawEncoding>, TextureError>
+  unsafe fn get_texels<D, P>(&mut self, handle: usize) -> Result<Vec<P::RawEncoding>, TextureError>
   where
+    D: Dimensionable,
     P: Pixel;
 }
 

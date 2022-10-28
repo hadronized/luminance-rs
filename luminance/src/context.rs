@@ -265,6 +265,8 @@ where
   pub fn clear_texture_data<D, P>(
     &mut self,
     texture: &Texture<D, P>,
+    offset: D::Offset,
+    size: D::Size,
     clear_value: P::RawEncoding,
   ) -> Result<(), TextureError>
   where
@@ -274,7 +276,7 @@ where
     unsafe {
       self
         .backend
-        .clear_texture_data::<P>(texture.handle(), clear_value)
+        .clear_texture_data::<D, P>(texture.handle(), offset, size, clear_value)
     }
   }
 
@@ -286,7 +288,7 @@ where
     D: Dimensionable,
     P: Pixel,
   {
-    unsafe { self.backend.get_texels::<P>(texture.handle()) }
+    unsafe { self.backend.get_texels::<D, P>(texture.handle()) }
   }
 
   pub fn with_framebuffer<D, CS, DS, Err>(
