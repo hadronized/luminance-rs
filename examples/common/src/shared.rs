@@ -1,7 +1,7 @@
 use luminance::{
   backend::Backend,
   context::Context,
-  dim::Dim2,
+  dim::{Dim2, Size2},
   namespace,
   pixel::NormRGB8UI,
   texture::{Sampler, Texture},
@@ -146,7 +146,12 @@ pub fn load_texture(
   //
   // the GenMipmaps argument disables mipmap generation (we don’t care so far)
   context
-    .new_texture([width, height], mipmaps, Sampler::default(), texels)
+    .new_texture(
+      Size2::new(width, height),
+      mipmaps,
+      Sampler::default(),
+      texels,
+    )
     .map_err(|e| log::error!("error while creating texture: {}", e))
     .ok()
 }
