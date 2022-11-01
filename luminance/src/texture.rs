@@ -118,3 +118,29 @@ where
     (self.dropper)(self.handle)
   }
 }
+
+pub struct InUseTexture<D, P> {
+  handle: usize,
+  dropper: Box<dyn FnMut(usize)>,
+  _phantom: PhantomData<*const (D, P)>,
+}
+
+impl<D, P> InUseTexture<D, P> {
+  pub unsafe fn new(handle: usize, dropper: Box<dyn FnMut(usize)>) -> Self {
+    Self {
+      handle,
+      dropper,
+      _phantom: PhantomData,
+    }
+  }
+
+  pub fn handle(&self) -> usize {
+    self.handle
+  }
+}
+
+impl<D, P> Drop for InUseTexture<D, P> {
+  fn drop(&mut self) {
+    (self.dropper)(self.handle)
+  }
+}

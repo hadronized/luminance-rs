@@ -2,8 +2,11 @@ pub mod types;
 
 use crate::{
   backend::{ShaderBackend, ShaderError},
+  dim::{self, Dimensionable},
+  pixel::{self, Pixel},
   primitive::Primitive,
   render_slots::RenderSlots,
+  texture::{InUseTexture, Texture},
   vertex::Vertex,
 };
 use std::marker::PhantomData;
@@ -209,8 +212,9 @@ pub enum UniSamplerDim {
 pub trait Uniform {
   type UniType;
 
-  const UNI_TY: UniType;
   const LEN: usize;
+
+  fn uni_type() -> UniType;
 
   fn set(
     &self,
@@ -225,8 +229,11 @@ macro_rules! impl_Uniform {
     impl Uniform for $t {
       type UniType = Self;
 
-      const UNI_TY: UniType = UniType::$v $(($dim))?;
       const LEN: usize = 1;
+
+      fn uni_type() -> UniType {
+        UniType::$v $(($dim))?
+      }
 
       fn set(&self, backend: &mut impl ShaderBackend, uni: &Uni<Self::UniType>) -> Result<(), ShaderError> {
         backend.$visit_fn(uni, self)
@@ -239,8 +246,11 @@ macro_rules! impl_Uniform {
     impl Uniform for $t where $t: AsRef<$q> {
       type UniType = $q;
 
-      const UNI_TY: UniType = UniType::$v $(($dim))?;
       const LEN: usize = 1;
+
+      fn uni_type() -> UniType {
+        UniType::$v $(($dim))?
+      }
 
       fn set(&self, backend: &mut impl ShaderBackend, uni: &Uni<Self::UniType>) -> Result<(), ShaderError> {
         backend.$visit_fn(uni, self.as_ref())
@@ -253,8 +263,11 @@ macro_rules! impl_Uniform {
     impl<const N: usize> Uniform for [$t; N] {
       type UniType = Self;
 
-      const UNI_TY: UniType = <$t>::UNI_TY;
       const LEN: usize = N;
+
+      fn uni_type() -> UniType {
+        <$t>::uni_type()
+      }
 
       fn set(&self, backend: &mut impl ShaderBackend, uni: &Uni<Self::UniType>) -> Result<(), ShaderError> {
         backend.$visit_fn(uni, self.into())
@@ -409,7 +422,52 @@ impl_Uniform!(
   UniMatDim::Mat44
 );
 
-// TODO: samplers
+impl<D, P> Uniform for InUseTexture<D, P>
+where
+  D: Dimensionable,
+  P: Pixel,
+{
+  type UniType = Texture<D, P>;
+
+  const LEN: usize = 1;
+
+  fn uni_type() -> UniType {
+    let dim = D::dim();
+    let encoding = P::pixel_format().encoding;
+
+    macro_rules! match_sampler {
+      ($dim:expr, $encoding:ident) => {
+        match encoding {
+          pixel::Type::NormIntegral | pixel::Type::Integral => UniType::IntegralSampler($dim),
+          pixel::Type::NormUnsigned | pixel::Type::Unsigned => UniType::UnsignedSampler($dim),
+          pixel::Type::Floating => UniType::FloatingSampler($dim),
+        }
+      };
+    }
+
+    match dim {
+      dim::Dim::Cubemap => match encoding {
+        pixel::Type::NormIntegral | pixel::Type::Integral => UniType::IntegralCubemapSampler,
+        pixel::Type::NormUnsigned | pixel::Type::Unsigned => UniType::UnsignedCubemapSampler,
+        pixel::Type::Floating => UniType::FloatingCubemapSampler,
+      },
+
+      dim::Dim::Dim1 => match_sampler!(UniSamplerDim::Dim1, encoding),
+      dim::Dim::Dim2 => match_sampler!(UniSamplerDim::Dim2, encoding),
+      dim::Dim::Dim3 => match_sampler!(UniSamplerDim::Dim3, encoding),
+      dim::Dim::Dim1Array => match_sampler!(UniSamplerDim::Dim1Array, encoding),
+      dim::Dim::Dim2Array => match_sampler!(UniSamplerDim::Dim2Array, encoding),
+    }
+  }
+
+  fn set(
+    &self,
+    backend: &mut impl ShaderBackend,
+    uni: &Uni<Self::UniType>,
+  ) -> Result<(), ShaderError> {
+    backend.visit_texture(uni, self)
+  }
+}
 
 pub trait Uniforms: Sized {
   fn build_uniforms<B>(backend: &mut B, program_handle: usize) -> Result<Self, ShaderError>

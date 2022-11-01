@@ -8,7 +8,7 @@ use crate::{
   render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
   render_state::RenderState,
   shader::{Program, Uni, Uniform, Uniforms},
-  texture::{Sampler, Texture},
+  texture::{InUseTexture, Sampler, Texture},
   vertex::Vertex,
   vertex_entity::{VertexEntity, VertexEntityView},
   vertex_storage::AsVertexStorage,
@@ -642,6 +642,15 @@ pub unsafe trait ShaderBackend {
     visit_mat33, [[f32; 3]; 3],
     visit_mat44, [[f32; 4]; 4],
   }
+
+  fn visit_texture<D, P>(
+    &mut self,
+    uni: &Uni<Texture<D, P>>,
+    value: &InUseTexture<D, P>,
+  ) -> Result<(), ShaderError>
+  where
+    D: Dimensionable,
+    P: Pixel;
 }
 
 pub unsafe trait TextureBackend {
@@ -689,6 +698,11 @@ pub unsafe trait TextureBackend {
     P: Pixel;
 
   unsafe fn get_texels<D, P>(&mut self, handle: usize) -> Result<Vec<P::RawEncoding>, TextureError>
+  where
+    D: Dimensionable,
+    P: Pixel;
+
+  unsafe fn use_texture<D, P>(&mut self, handle: usize) -> Result<InUseTexture<D, P>, TextureError>
   where
     D: Dimensionable,
     P: Pixel;

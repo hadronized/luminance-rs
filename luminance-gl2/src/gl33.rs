@@ -19,7 +19,7 @@ use luminance::{
   render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
   scissor::Scissor,
   shader::{Program, Uni, Uniform, Uniforms},
-  texture::{MagFilter, MinFilter, Sampler, Texture, Wrap},
+  texture::{InUseTexture, MagFilter, MinFilter, Sampler, Texture, Wrap},
   vertex::{
     Normalized, Vertex, VertexAttribDesc, VertexAttribDim, VertexAttribType, VertexBufferDesc,
     VertexDesc, VertexInstancing,
@@ -283,7 +283,7 @@ impl State {
     self.context_active.is_active()
   }
 
-  fn bind_texture(&mut self, target: GLenum, handle: usize) -> Result<(), TextureError> {
+  fn bind_texture(&mut self, target: GLenum, handle: usize) -> Result<usize, TextureError> {
     let texture_data = self
       .textures
       .get_mut(&handle)
@@ -293,7 +293,7 @@ impl State {
     if let Some(unit) = texture_data.unit {
       // remove the unit from the idling ones
       self.texture_units.mark_nonidle(unit);
-      Ok(())
+      Ok(unit)
     } else {
       // if we don’t have any unit associated with, ask one
       let (unit, old_texture_handle) = self.texture_units.get_texture_unit()?;
@@ -318,7 +318,7 @@ impl State {
         gl::BindTexture(target, handle as GLuint);
       }
 
-      Ok(())
+      Ok(unit)
     }
   }
 
@@ -2709,6 +2709,22 @@ unsafe impl ShaderBackend for GL33 {
 
     Ok(())
   }
+
+  fn visit_texture<D, P>(
+    &mut self,
+    uni: &Uni<Texture<D, P>>,
+    value: &InUseTexture<D, P>,
+  ) -> Result<(), ShaderError>
+  where
+    D: Dimensionable,
+    P: Pixel,
+  {
+    unsafe {
+      gl::Uniform1i(uni.handle() as GLint, value.handle() as GLint);
+    }
+
+    Ok(())
+  }
 }
 
 unsafe impl TextureBackend for GL33 {
@@ -2819,6 +2835,22 @@ unsafe impl TextureBackend for GL33 {
     gl::GetTexImage(target, 0, format, ty, texels.as_mut_ptr() as *mut c_void);
 
     Ok(texels)
+  }
+
+  unsafe fn use_texture<D, P>(&mut self, handle: usize) -> Result<InUseTexture<D, P>, TextureError>
+  where
+    D: Dimensionable,
+    P: Pixel,
+  {
+    let state = self.state.clone();
+    let dropper = Box::new(move |handle| {
+      let _ = state.borrow_mut().idle_texture(handle);
+    });
+
+    let target = GL33::opengl_target(D::dim());
+    let unit = self.state.borrow_mut().bind_texture(target, handle)?;
+
+    Ok(InUseTexture::new(unit, dropper))
   }
 }
 
