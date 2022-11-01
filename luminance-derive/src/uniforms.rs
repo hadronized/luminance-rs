@@ -130,7 +130,7 @@ fn extract_uniform_type(ty: &Type) -> Option<proc_macro2::TokenStream> {
   {
     let segment = segments.first()?;
 
-    if segment.ident != "Uniform" {
+    if segment.ident != "Uni" {
       return None;
     }
 
