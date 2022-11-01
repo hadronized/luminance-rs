@@ -142,7 +142,10 @@ impl<V, P, S, E> Drop for Program<V, P, S, E> {
 }
 
 #[derive(Debug)]
-pub struct Uni<T> {
+pub struct Uni<T>
+where
+  T: ?Sized,
+{
   handle: usize,
   _phantom: PhantomData<T>,
 }
@@ -210,16 +213,16 @@ pub enum UniSamplerDim {
 }
 
 pub trait Uniform {
-  type UniType;
+  type Value;
 
   const LEN: usize;
 
   fn uni_type() -> UniType;
 
   fn set(
-    &self,
     backend: &mut impl ShaderBackend,
-    uni: &Uni<Self::UniType>,
+    uni: &Uni<Self>,
+    value: &Self::Value,
   ) -> Result<(), ShaderError>;
 }
 
@@ -227,7 +230,7 @@ macro_rules! impl_Uniform {
   // scalar
   ($t:ty, $v:ident, $visit_fn:ident $(, $dim:path)?) => {
     impl Uniform for $t {
-      type UniType = Self;
+      type Value = Self;
 
       const LEN: usize = 1;
 
@@ -235,16 +238,16 @@ macro_rules! impl_Uniform {
         UniType::$v $(($dim))?
       }
 
-      fn set(&self, backend: &mut impl ShaderBackend, uni: &Uni<Self::UniType>) -> Result<(), ShaderError> {
-        backend.$visit_fn(uni, self)
+      fn set(backend: &mut impl ShaderBackend, uni: &Uni<Self>, value: &Self::Value) -> Result<(), ShaderError> {
+        backend.$visit_fn(uni, value)
       }
     }
   };
 
   // via as_ref (vec, matrix)
   (as_ref $t:ty, $q:ty, $v:ident, $visit_fn:ident $(, $dim:path)?) => {
-    impl Uniform for $t where $t: AsRef<$q> {
-      type UniType = $q;
+    impl Uniform for $t {
+      type Value = $t;
 
       const LEN: usize = 1;
 
@@ -252,8 +255,8 @@ macro_rules! impl_Uniform {
         UniType::$v $(($dim))?
       }
 
-      fn set(&self, backend: &mut impl ShaderBackend, uni: &Uni<Self::UniType>) -> Result<(), ShaderError> {
-        backend.$visit_fn(uni, self.as_ref())
+      fn set(backend: &mut impl ShaderBackend, uni: &Uni<Self>, value: &Self::Value) -> Result<(), ShaderError> {
+        backend.$visit_fn(uni, value.as_ref())
       }
     }
   };
@@ -261,7 +264,7 @@ macro_rules! impl_Uniform {
   // array version
   (array $t:ty, $visit_fn:ident) => {
     impl<const N: usize> Uniform for [$t; N] {
-      type UniType = Self;
+      type Value = Self;
 
       const LEN: usize = N;
 
@@ -269,8 +272,8 @@ macro_rules! impl_Uniform {
         <$t>::uni_type()
       }
 
-      fn set(&self, backend: &mut impl ShaderBackend, uni: &Uni<Self::UniType>) -> Result<(), ShaderError> {
-        backend.$visit_fn(uni, self.into())
+      fn set(backend: &mut impl ShaderBackend, uni: &Uni<Self>, value: &Self::Value) -> Result<(), ShaderError> {
+        backend.$visit_fn(uni, value.into())
       }
     }
   };
@@ -422,12 +425,12 @@ impl_Uniform!(
   UniMatDim::Mat44
 );
 
-impl<D, P> Uniform for InUseTexture<D, P>
+impl<D, P> Uniform for Texture<D, P>
 where
   D: Dimensionable,
   P: Pixel,
 {
-  type UniType = Texture<D, P>;
+  type Value = InUseTexture<D, P>;
 
   const LEN: usize = 1;
 
@@ -461,11 +464,11 @@ where
   }
 
   fn set(
-    &self,
     backend: &mut impl ShaderBackend,
-    uni: &Uni<Self::UniType>,
+    uni: &Uni<Self>,
+    value: &Self::Value,
   ) -> Result<(), ShaderError> {
-    backend.visit_texture(uni, self)
+    backend.visit_texture(uni, value)
   }
 }
 
@@ -494,7 +497,7 @@ impl<'a, B> ProgramUpdate<'a, B>
 where
   B: ShaderBackend,
 {
-  pub fn set<T>(&mut self, uni: &Uni<T::UniType>, value: T) -> Result<(), ShaderError>
+  pub fn set<T>(&mut self, uni: &Uni<T>, value: &T::Value) -> Result<(), ShaderError>
   where
     T: Uniform,
   {

@@ -2457,13 +2457,13 @@ unsafe impl ShaderBackend for GL33 {
   unsafe fn set_shader_uni<T>(
     &mut self,
     _: usize,
-    uni: &Uni<T::UniType>,
-    value: T,
+    uni: &Uni<T>,
+    value: &T::Value,
   ) -> Result<(), ShaderError>
   where
     T: Uniform,
   {
-    value.set(self, uni)
+    T::set(self, uni, value)
   }
 
   fn visit_i32(&mut self, uni: &Uni<i32>, value: &i32) -> Result<(), ShaderError> {
@@ -2549,7 +2549,10 @@ unsafe impl ShaderBackend for GL33 {
     Ok(())
   }
 
-  fn visit_ivec2(&mut self, uni: &Uni<[i32; 2]>, value: &[i32; 2]) -> Result<(), ShaderError> {
+  fn visit_ivec2<T>(&mut self, uni: &Uni<T>, value: &[i32; 2]) -> Result<(), ShaderError>
+  where
+    T: AsRef<[i32; 2]>,
+  {
     unsafe {
       gl::Uniform2i(uni.handle() as GLint, value[0], value[1]);
     }
@@ -2557,7 +2560,10 @@ unsafe impl ShaderBackend for GL33 {
     Ok(())
   }
 
-  fn visit_uvec2(&mut self, uni: &Uni<[u32; 2]>, value: &[u32; 2]) -> Result<(), ShaderError> {
+  fn visit_uvec2<T>(&mut self, uni: &Uni<T>, value: &[u32; 2]) -> Result<(), ShaderError>
+  where
+    T: AsRef<[u32; 2]>,
+  {
     unsafe {
       gl::Uniform2ui(uni.handle() as GLint, value[0], value[1]);
     }
@@ -2565,7 +2571,10 @@ unsafe impl ShaderBackend for GL33 {
     Ok(())
   }
 
-  fn visit_vec2(&mut self, uni: &Uni<[f32; 2]>, value: &[f32; 2]) -> Result<(), ShaderError> {
+  fn visit_vec2<T>(&mut self, uni: &Uni<T>, value: &[f32; 2]) -> Result<(), ShaderError>
+  where
+    T: AsRef<[f32; 2]>,
+  {
     unsafe {
       gl::Uniform2f(uni.handle() as GLint, value[0], value[1]);
     }
@@ -2573,7 +2582,10 @@ unsafe impl ShaderBackend for GL33 {
     Ok(())
   }
 
-  fn visit_bvec2(&mut self, uni: &Uni<[bool; 2]>, value: &[bool; 2]) -> Result<(), ShaderError> {
+  fn visit_bvec2<T>(&mut self, uni: &Uni<T>, value: &[bool; 2]) -> Result<(), ShaderError>
+  where
+    T: AsRef<[bool; 2]>,
+  {
     unsafe {
       gl::Uniform2ui(uni.handle() as GLint, value[0] as u32, value[1] as u32);
     }
@@ -2581,7 +2593,10 @@ unsafe impl ShaderBackend for GL33 {
     Ok(())
   }
 
-  fn visit_ivec3(&mut self, uni: &Uni<[i32; 3]>, value: &[i32; 3]) -> Result<(), ShaderError> {
+  fn visit_ivec3<T>(&mut self, uni: &Uni<T>, value: &[i32; 3]) -> Result<(), ShaderError>
+  where
+    T: AsRef<[i32; 3]>,
+  {
     unsafe {
       gl::Uniform3i(uni.handle() as GLint, value[0], value[1], value[2]);
     }
@@ -2589,7 +2604,10 @@ unsafe impl ShaderBackend for GL33 {
     Ok(())
   }
 
-  fn visit_uvec3(&mut self, uni: &Uni<[u32; 3]>, value: &[u32; 3]) -> Result<(), ShaderError> {
+  fn visit_uvec3<T>(&mut self, uni: &Uni<T>, value: &[u32; 3]) -> Result<(), ShaderError>
+  where
+    T: AsRef<[u32; 3]>,
+  {
     unsafe {
       gl::Uniform3ui(uni.handle() as GLint, value[0], value[1], value[2]);
     }
@@ -2597,7 +2615,10 @@ unsafe impl ShaderBackend for GL33 {
     Ok(())
   }
 
-  fn visit_vec3(&mut self, uni: &Uni<[f32; 3]>, value: &[f32; 3]) -> Result<(), ShaderError> {
+  fn visit_vec3<T>(&mut self, uni: &Uni<T>, value: &[f32; 3]) -> Result<(), ShaderError>
+  where
+    T: AsRef<[f32; 3]>,
+  {
     unsafe {
       gl::Uniform3f(uni.handle() as GLint, value[0], value[1], value[2]);
     }
@@ -2605,7 +2626,10 @@ unsafe impl ShaderBackend for GL33 {
     Ok(())
   }
 
-  fn visit_bvec3(&mut self, uni: &Uni<[bool; 3]>, value: &[bool; 3]) -> Result<(), ShaderError> {
+  fn visit_bvec3<T>(&mut self, uni: &Uni<T>, value: &[bool; 3]) -> Result<(), ShaderError>
+  where
+    T: AsRef<[bool; 3]>,
+  {
     unsafe {
       gl::Uniform3ui(
         uni.handle() as GLint,
@@ -2618,7 +2642,10 @@ unsafe impl ShaderBackend for GL33 {
     Ok(())
   }
 
-  fn visit_ivec4(&mut self, uni: &Uni<[i32; 4]>, value: &[i32; 4]) -> Result<(), ShaderError> {
+  fn visit_ivec4<T>(&mut self, uni: &Uni<T>, value: &[i32; 4]) -> Result<(), ShaderError>
+  where
+    T: AsRef<[i32; 4]>,
+  {
     unsafe {
       gl::Uniform4i(
         uni.handle() as GLint,
@@ -2632,7 +2659,10 @@ unsafe impl ShaderBackend for GL33 {
     Ok(())
   }
 
-  fn visit_uvec4(&mut self, uni: &Uni<[u32; 4]>, value: &[u32; 4]) -> Result<(), ShaderError> {
+  fn visit_uvec4<T>(&mut self, uni: &Uni<T>, value: &[u32; 4]) -> Result<(), ShaderError>
+  where
+    T: AsRef<[u32; 4]>,
+  {
     unsafe {
       gl::Uniform4ui(
         uni.handle() as GLint,
@@ -2646,7 +2676,10 @@ unsafe impl ShaderBackend for GL33 {
     Ok(())
   }
 
-  fn visit_vec4(&mut self, uni: &Uni<[f32; 4]>, value: &[f32; 4]) -> Result<(), ShaderError> {
+  fn visit_vec4<T>(&mut self, uni: &Uni<T>, value: &[f32; 4]) -> Result<(), ShaderError>
+  where
+    T: AsRef<[f32; 4]>,
+  {
     unsafe {
       gl::Uniform4f(
         uni.handle() as GLint,
@@ -2660,7 +2693,10 @@ unsafe impl ShaderBackend for GL33 {
     Ok(())
   }
 
-  fn visit_bvec4(&mut self, uni: &Uni<[bool; 4]>, value: &[bool; 4]) -> Result<(), ShaderError> {
+  fn visit_bvec4<T>(&mut self, uni: &Uni<T>, value: &[bool; 4]) -> Result<(), ShaderError>
+  where
+    T: AsRef<[bool; 4]>,
+  {
     unsafe {
       gl::Uniform4ui(
         uni.handle() as GLint,
@@ -2674,11 +2710,10 @@ unsafe impl ShaderBackend for GL33 {
     Ok(())
   }
 
-  fn visit_mat22(
-    &mut self,
-    uni: &Uni<[[f32; 2]; 2]>,
-    value: &[[f32; 2]; 2],
-  ) -> Result<(), ShaderError> {
+  fn visit_mat22<T>(&mut self, uni: &Uni<T>, value: &[[f32; 2]; 2]) -> Result<(), ShaderError>
+  where
+    T: AsRef<[[f32; 2]; 2]>,
+  {
     unsafe {
       gl::UniformMatrix2fv(uni.handle() as GLint, 1, gl::FALSE, value.as_ptr() as _);
     }
@@ -2686,11 +2721,10 @@ unsafe impl ShaderBackend for GL33 {
     Ok(())
   }
 
-  fn visit_mat33(
-    &mut self,
-    uni: &Uni<[[f32; 3]; 3]>,
-    value: &[[f32; 3]; 3],
-  ) -> Result<(), ShaderError> {
+  fn visit_mat33<T>(&mut self, uni: &Uni<T>, value: &[[f32; 3]; 3]) -> Result<(), ShaderError>
+  where
+    T: AsRef<[[f32; 3]; 3]>,
+  {
     unsafe {
       gl::UniformMatrix3fv(uni.handle() as GLint, 1, gl::FALSE, value.as_ptr() as _);
     }
@@ -2698,11 +2732,10 @@ unsafe impl ShaderBackend for GL33 {
     Ok(())
   }
 
-  fn visit_mat44(
-    &mut self,
-    uni: &Uni<[[f32; 4]; 4]>,
-    value: &[[f32; 4]; 4],
-  ) -> Result<(), ShaderError> {
+  fn visit_mat44<T>(&mut self, uni: &Uni<T>, value: &[[f32; 4]; 4]) -> Result<(), ShaderError>
+  where
+    T: AsRef<[[f32; 4]; 4]>,
+  {
     unsafe {
       gl::UniformMatrix4fv(uni.handle() as GLint, 1, gl::FALSE, value.as_ptr() as _);
     }

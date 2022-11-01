@@ -573,6 +573,10 @@ macro_rules! mk_uniform_visit {
     $( fn $name(&mut self, uni: &Uni<$t>, value: &$t) -> Result<(), ShaderError>; )*
   };
 
+  ($( as_ref $name:ident, $t:ty, )*) => {
+    $( fn $name<T>(&mut self, uni: &Uni<T>, value: &$t) -> Result<(), ShaderError> where T: AsRef<$t>; )*
+  };
+
   ($( array $name:ident, $t:ty, )*) => {
     $( fn $name<const N: usize>(&mut self, uni: &Uni<[$t; N]>, value: &[$t; N]) -> Result<(), ShaderError>; )*
   };
@@ -602,8 +606,8 @@ pub unsafe trait ShaderBackend {
   unsafe fn set_shader_uni<T>(
     &mut self,
     handle: usize,
-    uni: &Uni<T::UniType>,
-    value: T,
+    uni: &Uni<T>,
+    value: &T::Value,
   ) -> Result<(), ShaderError>
   where
     T: Uniform;
@@ -623,24 +627,24 @@ pub unsafe trait ShaderBackend {
   }
 
   mk_uniform_visit! {
-    visit_ivec2, [i32; 2],
-    visit_uvec2, [u32; 2],
-    visit_vec2, [f32; 2],
-    visit_bvec2, [bool; 2],
+    as_ref visit_ivec2, [i32; 2],
+    as_ref visit_uvec2, [u32; 2],
+    as_ref visit_vec2, [f32; 2],
+    as_ref visit_bvec2, [bool; 2],
 
-    visit_ivec3, [i32; 3],
-    visit_uvec3, [u32; 3],
-    visit_vec3, [f32; 3],
-    visit_bvec3, [bool; 3],
+    as_ref visit_ivec3, [i32; 3],
+    as_ref visit_uvec3, [u32; 3],
+    as_ref visit_vec3, [f32; 3],
+    as_ref visit_bvec3, [bool; 3],
 
-    visit_ivec4, [i32; 4],
-    visit_uvec4, [u32; 4],
-    visit_vec4, [f32; 4],
-    visit_bvec4, [bool; 4],
+    as_ref visit_ivec4, [i32; 4],
+    as_ref visit_uvec4, [u32; 4],
+    as_ref visit_vec4, [f32; 4],
+    as_ref visit_bvec4, [bool; 4],
 
-    visit_mat22, [[f32; 2]; 2],
-    visit_mat33, [[f32; 3]; 3],
-    visit_mat44, [[f32; 4]; 4],
+    as_ref visit_mat22, [[f32; 2]; 2],
+    as_ref visit_mat33, [[f32; 3]; 3],
+    as_ref visit_mat44, [[f32; 4]; 4],
   }
 
   fn visit_texture<D, P>(

@@ -130,6 +130,10 @@ fn extract_uniform_type(ty: &Type) -> Option<proc_macro2::TokenStream> {
   {
     let segment = segments.first()?;
 
+    if segment.ident != "Uniform" {
+      return None;
+    }
+
     if let PathArguments::AngleBracketed(ref bracketed_args) = segment.arguments {
       let sub = bracketed_args.args.first()?;
       Some(quote! { #sub })
