@@ -11,7 +11,7 @@ use crate::{
   primitive::Primitive,
   render_slots::{DepthRenderSlot, RenderSlots},
   shader::{Program, ProgramBuilder, ProgramUpdate, Uniforms},
-  texture::{Sampler, Texture},
+  texture::{InUseTexture, Sampler, Texture},
   vertex::Vertex,
   vertex_entity::VertexEntity,
   vertex_storage::AsVertexStorage,
@@ -304,6 +304,17 @@ where
     Err: From<PipelineError>,
   {
     unsafe { self.backend.with_framebuffer(framebuffer, state, f) }
+  }
+
+  pub fn use_texture<D, P>(
+    &mut self,
+    texture: &Texture<D, P>,
+  ) -> Result<InUseTexture<D, P>, TextureError>
+  where
+    D: Dimensionable,
+    P: Pixel,
+  {
+    unsafe { self.backend.use_texture(texture.handle()) }
   }
 }
 

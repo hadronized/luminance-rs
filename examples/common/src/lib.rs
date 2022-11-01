@@ -45,7 +45,7 @@ pub mod shared;
 // pub mod skybox;
 pub mod sliced_vertex_entity;
 // pub mod stencil;
-// pub mod texture;
+pub mod texture;
 // pub mod vertex_instancing;
 
 // functional tests

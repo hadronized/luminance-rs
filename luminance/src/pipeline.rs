@@ -1,12 +1,15 @@
 use std::marker::PhantomData;
 
 use crate::{
-  backend::{PipelineBackend, PipelineError, ShaderError},
+  backend::{PipelineBackend, PipelineError, ShaderError, TextureBackend, TextureError},
+  dim::Dimensionable,
+  pixel::Pixel,
   primitive::Primitive,
   render_slots::{CompatibleRenderSlots, RenderSlots},
   render_state::RenderState,
   scissor::Scissor,
   shader::{Program, ProgramUpdate, Uniforms},
+  texture::{InUseTexture, Texture},
   vertex::{CompatibleVertex, Vertex},
   vertex_entity::VertexEntityView,
 };
@@ -212,6 +215,18 @@ where
   {
     unsafe { self.backend.with_program(program, f) }
   }
+
+  pub fn use_texture<D, P>(
+    &mut self,
+    texture: &Texture<D, P>,
+  ) -> Result<InUseTexture<D, P>, TextureError>
+  where
+    B: TextureBackend,
+    D: Dimensionable,
+    P: Pixel,
+  {
+    unsafe { self.backend.use_texture(texture.handle()) }
+  }
 }
 
 pub struct WithProgram<'a, B, V, P, S, E>
@@ -260,6 +275,18 @@ where
 
     f(program_update, &self.program.uniforms)
   }
+
+  pub fn use_texture<D, Px>(
+    &mut self,
+    texture: &Texture<D, Px>,
+  ) -> Result<InUseTexture<D, Px>, TextureError>
+  where
+    B: TextureBackend,
+    D: Dimensionable,
+    Px: Pixel,
+  {
+    unsafe { self.backend.use_texture(texture.handle()) }
+  }
 }
 
 #[derive(Debug)]
@@ -293,5 +320,17 @@ where
     W: Vertex,
   {
     unsafe { self.backend.render_vertex_entity(view) }
+  }
+
+  pub fn use_texture<D, Px>(
+    &mut self,
+    texture: &Texture<D, Px>,
+  ) -> Result<InUseTexture<D, Px>, TextureError>
+  where
+    B: TextureBackend,
+    D: Dimensionable,
+    Px: Pixel,
+  {
+    unsafe { self.backend.use_texture(texture.handle()) }
   }
 }

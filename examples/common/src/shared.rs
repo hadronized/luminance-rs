@@ -1,5 +1,15 @@
-use luminance::{namespace, RenderSlots, Vertex};
+use luminance::{
+  backend::Backend,
+  context::Context,
+  dim::Dim2,
+  namespace,
+  pixel::NormRGB8UI,
+  texture::{Sampler, Texture},
+  RenderSlots, Vertex,
+};
 use mint::{Vector2, Vector3};
+
+use crate::PlatformServices;
 
 // Render slots.
 //
@@ -115,31 +125,28 @@ pub fn cube(size: f32) -> ([CubeVertex; 24], [u32; 30]) {
   (vertices, indices)
 }
 
-// /// RGB texture.
-// pub type RGBTexture = Texture<Dim2, NormRGB8UI>;
-//
-// pub fn load_texture(
-//   context: &mut impl GraphicsContext<Backend = Backend>,
-//   platform: &mut impl PlatformServices,
-// ) -> Option<RGBTexture> {
-//   let img = platform
-//     .fetch_texture()
-//     .map_err(|e| log::error!("error while loading image: {}", e))
-//     .ok()?;
-//   let (width, height) = img.dimensions();
-//   let texels = img.as_raw();
-//
-//   // create the luminance texture; the third argument is the number of mipmaps we want (leave it
-//   // to 0 for now) and the latest is the sampler to use when sampling the texels in the
-//   // shader (we’ll just use the default one)
-//   //
-//   // the GenMipmaps argument disables mipmap generation (we don’t care so far)
-//   context
-//     .new_texture_raw(
-//       [width, height],
-//       Sampler::default(),
-//       TexelUpload::base_level(texels, 0),
-//     )
-//     .map_err(|e| log::error!("error while creating texture: {}", e))
-//     .ok()
-// }
+/// RGB texture.
+pub type RGBTexture = Texture<Dim2, NormRGB8UI>;
+
+pub fn load_texture(
+  context: &mut Context<impl Backend>,
+  platform: &mut impl PlatformServices,
+  mipmaps: usize,
+) -> Option<RGBTexture> {
+  let img = platform
+    .fetch_texture()
+    .map_err(|e| log::error!("error while loading image: {}", e))
+    .ok()?;
+  let (width, height) = img.dimensions();
+  let texels = img.as_raw();
+
+  // create the luminance texture; the third argument is the number of mipmaps we want (leave it
+  // to 0 for now) and the latest is the sampler to use when sampling the texels in the
+  // shader (we’ll just use the default one)
+  //
+  // the GenMipmaps argument disables mipmap generation (we don’t care so far)
+  context
+    .new_texture([width, height], mipmaps, Sampler::default(), texels)
+    .map_err(|e| log::error!("error while creating texture: {}", e))
+    .ok()
+}
