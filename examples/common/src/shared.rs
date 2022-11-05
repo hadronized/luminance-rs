@@ -4,7 +4,7 @@ use luminance::{
   dim::{Dim2, Size2},
   namespace,
   pixel::NormRGB8UI,
-  texture::{Sampler, Texture},
+  texture::{TextureSampling, Texture},
   RenderSlots, Vertex,
 };
 use mint::{Vector2, Vector3};
@@ -149,7 +149,7 @@ pub fn load_texture(
     .new_texture(
       Size2::new(width, height),
       mipmaps,
-      Sampler::default(),
+      TextureSampling::default(),
       texels,
     )
     .map_err(|e| log::error!("error while creating texture: {}", e))

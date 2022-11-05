@@ -2,13 +2,13 @@ use crate::{
   dim::Dimensionable,
   framebuffer::{Back, Framebuffer},
   pipeline::{PipelineState, WithFramebuffer, WithProgram, WithRenderState},
-  pixel::{Pixel, PixelFormat},
+  pixel::{Pixel, PixelFormat, PixelType},
   primitive::Primitive,
   render_channel::{DepthChannel, RenderChannel},
   render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
   render_state::RenderState,
   shader::{Program, Uni, Uniform, Uniforms},
-  texture::{InUseTexture, Sampler, Texture},
+  texture::{InUseTexture, Texture, TextureSampling},
   vertex::Vertex,
   vertex_entity::{VertexEntity, VertexEntityView},
   vertex_storage::AsVertexStorage,
@@ -649,12 +649,12 @@ pub unsafe trait ShaderBackend {
 
   fn visit_texture<D, P>(
     &mut self,
-    uni: &Uni<Texture<D, P>>,
+    uni: &Uni<InUseTexture<D, P>>,
     value: &InUseTexture<D, P>,
   ) -> Result<(), ShaderError>
   where
     D: Dimensionable,
-    P: Pixel;
+    P: PixelType;
 }
 
 pub unsafe trait TextureBackend {
@@ -662,7 +662,7 @@ pub unsafe trait TextureBackend {
     &mut self,
     size: D::Size,
     mipmaps: usize,
-    sampler: Sampler,
+    sampling: TextureSampling,
   ) -> Result<Texture<D, P>, TextureError>
   where
     D: Dimensionable,
@@ -709,7 +709,7 @@ pub unsafe trait TextureBackend {
   unsafe fn use_texture<D, P>(&mut self, handle: usize) -> Result<InUseTexture<D, P>, TextureError>
   where
     D: Dimensionable,
-    P: Pixel;
+    P: PixelType;
 }
 
 pub unsafe trait PipelineBackend:

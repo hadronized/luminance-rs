@@ -9,14 +9,14 @@ use luminance::{
   backend::Backend,
   blending::{Blending, BlendingMode, Equation, Factor},
   context::Context,
-  dim::Dim2,
+  dim::{Dim2, Size2},
   framebuffer::{Back, Framebuffer},
   pipeline::PipelineState,
   pixel::NormUnsigned,
-  primitive::Triangle,
+  primitive::TriangleFan,
   render_state::RenderState,
   shader::{Program, ProgramBuilder, Stage, Uni},
-  texture::Texture,
+  texture::InUseTexture,
   vertex_entity::{VertexEntity, View},
   vertex_storage::Interleaved,
   Uniforms,
@@ -33,13 +33,13 @@ const FS: &'static str = include_str!("texture-fs.glsl");
 // we also need a special uniform interface here to pass the texture to the shader
 #[derive(Uniforms)]
 struct ShaderUniforms {
-  tex: Uni<Texture<Dim2, NormUnsigned>>,
+  tex: Uni<InUseTexture<Dim2, NormUnsigned>>,
 }
 
 pub struct LocalExample {
   image: RGBTexture,
-  program: Program<(), Triangle<()>, FragSlot, ShaderUniforms>,
-  vertex_entity: VertexEntity<(), Triangle<()>, Interleaved<()>>,
+  program: Program<(), TriangleFan<()>, FragSlot, ShaderUniforms>,
+  vertex_entity: VertexEntity<(), TriangleFan<()>, Interleaved<()>>,
   back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }
 
@@ -49,7 +49,7 @@ impl Example for LocalExample {
   const TITLE: &'static str = "Texture";
 
   fn bootstrap(
-    frame_size: [u32; 2],
+    [width, height]: [u32; 2],
     platform: &mut impl PlatformServices,
     ctx: &mut Context<impl Backend>,
   ) -> Result<Self, Self::Err> {
@@ -67,7 +67,7 @@ impl Example for LocalExample {
     // TriangleFan creates triangles by connecting the third (and next) vertex to the first one
     let vertex_entity = ctx.new_vertex_entity(Interleaved::new(), [])?;
 
-    let back_buffer = ctx.back_buffer(frame_size)?;
+    let back_buffer = ctx.back_buffer(Size2::new(width, height))?;
 
     Ok(LocalExample {
       image,
@@ -78,7 +78,7 @@ impl Example for LocalExample {
   }
 
   fn render_frame(
-    mut self,
+    self,
     _: f32,
     actions: impl Iterator<Item = InputAction>,
     ctx: &mut Context<impl Backend>,
@@ -102,10 +102,10 @@ impl Example for LocalExample {
     let in_use_texture = ctx.use_texture(tex)?;
     ctx.with_framebuffer(&self.back_buffer, &PipelineState::default(), |mut frame| {
       frame.with_program(program, |mut frame| {
-        frame.update(|program, unis| program.set(&unis.tex, &in_use_texture))?;
+        frame.update(|mut program, unis| program.set(&unis.tex, &in_use_texture))?;
 
         frame.with_render_state(render_state, |mut frame| {
-          frame.render_vertex_entity(vertex_entity.view(..))
+          frame.render_vertex_entity(vertex_entity.view(..4))
         })
       })
     })?;

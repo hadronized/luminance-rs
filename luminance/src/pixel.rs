@@ -1,9 +1,11 @@
 /// Reify a static pixel format at runtime.
-pub unsafe trait Pixel {
+pub trait Pixel {
   /// Raw encoding of a single pixel; i.e. that is, encoding of underlying values in contiguous
   /// texture memory, without taking into account channels. It should match the [`PixelFormat`]
   /// mapping.
   type RawEncoding: Copy + Default;
+
+  type Type: PixelType;
 
   /// Reify to [`PixelFormat`].
   fn pixel_format() -> PixelFormat;
@@ -48,6 +50,10 @@ impl PixelFormat {
   }
 }
 
+pub trait PixelType {
+  fn pixel_type() -> Type;
+}
+
 /// Pixel type.
 ///
 /// - Normalized integer types: [`NormIntegral`] and [`NormUnsigned`] represent integer types
@@ -57,7 +63,7 @@ impl PixelFormat {
 /// - Integer types: [`Integral`] and [`Unsigned`] allows to store signed and unsigned integers,
 ///   respectively.
 /// - Floating-point types: currently, only [`Floating`] is supported.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Type {
   /// Normalized signed integral pixel type.
   NormIntegral,
@@ -141,30 +147,31 @@ impl Size {
   }
 }
 
-/// The normalized (signed) integral sampler type.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct NormIntegral;
+macro_rules! mk_pixel_type {
+  ($name:ident) => {
+    #[derive(Copy, Clone, Debug, PartialEq, Eq)]
+    pub struct $name;
 
-/// The normalized unsigned integral samplre type.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct NormUnsigned;
+    impl PixelType for $name {
+      fn pixel_type() -> Type {
+        Type::$name
+      }
+    }
+  };
+}
 
-/// The (signed) integral sampler type.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Integral;
-
-/// The unsigned integral sampler type.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Unsigned;
-
-/// The floating sampler type.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Floating;
+mk_pixel_type!(NormIntegral);
+mk_pixel_type!(NormUnsigned);
+mk_pixel_type!(Integral);
+mk_pixel_type!(Unsigned);
+mk_pixel_type!(Floating);
 
 macro_rules! impl_Pixel {
   ($t:ty, $raw_encoding:ty, $encoding_ty:ident, $format:expr) => {
-    unsafe impl Pixel for $t {
+    impl Pixel for $t {
       type RawEncoding = $raw_encoding;
+
+      type Type = $encoding_ty;
 
       fn pixel_format() -> PixelFormat {
         PixelFormat {

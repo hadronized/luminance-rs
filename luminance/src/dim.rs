@@ -104,7 +104,7 @@ impl Off3 {
   }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Dim {
   Dim1,
   Dim2,

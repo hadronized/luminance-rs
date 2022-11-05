@@ -2,11 +2,11 @@ pub mod types;
 
 use crate::{
   backend::{ShaderBackend, ShaderError},
-  dim::{self, Dimensionable},
-  pixel::{self, Pixel},
+  dim::{Dim, Dimensionable},
+  pixel::{self, PixelType},
   primitive::Primitive,
   render_slots::RenderSlots,
-  texture::{InUseTexture, Texture},
+  texture::InUseTexture,
   vertex::Vertex,
 };
 use std::marker::PhantomData;
@@ -175,17 +175,7 @@ pub enum UniType {
 
   Matrix(UniMatDim),
 
-  IntegralSampler(UniSamplerDim),
-
-  UnsignedSampler(UniSamplerDim),
-
-  FloatingSampler(UniSamplerDim),
-
-  IntegralCubemapSampler,
-
-  UnsignedCubemapSampler,
-
-  FloatingCubemapSampler,
+  Sampler(pixel::Type, Dim),
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -425,42 +415,17 @@ impl_Uniform!(
   UniMatDim::Mat44
 );
 
-impl<D, P> Uniform for Texture<D, P>
+impl<D, P> Uniform for InUseTexture<D, P>
 where
   D: Dimensionable,
-  P: Pixel,
+  P: PixelType,
 {
   type Value = InUseTexture<D, P>;
 
   const LEN: usize = 1;
 
   fn uni_type() -> UniType {
-    let dim = D::dim();
-    let encoding = P::pixel_format().encoding;
-
-    macro_rules! match_sampler {
-      ($dim:expr, $encoding:ident) => {
-        match encoding {
-          pixel::Type::NormIntegral | pixel::Type::Integral => UniType::IntegralSampler($dim),
-          pixel::Type::NormUnsigned | pixel::Type::Unsigned => UniType::UnsignedSampler($dim),
-          pixel::Type::Floating => UniType::FloatingSampler($dim),
-        }
-      };
-    }
-
-    match dim {
-      dim::Dim::Cubemap => match encoding {
-        pixel::Type::NormIntegral | pixel::Type::Integral => UniType::IntegralCubemapSampler,
-        pixel::Type::NormUnsigned | pixel::Type::Unsigned => UniType::UnsignedCubemapSampler,
-        pixel::Type::Floating => UniType::FloatingCubemapSampler,
-      },
-
-      dim::Dim::Dim1 => match_sampler!(UniSamplerDim::Dim1, encoding),
-      dim::Dim::Dim2 => match_sampler!(UniSamplerDim::Dim2, encoding),
-      dim::Dim::Dim3 => match_sampler!(UniSamplerDim::Dim3, encoding),
-      dim::Dim::Dim1Array => match_sampler!(UniSamplerDim::Dim1Array, encoding),
-      dim::Dim::Dim2Array => match_sampler!(UniSamplerDim::Dim2Array, encoding),
-    }
+    UniType::Sampler(P::pixel_type(), D::dim())
   }
 
   fn set(

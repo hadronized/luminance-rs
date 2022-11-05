@@ -199,7 +199,7 @@ examples! {
   "sliced-vertex-entity", sliced_vertex_entity,
   "shader-uniforms", shader_uniforms,
   "attributeless", attributeless,
-  // "texture", texture,
+  "texture", texture,
   // "offscreen", offscreen,
   // "shader-uniform-adapt", shader_uniform_adapt,
   // "dynamic-uniform-interface", dynamic_uniform_interface,

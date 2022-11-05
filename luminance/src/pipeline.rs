@@ -219,7 +219,7 @@ where
   pub fn use_texture<D, P>(
     &mut self,
     texture: &Texture<D, P>,
-  ) -> Result<InUseTexture<D, P>, TextureError>
+  ) -> Result<InUseTexture<D, P::Type>, TextureError>
   where
     B: TextureBackend,
     D: Dimensionable,
@@ -279,7 +279,7 @@ where
   pub fn use_texture<D, Px>(
     &mut self,
     texture: &Texture<D, Px>,
-  ) -> Result<InUseTexture<D, Px>, TextureError>
+  ) -> Result<InUseTexture<D, Px::Type>, TextureError>
   where
     B: TextureBackend,
     D: Dimensionable,
@@ -325,7 +325,7 @@ where
   pub fn use_texture<D, Px>(
     &mut self,
     texture: &Texture<D, Px>,
-  ) -> Result<InUseTexture<D, Px>, TextureError>
+  ) -> Result<InUseTexture<D, Px::Type>, TextureError>
   where
     B: TextureBackend,
     D: Dimensionable,

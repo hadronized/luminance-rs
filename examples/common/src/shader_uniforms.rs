@@ -132,8 +132,8 @@ impl Example for LocalExample {
     ctx.with_framebuffer(&self.back_buffer, &PipelineState::default(), |mut frame| {
       frame.with_program(program, |mut frame| {
         frame.update(|mut program, unis| {
-          program.set(&unis.time, t)?;
-          program.set(&unis.triangle_pos, triangle_pos)
+          program.set(&unis.time, &t)?;
+          program.set(&unis.triangle_pos, triangle_pos.as_ref())
         })?;
 
         frame.with_render_state(&RenderState::default(), |mut frame| {

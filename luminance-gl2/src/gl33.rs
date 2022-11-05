@@ -13,13 +13,13 @@ use luminance::{
   face_culling::{FaceCulling, FaceCullingFace, FaceCullingOrder},
   framebuffer::{Back, Framebuffer},
   pipeline::{PipelineState, Viewport, WithFramebuffer, WithProgram, WithRenderState},
-  pixel::{Format, Pixel, PixelFormat, Size, Type},
+  pixel::{Format, Pixel, PixelFormat, PixelType, Size, Type},
   primitive::{Connector, Primitive},
   render_channel::{DepthChannel, RenderChannel},
   render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
   scissor::Scissor,
   shader::{Program, Uni, Uniform, Uniforms},
-  texture::{InUseTexture, MagFilter, MinFilter, Sampler, Texture, Wrap},
+  texture::{InUseTexture, MagFilter, MinFilter, Texture, TextureSampling, Wrap},
   vertex::{
     Normalized, Vertex, VertexAttribDesc, VertexAttribDim, VertexAttribType, VertexBufferDesc,
     VertexDesc, VertexInstancing,
@@ -669,10 +669,7 @@ impl TextureUnits {
 #[derive(Debug)]
 struct TextureData {
   handle: GLuint,
-  target: GLenum, // “type” of the texture; used for bindings
-  mipmaps: usize,
   unit: Option<usize>, // texture unit the texture is bound to
-  pixels_count: usize, // number of pixels stored
   state: StateRef,
 }
 
@@ -683,7 +680,7 @@ impl TextureData {
     size: D::Size,
     mipmaps: usize,
     pf: PixelFormat,
-    sampler: Sampler,
+    sampling: TextureSampling,
   ) -> Result<usize, TextureError>
   where
     D: Dimensionable,
@@ -697,10 +694,7 @@ impl TextureData {
 
     let texture_data = TextureData {
       handle: texture,
-      target,
-      mipmaps,
       unit: None,
-      pixels_count: D::count(&size),
       state: state.clone(),
     };
     {
@@ -710,7 +704,7 @@ impl TextureData {
     }
 
     Self::set_texture_levels(target, mipmaps);
-    Self::apply_sampler_to_texture(target, sampler);
+    Self::apply_sampling_to_texture(target, sampling);
     Self::create_texture_storage::<D>(&size, mipmaps + 1, pf)?;
 
     state.borrow_mut().idle_texture(handle as _)?;
@@ -725,35 +719,35 @@ impl TextureData {
     }
   }
 
-  fn apply_sampler_to_texture(target: GLenum, sampler: Sampler) {
+  fn apply_sampling_to_texture(target: GLenum, sampling: TextureSampling) {
     unsafe {
       gl::TexParameteri(
         target,
         gl::TEXTURE_WRAP_R,
-        GL33::opengl_wrap(sampler.wrap_r) as GLint,
+        GL33::opengl_wrap(sampling.wrap_r) as GLint,
       );
       gl::TexParameteri(
         target,
         gl::TEXTURE_WRAP_S,
-        GL33::opengl_wrap(sampler.wrap_s) as GLint,
+        GL33::opengl_wrap(sampling.wrap_s) as GLint,
       );
       gl::TexParameteri(
         target,
         gl::TEXTURE_WRAP_T,
-        GL33::opengl_wrap(sampler.wrap_t) as GLint,
+        GL33::opengl_wrap(sampling.wrap_t) as GLint,
       );
       gl::TexParameteri(
         target,
         gl::TEXTURE_MIN_FILTER,
-        GL33::opengl_min_filter(sampler.min_filter) as GLint,
+        GL33::opengl_min_filter(sampling.min_filter) as GLint,
       );
       gl::TexParameteri(
         target,
         gl::TEXTURE_MAG_FILTER,
-        GL33::opengl_mag_filter(sampler.mag_filter) as GLint,
+        GL33::opengl_mag_filter(sampling.mag_filter) as GLint,
       );
 
-      match sampler.depth_comparison {
+      match sampling.depth_comparison {
         Some(fun) => {
           gl::TexParameteri(
             target,
@@ -2234,7 +2228,7 @@ unsafe impl FramebufferBackend for GL33 {
       size,
       mipmaps,
       pixel_format,
-      Sampler::default(),
+      TextureSampling::default(),
     )
     .map_err(|e| FramebufferError::RenderLayerCreation {
       cause: Some(Box::new(e)),
@@ -2269,7 +2263,7 @@ unsafe impl FramebufferBackend for GL33 {
       size,
       mipmaps,
       pixel_format,
-      Sampler::default(),
+      TextureSampling::default(),
     )
     .map_err(|e| FramebufferError::RenderLayerCreation {
       cause: Some(Box::new(e)),
@@ -2745,12 +2739,12 @@ unsafe impl ShaderBackend for GL33 {
 
   fn visit_texture<D, P>(
     &mut self,
-    uni: &Uni<Texture<D, P>>,
+    uni: &Uni<InUseTexture<D, P>>,
     value: &InUseTexture<D, P>,
   ) -> Result<(), ShaderError>
   where
     D: Dimensionable,
-    P: Pixel,
+    P: PixelType,
   {
     unsafe {
       gl::Uniform1i(uni.handle() as GLint, value.handle() as GLint);
@@ -2765,7 +2759,7 @@ unsafe impl TextureBackend for GL33 {
     &mut self,
     size: D::Size,
     mipmaps: usize,
-    sampler: Sampler,
+    sampling: TextureSampling,
   ) -> Result<Texture<D, P>, TextureError>
   where
     D: Dimensionable,
@@ -2777,7 +2771,7 @@ unsafe impl TextureBackend for GL33 {
       size,
       mipmaps,
       P::pixel_format(),
-      sampler,
+      sampling,
     )?;
 
     let state = self.state.clone();
@@ -2873,7 +2867,7 @@ unsafe impl TextureBackend for GL33 {
   unsafe fn use_texture<D, P>(&mut self, handle: usize) -> Result<InUseTexture<D, P>, TextureError>
   where
     D: Dimensionable,
-    P: Pixel,
+    P: PixelType,
   {
     let state = self.state.clone();
     let dropper = Box::new(move |handle| {

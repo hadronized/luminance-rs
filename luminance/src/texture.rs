@@ -48,9 +48,9 @@ pub enum MagFilter {
   Linear,
 }
 
-/// A `Sampler` object gives hint on how a `Texture` should be sampled.
+/// A [`Sampler`] object gives hint on how a [`Texture`] should be sampled.
 #[derive(Clone, Copy, Debug)]
-pub struct Sampler {
+pub struct TextureSampling {
   /// How should we wrap around the *r* sampling coordinate?
   pub wrap_r: Wrap,
 
@@ -70,10 +70,9 @@ pub struct Sampler {
   pub depth_comparison: Option<Comparison>,
 }
 
-/// Default value is as following:
-impl Default for Sampler {
+impl Default for TextureSampling {
   fn default() -> Self {
-    Sampler {
+    TextureSampling {
       wrap_r: Wrap::ClampToEdge,
       wrap_s: Wrap::ClampToEdge,
       wrap_t: Wrap::ClampToEdge,
@@ -119,13 +118,13 @@ where
   }
 }
 
-pub struct InUseTexture<D, P> {
+pub struct InUseTexture<D, S> {
   handle: usize,
   dropper: Box<dyn FnMut(usize)>,
-  _phantom: PhantomData<*const (D, P)>,
+  _phantom: PhantomData<*const (D, S)>,
 }
 
-impl<D, P> InUseTexture<D, P> {
+impl<D, S> InUseTexture<D, S> {
   pub unsafe fn new(handle: usize, dropper: Box<dyn FnMut(usize)>) -> Self {
     Self {
       handle,
@@ -139,7 +138,7 @@ impl<D, P> InUseTexture<D, P> {
   }
 }
 
-impl<D, P> Drop for InUseTexture<D, P> {
+impl<D, S> Drop for InUseTexture<D, S> {
   fn drop(&mut self) {
     (self.dropper)(self.handle)
   }

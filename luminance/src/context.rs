@@ -11,7 +11,7 @@ use crate::{
   primitive::Primitive,
   render_slots::{DepthRenderSlot, RenderSlots},
   shader::{Program, ProgramBuilder, ProgramUpdate, Uniforms},
-  texture::{InUseTexture, Sampler, Texture},
+  texture::{InUseTexture, Texture, TextureSampling},
   vertex::Vertex,
   vertex_entity::VertexEntity,
   vertex_storage::AsVertexStorage,
@@ -164,20 +164,20 @@ where
     &mut self,
     size: D::Size,
     mipmaps: usize,
-    sampler: Sampler,
+    sampling: TextureSampling,
   ) -> Result<Texture<D, P>, TextureError>
   where
     D: Dimensionable,
     P: Pixel,
   {
-    unsafe { self.backend.new_texture(size, mipmaps, sampler) }
+    unsafe { self.backend.new_texture(size, mipmaps, sampling) }
   }
 
   pub fn new_texture<D, P>(
     &mut self,
     size: D::Size,
     mipmaps: usize,
-    sampler: Sampler,
+    sampling: TextureSampling,
     texels: &[P::RawEncoding],
   ) -> Result<Texture<D, P>, TextureError>
   where
@@ -185,7 +185,7 @@ where
     P: Pixel,
   {
     unsafe {
-      let texture = self.backend.new_texture(size, mipmaps, sampler)?;
+      let texture = self.backend.new_texture(size, mipmaps, sampling)?;
       self.backend.set_texture_data::<D, P>(
         texture.handle(),
         D::ZERO_OFFSET,
@@ -201,7 +201,7 @@ where
     &mut self,
     size: D::Size,
     mipmaps: usize,
-    sampler: Sampler,
+    sampling: TextureSampling,
     levels: &[&[P::RawEncoding]],
   ) -> Result<Texture<D, P>, TextureError>
   where
@@ -209,7 +209,7 @@ where
     P: Pixel,
   {
     unsafe {
-      let texture = self.backend.new_texture(size, mipmaps, sampler)?;
+      let texture = self.backend.new_texture(size, mipmaps, sampling)?;
 
       for level in 0..mipmaps {
         self.backend.set_texture_data::<D, P>(
@@ -309,7 +309,7 @@ where
   pub fn use_texture<D, P>(
     &mut self,
     texture: &Texture<D, P>,
-  ) -> Result<InUseTexture<D, P>, TextureError>
+  ) -> Result<InUseTexture<D, P::Type>, TextureError>
   where
     D: Dimensionable,
     P: Pixel,
