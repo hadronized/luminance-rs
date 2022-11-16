@@ -30,11 +30,11 @@ pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
           };
 
           let render_layer_field = quote! {
-            pub #field_ident: luminance::render_slots::RenderLayer<#field_ty>
+            pub #field_ident: luminance::render_slots::RenderLayer<D, #field_ty>
           };
 
           let render_layer_decl = quote! {
-            #field_ident: backend.new_render_layer::<D, _>(
+            #field_ident: backend.new_render_layer(
               framebuffer_handle,
               size,
               mipmaps,
@@ -78,13 +78,13 @@ pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
 
         // generate a type that will act as RenderSlots::RenderLayers
         #[derive(Debug)]
-        pub struct #render_layers_ty {
+        pub struct #render_layers_ty<D> where D: luminance::dim::Dimensionable {
           #(#render_layer_fields),*
         }
 
         // implement RenderSlots
         impl luminance::render_slots::RenderSlots for #type_ident {
-          type RenderLayers = #render_layers_ty;
+          type RenderLayers<D> = #render_layers_ty<D> where D: luminance::dim::Dimensionable;
 
           fn color_channel_descs() -> &'static [luminance::render_channel::RenderChannelDesc] {
             &[#(#render_channel_descs),*]
@@ -95,7 +95,7 @@ pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
             framebuffer_handle: usize,
             size: D::Size,
             mipmaps: usize,
-          ) -> Result<Self::RenderLayers, luminance::backend::FramebufferError>
+          ) -> Result<Self::RenderLayers<D>, luminance::backend::FramebufferError>
           where
             B: luminance::backend::FramebufferBackend,
             D: luminance::dim::Dimensionable,

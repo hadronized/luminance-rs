@@ -13,7 +13,9 @@ use crate::{
 /// channel and a depth channel. For more complex examples, it could have a diffuse, specular, normal and shininess
 /// channel.
 pub trait RenderSlots {
-  type RenderLayers;
+  type RenderLayers<D>
+  where
+    D: Dimensionable;
 
   fn color_channel_descs() -> &'static [RenderChannelDesc];
 
@@ -22,14 +24,14 @@ pub trait RenderSlots {
     framebuffer_handle: usize,
     size: D::Size,
     mipmaps: usize,
-  ) -> Result<Self::RenderLayers, FramebufferError>
+  ) -> Result<Self::RenderLayers<D>, FramebufferError>
   where
     B: FramebufferBackend,
     D: Dimensionable;
 }
 
 impl RenderSlots for () {
-  type RenderLayers = ();
+  type RenderLayers<D> = () where D: Dimensionable;
 
   fn color_channel_descs() -> &'static [RenderChannelDesc] {
     &[]
@@ -40,7 +42,7 @@ impl RenderSlots for () {
     _: usize,
     _: D::Size,
     _: usize,
-  ) -> Result<Self::RenderLayers, FramebufferError>
+  ) -> Result<Self::RenderLayers<D>, FramebufferError>
   where
     B: FramebufferBackend,
     D: Dimensionable,
@@ -53,7 +55,7 @@ impl<RS> RenderSlots for Back<RS>
 where
   RS: RenderSlots,
 {
-  type RenderLayers = ();
+  type RenderLayers<D> = () where D: Dimensionable;
 
   fn color_channel_descs() -> &'static [RenderChannelDesc] {
     &[]
@@ -64,7 +66,7 @@ where
     _: usize,
     _: D::Size,
     _: usize,
-  ) -> Result<Self::RenderLayers, FramebufferError>
+  ) -> Result<Self::RenderLayers<D>, FramebufferError>
   where
     B: FramebufferBackend,
     D: Dimensionable,
@@ -76,12 +78,12 @@ where
 pub trait CompatibleRenderSlots<S> {}
 
 #[derive(Debug)]
-pub struct RenderLayer<RC> {
+pub struct RenderLayer<D, RC> {
   handle: usize,
-  _phantom: PhantomData<*const RC>,
+  _phantom: PhantomData<*const (D, RC)>,
 }
 
-impl<RC> RenderLayer<RC> {
+impl<D, RC> RenderLayer<D, RC> {
   pub unsafe fn new(handle: usize) -> Self {
     Self {
       handle,
@@ -95,7 +97,9 @@ impl<RC> RenderLayer<RC> {
 }
 
 pub trait DepthRenderSlot {
-  type DepthRenderLayer;
+  type DepthRenderLayer<D>
+  where
+    D: Dimensionable;
 
   const DEPTH_CHANNEL_TY: Option<DepthChannelType>;
 
@@ -104,14 +108,14 @@ pub trait DepthRenderSlot {
     framebuffer_handle: usize,
     size: D::Size,
     mipmaps: usize,
-  ) -> Result<Self::DepthRenderLayer, FramebufferError>
+  ) -> Result<Self::DepthRenderLayer<D>, FramebufferError>
   where
     B: FramebufferBackend,
     D: Dimensionable;
 }
 
 impl DepthRenderSlot for () {
-  type DepthRenderLayer = ();
+  type DepthRenderLayer<D> = () where D: Dimensionable;
 
   const DEPTH_CHANNEL_TY: Option<DepthChannelType> = None;
 
@@ -120,7 +124,7 @@ impl DepthRenderSlot for () {
     _: usize,
     _: D::Size,
     _: usize,
-  ) -> Result<Self::DepthRenderLayer, FramebufferError>
+  ) -> Result<Self::DepthRenderLayer<D>, FramebufferError>
   where
     B: FramebufferBackend,
     D: Dimensionable,
@@ -133,7 +137,7 @@ impl<DS> DepthRenderSlot for Back<DS>
 where
   DS: DepthRenderSlot,
 {
-  type DepthRenderLayer = ();
+  type DepthRenderLayer<D> = () where D: Dimensionable;
 
   const DEPTH_CHANNEL_TY: Option<DepthChannelType> = None;
 
@@ -142,7 +146,7 @@ where
     _: usize,
     _: D::Size,
     _: usize,
-  ) -> Result<Self::DepthRenderLayer, FramebufferError>
+  ) -> Result<Self::DepthRenderLayer<D>, FramebufferError>
   where
     B: FramebufferBackend,
     D: Dimensionable,
@@ -155,7 +159,7 @@ impl<RC> DepthRenderSlot for RC
 where
   RC: DepthChannel,
 {
-  type DepthRenderLayer = RenderLayer<RC>;
+  type DepthRenderLayer<D> = RenderLayer<D, RC> where D: Dimensionable;
 
   const DEPTH_CHANNEL_TY: Option<DepthChannelType> = Some(RC::CHANNEL_TY);
 
@@ -164,11 +168,11 @@ where
     framebuffer_handle: usize,
     size: D::Size,
     mipmaps: usize,
-  ) -> Result<Self::DepthRenderLayer, FramebufferError>
+  ) -> Result<Self::DepthRenderLayer<D>, FramebufferError>
   where
     B: FramebufferBackend,
     D: Dimensionable,
   {
-    Ok(backend.new_depth_render_layer::<D, _>(framebuffer_handle, size, mipmaps)?)
+    Ok(backend.new_depth_render_layer(framebuffer_handle, size, mipmaps)?)
   }
 }

@@ -1,11 +1,14 @@
 use std::marker::PhantomData;
 
 use crate::{
-  backend::{PipelineBackend, PipelineError, ShaderError, TextureBackend, TextureError},
+  backend::{
+    FramebufferError, PipelineBackend, PipelineError, ShaderError, TextureBackend, TextureError,
+  },
   dim::Dimensionable,
   pixel::Pixel,
   primitive::Primitive,
-  render_slots::{CompatibleRenderSlots, RenderSlots},
+  render_channel::{DepthChannel, RenderChannel},
+  render_slots::{CompatibleRenderSlots, RenderLayer, RenderSlots},
   render_state::RenderState,
   scissor::Scissor,
   shader::{Program, ProgramUpdate, Uniforms},
@@ -227,6 +230,30 @@ where
   {
     unsafe { self.backend.use_texture(texture.handle()) }
   }
+
+  pub fn use_render_layer<D, RC>(
+    &mut self,
+    render_layer: &RenderLayer<D, RC>,
+  ) -> Result<InUseTexture<D, RC::Type>, FramebufferError>
+  where
+    B: TextureBackend,
+    D: Dimensionable,
+    RC: RenderChannel,
+  {
+    unsafe { self.backend.use_render_layer(render_layer.handle()) }
+  }
+
+  pub fn use_depth_render_layer<D, DC>(
+    &mut self,
+    render_layer: &RenderLayer<D, DC>,
+  ) -> Result<InUseTexture<D, DC::Type>, FramebufferError>
+  where
+    B: TextureBackend,
+    D: Dimensionable,
+    DC: DepthChannel,
+  {
+    unsafe { self.backend.use_depth_render_layer(render_layer.handle()) }
+  }
 }
 
 pub struct WithProgram<'a, B, V, P, S, E>
@@ -287,6 +314,30 @@ where
   {
     unsafe { self.backend.use_texture(texture.handle()) }
   }
+
+  pub fn use_render_layer<D, RC>(
+    &mut self,
+    render_layer: &RenderLayer<D, RC>,
+  ) -> Result<InUseTexture<D, RC::Type>, FramebufferError>
+  where
+    B: TextureBackend,
+    D: Dimensionable,
+    RC: RenderChannel,
+  {
+    unsafe { self.backend.use_render_layer(render_layer.handle()) }
+  }
+
+  pub fn use_depth_render_layer<D, DC>(
+    &mut self,
+    render_layer: &RenderLayer<D, DC>,
+  ) -> Result<InUseTexture<D, DC::Type>, FramebufferError>
+  where
+    B: TextureBackend,
+    D: Dimensionable,
+    DC: DepthChannel,
+  {
+    unsafe { self.backend.use_depth_render_layer(render_layer.handle()) }
+  }
 }
 
 #[derive(Debug)]
@@ -332,5 +383,17 @@ where
     Px: Pixel,
   {
     unsafe { self.backend.use_texture(texture.handle()) }
+  }
+
+  pub fn use_render_layer<D, RC>(
+    &mut self,
+    render_layer: &RenderLayer<D, RC>,
+  ) -> Result<InUseTexture<D, RC::Type>, FramebufferError>
+  where
+    B: TextureBackend,
+    D: Dimensionable,
+    RC: RenderChannel,
+  {
+    unsafe { self.backend.use_render_layer(render_layer.handle()) }
   }
 }

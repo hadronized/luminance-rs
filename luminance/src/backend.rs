@@ -76,6 +76,7 @@ pub enum FramebufferError {
   RenderLayerCreation { cause: Option<Box<dyn ErrorTrait>> },
   DepthRenderLayerCreation { cause: Option<Box<dyn ErrorTrait>> },
   RetrieveBackBuffer { cause: Option<Box<dyn ErrorTrait>> },
+  RenderLayerUsage { cause: Option<Box<dyn ErrorTrait>> },
 }
 
 impl fmt::Display for FramebufferError {
@@ -111,6 +112,15 @@ impl fmt::Display for FramebufferError {
       FramebufferError::RetrieveBackBuffer { cause } => write!(
         f,
         "cannot retrieve back buffer {}",
+        cause
+          .as_ref()
+          .map(|cause| cause.to_string())
+          .unwrap_or_else(|| "unknown cause".to_string())
+      ),
+
+      FramebufferError::RenderLayerUsage { cause } => write!(
+        f,
+        "error when using a render layer: {}",
         cause
           .as_ref()
           .map(|cause| cause.to_string())
@@ -533,7 +543,7 @@ pub unsafe trait FramebufferBackend {
     size: D::Size,
     mipmaps: usize,
     index: usize,
-  ) -> Result<RenderLayer<RC>, FramebufferError>
+  ) -> Result<RenderLayer<D, RC>, FramebufferError>
   where
     D: Dimensionable,
     RC: RenderChannel;
@@ -543,7 +553,7 @@ pub unsafe trait FramebufferBackend {
     framebuffer_handle: usize,
     size: D::Size,
     mipmaps: usize,
-  ) -> Result<RenderLayer<DC>, FramebufferError>
+  ) -> Result<RenderLayer<D, DC>, FramebufferError>
   where
     D: Dimensionable,
     DC: DepthChannel;
@@ -566,6 +576,22 @@ pub unsafe trait FramebufferBackend {
     D: Dimensionable,
     RS: RenderSlots,
     DS: DepthRenderSlot;
+
+  unsafe fn use_render_layer<D, P>(
+    &mut self,
+    handle: usize,
+  ) -> Result<InUseTexture<D, P>, FramebufferError>
+  where
+    D: Dimensionable,
+    P: PixelType;
+
+  unsafe fn use_depth_render_layer<D, P>(
+    &mut self,
+    handle: usize,
+  ) -> Result<InUseTexture<D, P>, FramebufferError>
+  where
+    D: Dimensionable,
+    P: PixelType;
 }
 
 macro_rules! mk_uniform_visit {

@@ -13,8 +13,8 @@ where
 {
   handle: usize,
   size: D::Size,
-  layers: RS::RenderLayers,
-  depth_layer: DS::DepthRenderLayer,
+  layers: RS::RenderLayers<D>,
+  depth_layer: DS::DepthRenderLayer<D>,
   dropper: Box<dyn FnMut(usize)>,
 }
 
@@ -27,8 +27,8 @@ where
   pub unsafe fn new(
     handle: usize,
     size: D::Size,
-    layers: RS::RenderLayers,
-    depth_layer: DS::DepthRenderLayer,
+    layers: RS::RenderLayers<D>,
+    depth_layer: DS::DepthRenderLayer<D>,
     dropper: Box<dyn FnMut(usize)>,
   ) -> Self {
     Self {
@@ -48,11 +48,11 @@ where
     &self.size
   }
 
-  pub fn layers(&self) -> &RS::RenderLayers {
+  pub fn layers(&self) -> &RS::RenderLayers<D> {
     &self.layers
   }
 
-  pub fn depth_layer(&self) -> &DS::DepthRenderLayer {
+  pub fn depth_layer(&self) -> &DS::DepthRenderLayer<D> {
     &self.depth_layer
   }
 }

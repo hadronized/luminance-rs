@@ -9,7 +9,8 @@ use crate::{
   pipeline::{PipelineState, WithFramebuffer},
   pixel::Pixel,
   primitive::Primitive,
-  render_slots::{DepthRenderSlot, RenderSlots},
+  render_channel::{DepthChannel, RenderChannel},
+  render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
   shader::{Program, ProgramBuilder, ProgramUpdate, Uniforms},
   texture::{InUseTexture, Texture, TextureSampling},
   vertex::Vertex,
@@ -315,6 +316,28 @@ where
     P: Pixel,
   {
     unsafe { self.backend.use_texture(texture.handle()) }
+  }
+
+  pub fn use_render_layer<D, RC>(
+    &mut self,
+    render_layer: &RenderLayer<D, RC>,
+  ) -> Result<InUseTexture<D, RC::Type>, FramebufferError>
+  where
+    D: Dimensionable,
+    RC: RenderChannel,
+  {
+    unsafe { self.backend.use_render_layer(render_layer.handle()) }
+  }
+
+  pub fn use_depth_render_layer<D, DC>(
+    &mut self,
+    render_layer: &RenderLayer<D, DC>,
+  ) -> Result<InUseTexture<D, DC::Type>, FramebufferError>
+  where
+    D: Dimensionable,
+    DC: DepthChannel,
+  {
+    unsafe { self.backend.use_depth_render_layer(render_layer.handle()) }
   }
 }
 

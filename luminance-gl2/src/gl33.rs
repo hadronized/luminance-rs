@@ -2215,7 +2215,7 @@ unsafe impl FramebufferBackend for GL33 {
     size: D::Size,
     mipmaps: usize,
     index: usize,
-  ) -> Result<RenderLayer<RC>, FramebufferError>
+  ) -> Result<RenderLayer<D, RC>, FramebufferError>
   where
     D: Dimensionable,
     RC: RenderChannel,
@@ -2250,7 +2250,7 @@ unsafe impl FramebufferBackend for GL33 {
     _: usize,
     size: D::Size,
     mipmaps: usize,
-  ) -> Result<RenderLayer<DC>, FramebufferError>
+  ) -> Result<RenderLayer<D, DC>, FramebufferError>
   where
     D: Dimensionable,
     DC: DepthChannel,
@@ -2367,6 +2367,36 @@ unsafe impl FramebufferBackend for GL33 {
     DS: DepthRenderSlot,
   {
     Ok(Framebuffer::new(0, size, (), (), Box::new(|_| {})))
+  }
+
+  unsafe fn use_render_layer<D, P>(
+    &mut self,
+    handle: usize,
+  ) -> Result<InUseTexture<D, P>, FramebufferError>
+  where
+    D: Dimensionable,
+    P: PixelType,
+  {
+    self
+      .use_texture(handle)
+      .map_err(|cause| FramebufferError::RenderLayerUsage {
+        cause: Some(Box::new(cause)),
+      })
+  }
+
+  unsafe fn use_depth_render_layer<D, P>(
+    &mut self,
+    handle: usize,
+  ) -> Result<InUseTexture<D, P>, FramebufferError>
+  where
+    D: Dimensionable,
+    P: PixelType,
+  {
+    self
+      .use_texture(handle)
+      .map_err(|cause| FramebufferError::RenderLayerUsage {
+        cause: Some(Box::new(cause)),
+      })
   }
 }
 
