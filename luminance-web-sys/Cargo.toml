@@ -11,7 +11,7 @@ repository = "https://github.com/phaazon/luminance-rs"
 documentation = "https://docs.rs/luminance-web-sys"
 readme = "README.md"
 edition = "2021"
-rust-version = "1.56.0"
+rust-version = "1.65.0"
 
 [dependencies]
 luminance = { version = ">=0.46, <0.48", path = "../luminance" }

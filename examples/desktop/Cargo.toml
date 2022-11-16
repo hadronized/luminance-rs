@@ -10,7 +10,7 @@ repository = "https://github.com/phaazon/luminance-rs"
 documentation = "https://docs.rs/luminance"
 readme = "README.md"
 edition = "2021"
-rust-version = "1.56.0"
+rust-version = "1.65.0"
 
 [[bin]]
 name = "luminance-examples-desktop"
