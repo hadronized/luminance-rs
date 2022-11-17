@@ -32,7 +32,10 @@ impl ContextActive {
 }
 
 #[derive(Debug)]
-pub struct Context<B> {
+pub struct Context<B>
+where
+  B: Backend,
+{
   backend: B,
   context_active: ContextActive,
 }
@@ -341,8 +344,15 @@ where
   }
 }
 
-impl<B> Drop for Context<B> {
+impl<B> Drop for Context<B>
+where
+  B: Backend,
+{
   fn drop(&mut self) {
+    unsafe {
+      self.backend.unload();
+    }
+
     *self.context_active.0.borrow_mut() = false;
   }
 }

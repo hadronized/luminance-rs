@@ -2,8 +2,8 @@ use core::fmt;
 use gl::types::{GLboolean, GLchar, GLenum, GLfloat, GLint, GLsizei, GLubyte, GLuint};
 use luminance::{
   backend::{
-    FramebufferBackend, FramebufferError, PipelineBackend, PipelineError, QueryBackend, QueryError,
-    ShaderBackend, ShaderError, TextureBackend, TextureError, VertexEntityBackend,
+    Backend, FramebufferBackend, FramebufferError, PipelineBackend, PipelineError, QueryBackend,
+    QueryError, ShaderBackend, ShaderError, TextureBackend, TextureError, VertexEntityBackend,
     VertexEntityError,
   },
   blending::{BlendingMode, Equation, Factor},
@@ -1993,6 +1993,17 @@ impl GL33 {
       let name = CStr::from_ptr(name_ptr as *const c_char);
       name.to_string_lossy().into_owned()
     }
+  }
+}
+
+unsafe impl Backend for GL33 {
+  unsafe fn unload(&mut self) {
+    let mut st = self.state.borrow_mut();
+
+    st.vertex_entities.clear();
+    st.framebuffers.clear();
+    st.textures.clear();
+    st.programs.clear();
   }
 }
 

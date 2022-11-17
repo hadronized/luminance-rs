@@ -476,7 +476,7 @@ impl From<PipelineError> for Error {
   }
 }
 
-pub trait Backend:
+pub unsafe trait Backend:
   VertexEntityBackend
   + FramebufferBackend
   + ShaderBackend
@@ -484,16 +484,7 @@ pub trait Backend:
   + PipelineBackend
   + QueryBackend
 {
-}
-
-impl<B> Backend for B where
-  B: VertexEntityBackend
-    + FramebufferBackend
-    + ShaderBackend
-    + TextureBackend
-    + PipelineBackend
-    + QueryBackend
-{
+  unsafe fn unload(&mut self);
 }
 
 pub unsafe trait VertexEntityBackend {
