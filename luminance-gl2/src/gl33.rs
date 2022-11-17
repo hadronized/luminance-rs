@@ -353,9 +353,12 @@ impl State {
     }
   }
 
-  fn drop_texture(&mut self, handle: usize) {
+  // we return the [`TextureData`] so that we can drop it in the caller
+  fn remove_texture(&mut self, handle: usize) -> Option<TextureData> {
     if self.is_context_active() {
-      self.textures.remove(&handle);
+      self.textures.remove(&handle)
+    } else {
+      None
     }
   }
 }
@@ -2817,7 +2820,8 @@ unsafe impl TextureBackend for GL33 {
 
     let state = self.state.clone();
     let dropper = Box::new(move |handle| {
-      state.borrow_mut().drop_texture(handle);
+      let texture_data = state.borrow_mut().remove_texture(handle);
+      drop(texture_data);
     });
 
     Ok(Texture::new(handle, dropper))
