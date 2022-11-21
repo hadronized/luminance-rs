@@ -76,7 +76,7 @@ impl Default for TextureSampling {
       wrap_r: Wrap::ClampToEdge,
       wrap_s: Wrap::ClampToEdge,
       wrap_t: Wrap::ClampToEdge,
-      min_filter: MinFilter::NearestMipmapLinear,
+      min_filter: MinFilter::Linear,
       mag_filter: MagFilter::Linear,
       depth_comparison: None,
     }

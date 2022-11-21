@@ -38,6 +38,7 @@ pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
               framebuffer_handle,
               size,
               mipmaps,
+              sampling,
               #rank,
             )?
           };
@@ -95,6 +96,7 @@ pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
             framebuffer_handle: usize,
             size: D::Size,
             mipmaps: luminance::texture::Mipmaps,
+            sampling: &luminance::texture::TextureSampling,
           ) -> Result<Self::RenderLayers<D>, luminance::backend::FramebufferError>
           where
             B: luminance::backend::FramebufferBackend,

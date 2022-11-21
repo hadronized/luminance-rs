@@ -132,6 +132,7 @@ pub fn load_texture(
   ctx: &mut Context<impl Backend>,
   platform: &mut impl PlatformServices,
   mipmaps: luminance::texture::Mipmaps,
+  sampling: &TextureSampling,
 ) -> Option<RGBTexture> {
   let img = platform
     .fetch_texture()
@@ -147,12 +148,7 @@ pub fn load_texture(
   //
   // the GenMipmaps argument disables mipmap generation (we don’t care so far)
   ctx
-    .new_texture(
-      Size2::new(width, height),
-      mipmaps,
-      TextureSampling::default(),
-      texels,
-    )
+    .new_texture(Size2::new(width, height), mipmaps, sampling, texels)
     .map_err(|e| log::error!("error while creating texture: {}", e))
     .ok()
 }

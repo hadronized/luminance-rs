@@ -104,13 +104,14 @@ where
     &mut self,
     size: D::Size,
     mipmaps: Mipmaps,
+    sampling: &TextureSampling,
   ) -> Result<Framebuffer<D, RS, DS>, FramebufferError>
   where
     D: Dimensionable,
     RS: RenderSlots,
     DS: DepthRenderSlot,
   {
-    unsafe { self.backend.new_framebuffer(size, mipmaps) }
+    unsafe { self.backend.new_framebuffer(size, mipmaps, sampling) }
   }
 
   pub fn back_buffer<D, RS, DS>(
@@ -168,7 +169,7 @@ where
     &mut self,
     size: D::Size,
     mipmaps: Mipmaps,
-    sampling: TextureSampling,
+    sampling: &TextureSampling,
   ) -> Result<Texture<D, P>, TextureError>
   where
     D: Dimensionable,
@@ -181,7 +182,7 @@ where
     &mut self,
     size: D::Size,
     mipmaps: Mipmaps,
-    sampling: TextureSampling,
+    sampling: &TextureSampling,
     texels: &[P::RawEncoding],
   ) -> Result<Texture<D, P>, TextureError>
   where
@@ -211,7 +212,7 @@ where
   pub fn new_texture_with_levels<D, P>(
     &mut self,
     size: D::Size,
-    sampling: TextureSampling,
+    sampling: &TextureSampling,
     levels: &[&[P::RawEncoding]],
   ) -> Result<Texture<D, P>, TextureError>
   where

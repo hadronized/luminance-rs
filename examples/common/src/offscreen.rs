@@ -13,7 +13,7 @@ use luminance::{
   primitive::{Triangle, TriangleFan},
   render_state::RenderState,
   shader::{Program, ProgramBuilder, Stage, Uni},
-  texture::{InUseTexture, Mipmaps},
+  texture::{InUseTexture, Mipmaps, TextureSampling},
   vertex_entity::{VertexEntity, View},
   vertex_storage::Interleaved,
   Uniforms,
@@ -106,7 +106,8 @@ impl Example for LocalExample {
     let triangle = ctx.new_vertex_entity(Interleaved::new().set_vertices(&TRI_VERTICES[..]), [])?;
     let quad = ctx.new_vertex_entity(Interleaved::new(), [])?;
     let fb_size = Size2::new(width, height);
-    let offscreen_buffer = ctx.new_framebuffer(fb_size, Mipmaps::No)?;
+    let offscreen_buffer =
+      ctx.new_framebuffer(fb_size, Mipmaps::No, &TextureSampling::default())?;
     let back_buffer = ctx.back_buffer(fb_size)?;
 
     Ok(Self {
@@ -129,7 +130,11 @@ impl Example for LocalExample {
       match action {
         InputAction::Quit => return Ok(LoopFeedback::Exit),
         InputAction::Resized { width, height } => {
-          self.offscreen_buffer = ctx.new_framebuffer(Size2::new(width, height), Mipmaps::No)?;
+          self.offscreen_buffer = ctx.new_framebuffer(
+            Size2::new(width, height),
+            Mipmaps::No,
+            &TextureSampling::default(),
+          )?;
         }
         _ => (),
       }
@@ -162,7 +167,7 @@ impl Example for LocalExample {
         frame.with_render_state(&RenderState::default(), |mut frame| {
           // this will render the attributeless quad with the offscreen framebuffer color slot
           // bound for the shader to fetch from
-          frame.render_vertex_entity(quad.view(..))
+          frame.render_vertex_entity(quad.view(..4))
         })
       })
     })?;

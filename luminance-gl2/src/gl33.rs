@@ -682,7 +682,7 @@ impl TextureData {
     size: D::Size,
     mipmaps: Mipmaps,
     pf: PixelFormat,
-    sampling: TextureSampling,
+    sampling: &TextureSampling,
   ) -> Result<usize, TextureError>
   where
     D: Dimensionable,
@@ -726,7 +726,7 @@ impl TextureData {
     }
   }
 
-  fn apply_sampling_to_texture(target: GLenum, sampling: TextureSampling) {
+  fn apply_sampling_to_texture(target: GLenum, sampling: &TextureSampling) {
     unsafe {
       gl::TexParameteri(
         target,
@@ -786,6 +786,12 @@ impl TextureData {
       Mipmaps::No => 1,
       Mipmaps::Yes { count } => count + 1,
     };
+
+    trace!(
+      "creating texture storage for mipmaps={:?}, pf={:?}",
+      mipmaps,
+      pf
+    );
 
     match GL33::opengl_pixel_format(pf) {
       Some(glf) => {
@@ -902,6 +908,8 @@ impl TextureData {
     h: u32,
     levels: usize,
   ) {
+    trace!("creating 2D texture {}*{} ({} levels)", w, h, levels);
+
     for level in 0..levels {
       let div = 1 << level as u32;
       let w = w / div;
@@ -2230,15 +2238,24 @@ unsafe impl VertexEntityBackend for GL33 {
 unsafe impl FramebufferBackend for GL33 {
   unsafe fn new_render_layer<D, RC>(
     &mut self,
-    _: usize,
+    _handle: usize,
     size: D::Size,
     mipmaps: Mipmaps,
+
+    sampling: &TextureSampling,
     index: usize,
   ) -> Result<RenderLayer<D, RC>, FramebufferError>
   where
     D: Dimensionable,
     RC: RenderChannel,
   {
+    trace!(
+      "creating new render layer for framebuffer={}, mipmaps={:?}, index={}",
+      _handle,
+      mipmaps,
+      index
+    );
+
     // a render layer is a texture, so there is no need to wrap it
     let pixel_format = RC::CHANNEL_TY.to_pixel_format();
     let tex = TextureData::new::<D>(
@@ -2247,7 +2264,7 @@ unsafe impl FramebufferBackend for GL33 {
       size,
       mipmaps,
       pixel_format,
-      TextureSampling::default(),
+      sampling,
     )
     .map_err(|e| FramebufferError::RenderLayerCreation {
       cause: Some(Box::new(e)),
@@ -2269,6 +2286,7 @@ unsafe impl FramebufferBackend for GL33 {
     _: usize,
     size: D::Size,
     mipmaps: Mipmaps,
+    sampling: &TextureSampling,
   ) -> Result<RenderLayer<D, DC>, FramebufferError>
   where
     D: Dimensionable,
@@ -2282,7 +2300,7 @@ unsafe impl FramebufferBackend for GL33 {
       size,
       mipmaps,
       pixel_format,
-      TextureSampling::default(),
+      sampling,
     )
     .map_err(|e| FramebufferError::RenderLayerCreation {
       cause: Some(Box::new(e)),
@@ -2298,6 +2316,7 @@ unsafe impl FramebufferBackend for GL33 {
     &mut self,
     size: D::Size,
     mipmaps: Mipmaps,
+    sampling: &TextureSampling,
   ) -> Result<Framebuffer<D, RS, DS>, FramebufferError>
   where
     D: Dimensionable,
@@ -2359,8 +2378,8 @@ unsafe impl FramebufferBackend for GL33 {
     let handle = handle as usize;
 
     // create render and depth render layers
-    let layers = RS::new_render_layers::<_, D>(self, handle, size, mipmaps)?;
-    let depth_layer = DS::new_depth_render_layer::<_, D>(self, handle, size, mipmaps)?;
+    let layers = RS::new_render_layers::<_, D>(self, handle, size, mipmaps, sampling)?;
+    let depth_layer = DS::new_depth_render_layer::<_, D>(self, handle, size, mipmaps, sampling)?;
 
     // validate the state of the framebuffer (the framebuffer is already bound)
     FramebufferData::validate()?;
@@ -2808,7 +2827,7 @@ unsafe impl TextureBackend for GL33 {
     &mut self,
     size: D::Size,
     mipmaps: Mipmaps,
-    sampling: TextureSampling,
+    sampling: &TextureSampling,
   ) -> Result<Texture<D, P>, TextureError>
   where
     D: Dimensionable,
@@ -2835,7 +2854,7 @@ unsafe impl TextureBackend for GL33 {
     &mut self,
     size: D::Size,
     mipmaps: Mipmaps,
-    sampling: TextureSampling,
+    sampling: &TextureSampling,
     texels: &[P::RawEncoding],
   ) -> Result<Texture<D, P>, TextureError>
   where

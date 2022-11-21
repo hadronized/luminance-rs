@@ -5,7 +5,7 @@ use crate::{
   dim::Dimensionable,
   framebuffer::Back,
   render_channel::{DepthChannel, DepthChannelType, RenderChannelDesc},
-  texture::Mipmaps,
+  texture::{Mipmaps, TextureSampling},
 };
 
 /// Render slots.
@@ -25,6 +25,7 @@ pub trait RenderSlots {
     framebuffer_handle: usize,
     size: D::Size,
     mipmaps: Mipmaps,
+    sampling: &TextureSampling,
   ) -> Result<Self::RenderLayers<D>, FramebufferError>
   where
     B: FramebufferBackend,
@@ -43,6 +44,7 @@ impl RenderSlots for () {
     _: usize,
     _: D::Size,
     _: Mipmaps,
+    _: &TextureSampling,
   ) -> Result<Self::RenderLayers<D>, FramebufferError>
   where
     B: FramebufferBackend,
@@ -67,6 +69,7 @@ where
     _: usize,
     _: D::Size,
     _: Mipmaps,
+    _: &TextureSampling,
   ) -> Result<Self::RenderLayers<D>, FramebufferError>
   where
     B: FramebufferBackend,
@@ -109,6 +112,7 @@ pub trait DepthRenderSlot {
     framebuffer_handle: usize,
     size: D::Size,
     mipmaps: Mipmaps,
+    sampling: &TextureSampling,
   ) -> Result<Self::DepthRenderLayer<D>, FramebufferError>
   where
     B: FramebufferBackend,
@@ -125,6 +129,7 @@ impl DepthRenderSlot for () {
     _: usize,
     _: D::Size,
     _: Mipmaps,
+    _: &TextureSampling,
   ) -> Result<Self::DepthRenderLayer<D>, FramebufferError>
   where
     B: FramebufferBackend,
@@ -147,6 +152,7 @@ where
     _: usize,
     _: D::Size,
     _: Mipmaps,
+    _: &TextureSampling,
   ) -> Result<Self::DepthRenderLayer<D>, FramebufferError>
   where
     B: FramebufferBackend,
@@ -169,11 +175,12 @@ where
     framebuffer_handle: usize,
     size: D::Size,
     mipmaps: Mipmaps,
+    sampling: &TextureSampling,
   ) -> Result<Self::DepthRenderLayer<D>, FramebufferError>
   where
     B: FramebufferBackend,
     D: Dimensionable,
   {
-    Ok(backend.new_depth_render_layer(framebuffer_handle, size, mipmaps)?)
+    Ok(backend.new_depth_render_layer(framebuffer_handle, size, mipmaps, sampling)?)
   }
 }

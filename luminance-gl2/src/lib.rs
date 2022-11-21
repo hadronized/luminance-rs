@@ -1,3 +1,6 @@
+#[macro_use]
+mod log;
+
 #[cfg(feature = "GL33")]
 pub mod gl33;
 

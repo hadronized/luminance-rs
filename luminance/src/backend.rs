@@ -543,6 +543,7 @@ pub unsafe trait FramebufferBackend {
     framebuffer_handle: usize,
     size: D::Size,
     mipmaps: Mipmaps,
+    sampling: &TextureSampling,
     index: usize,
   ) -> Result<RenderLayer<D, RC>, FramebufferError>
   where
@@ -554,6 +555,7 @@ pub unsafe trait FramebufferBackend {
     framebuffer_handle: usize,
     size: D::Size,
     mipmaps: Mipmaps,
+    sampling: &TextureSampling,
   ) -> Result<RenderLayer<D, DC>, FramebufferError>
   where
     D: Dimensionable,
@@ -563,6 +565,7 @@ pub unsafe trait FramebufferBackend {
     &mut self,
     size: D::Size,
     mipmaps: Mipmaps,
+    sampling: &TextureSampling,
   ) -> Result<Framebuffer<D, RS, DS>, FramebufferError>
   where
     D: Dimensionable,
@@ -689,7 +692,7 @@ pub unsafe trait TextureBackend {
     &mut self,
     size: D::Size,
     mipmaps: Mipmaps,
-    sampling: TextureSampling,
+    sampling: &TextureSampling,
   ) -> Result<Texture<D, P>, TextureError>
   where
     D: Dimensionable,
@@ -699,7 +702,7 @@ pub unsafe trait TextureBackend {
     &mut self,
     size: D::Size,
     mipmaps: Mipmaps,
-    sampling: TextureSampling,
+    sampling: &TextureSampling,
     texels: &[P::RawEncoding],
   ) -> Result<Texture<D, P>, TextureError>
   where
