@@ -4,7 +4,7 @@ use luminance::{
   dim::{Dim2, Size2},
   namespace,
   pixel::NormRGB8UI,
-  texture::{TextureSampling, Texture},
+  texture::{Texture, TextureSampling},
   RenderSlots, Vertex,
 };
 use mint::{Vector2, Vector3};
@@ -129,9 +129,9 @@ pub fn cube(size: f32) -> ([CubeVertex; 24], [u32; 30]) {
 pub type RGBTexture = Texture<Dim2, NormRGB8UI>;
 
 pub fn load_texture(
-  context: &mut Context<impl Backend>,
+  ctx: &mut Context<impl Backend>,
   platform: &mut impl PlatformServices,
-  mipmaps: usize,
+  mipmaps: luminance::texture::Mipmaps,
 ) -> Option<RGBTexture> {
   let img = platform
     .fetch_texture()
@@ -139,13 +139,14 @@ pub fn load_texture(
     .ok()?;
   let (width, height) = img.dimensions();
   let texels = img.as_raw();
+  log::info!("loaded texture with width={} height={}", width, height);
 
   // create the luminance texture; the third argument is the number of mipmaps we want (leave it
   // to 0 for now) and the latest is the sampler to use when sampling the texels in the
   // shader (we’ll just use the default one)
   //
   // the GenMipmaps argument disables mipmap generation (we don’t care so far)
-  context
+  ctx
     .new_texture(
       Size2::new(width, height),
       mipmaps,

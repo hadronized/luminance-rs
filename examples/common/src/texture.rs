@@ -16,7 +16,7 @@ use luminance::{
   primitive::TriangleFan,
   render_state::RenderState,
   shader::{Program, ProgramBuilder, Stage, Uni},
-  texture::InUseTexture,
+  texture::{InUseTexture, Mipmaps},
   vertex_entity::{VertexEntity, View},
   vertex_storage::Interleaved,
   Uniforms,
@@ -53,7 +53,7 @@ impl Example for LocalExample {
     platform: &mut impl PlatformServices,
     ctx: &mut Context<impl Backend>,
   ) -> Result<Self, Self::Err> {
-    let image = load_texture(ctx, platform, 1).expect("texture to display");
+    let image = load_texture(ctx, platform, Mipmaps::count(4)).expect("texture to display");
 
     let program = ctx.new_program(
       ProgramBuilder::new()
@@ -78,7 +78,7 @@ impl Example for LocalExample {
   }
 
   fn render_frame(
-    self,
+    mut self,
     _: f32,
     actions: impl Iterator<Item = InputAction>,
     ctx: &mut Context<impl Backend>,
@@ -86,6 +86,11 @@ impl Example for LocalExample {
     for action in actions {
       match action {
         InputAction::Quit => return Ok(LoopFeedback::Exit),
+
+        InputAction::Resized { width, height } => {
+          self.back_buffer = ctx.back_buffer(Size2::new(width, height))?;
+        }
+
         _ => (),
       }
     }

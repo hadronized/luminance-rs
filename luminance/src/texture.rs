@@ -83,6 +83,18 @@ impl Default for TextureSampling {
   }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Mipmaps {
+  No,
+  Yes { count: usize },
+}
+
+impl Mipmaps {
+  pub fn count(count: usize) -> Self {
+    Mipmaps::Yes { count }
+  }
+}
+
 pub struct Texture<D, P>
 where
   D: Dimensionable,

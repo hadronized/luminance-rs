@@ -94,7 +94,7 @@ pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
             backend: &mut B,
             framebuffer_handle: usize,
             size: D::Size,
-            mipmaps: usize,
+            mipmaps: luminance::texture::Mipmaps,
           ) -> Result<Self::RenderLayers<D>, luminance::backend::FramebufferError>
           where
             B: luminance::backend::FramebufferBackend,

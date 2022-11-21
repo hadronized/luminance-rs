@@ -12,7 +12,7 @@ use crate::{
   render_channel::{DepthChannel, RenderChannel},
   render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
   shader::{Program, ProgramBuilder, ProgramUpdate, Uniforms},
-  texture::{InUseTexture, Texture, TextureSampling},
+  texture::{InUseTexture, Mipmaps, Texture, TextureSampling},
   vertex::Vertex,
   vertex_entity::VertexEntity,
   vertex_storage::AsVertexStorage,
@@ -103,7 +103,7 @@ where
   pub fn new_framebuffer<D, RS, DS>(
     &mut self,
     size: D::Size,
-    mipmaps: usize,
+    mipmaps: Mipmaps,
   ) -> Result<Framebuffer<D, RS, DS>, FramebufferError>
   where
     D: Dimensionable,
@@ -167,20 +167,20 @@ where
   pub fn reserve_texture<D, P>(
     &mut self,
     size: D::Size,
-    mipmaps: usize,
+    mipmaps: Mipmaps,
     sampling: TextureSampling,
   ) -> Result<Texture<D, P>, TextureError>
   where
     D: Dimensionable,
     P: Pixel,
   {
-    unsafe { self.backend.new_texture(size, mipmaps, sampling) }
+    unsafe { self.backend.reserve_texture(size, mipmaps, sampling) }
   }
 
   pub fn new_texture<D, P>(
     &mut self,
     size: D::Size,
-    mipmaps: usize,
+    mipmaps: Mipmaps,
     sampling: TextureSampling,
     texels: &[P::RawEncoding],
   ) -> Result<Texture<D, P>, TextureError>
@@ -188,23 +188,29 @@ where
     D: Dimensionable,
     P: Pixel,
   {
+    unsafe { self.backend.new_texture(size, mipmaps, sampling, texels) }
+  }
+
+  pub fn resize_texture<D, P>(
+    &mut self,
+    texture: &Texture<D, P>,
+    size: D::Size,
+    mipmaps: Mipmaps,
+  ) -> Result<(), TextureError>
+  where
+    D: Dimensionable,
+    P: Pixel,
+  {
     unsafe {
-      let texture = self.backend.new_texture(size, mipmaps, sampling)?;
-      self.backend.set_texture_data::<D, P>(
-        texture.handle(),
-        D::ZERO_OFFSET,
-        size,
-        texels,
-        None,
-      )?;
-      Ok(texture)
+      self
+        .backend
+        .resize_texture::<D, P>(texture.handle(), size, mipmaps)
     }
   }
 
   pub fn new_texture_with_levels<D, P>(
     &mut self,
     size: D::Size,
-    mipmaps: usize,
     sampling: TextureSampling,
     levels: &[&[P::RawEncoding]],
   ) -> Result<Texture<D, P>, TextureError>
@@ -213,15 +219,17 @@ where
     P: Pixel,
   {
     unsafe {
-      let texture = self.backend.new_texture(size, mipmaps, sampling)?;
+      let levels_count = levels.len();
+      let texture = self.backend.reserve_texture(size, Mipmaps::No, sampling)?;
 
-      for level in 0..mipmaps {
+      for level in 0..levels_count {
         self.backend.set_texture_data::<D, P>(
           texture.handle(),
           D::ZERO_OFFSET,
           size,
+          false,
           &levels[level],
-          Some(level),
+          level,
         )?;
       }
 
@@ -243,7 +251,7 @@ where
     unsafe {
       self
         .backend
-        .set_texture_data::<D, P>(texture.handle(), offset, size, texels, None)
+        .set_texture_data::<D, P>(texture.handle(), offset, size, true, texels, 0)
     }
   }
 
@@ -262,7 +270,7 @@ where
     unsafe {
       self
         .backend
-        .set_texture_data::<D, P>(texture.handle(), offset, size, texels, Some(level))
+        .set_texture_data::<D, P>(texture.handle(), offset, size, false, texels, level)
     }
   }
 
@@ -280,7 +288,7 @@ where
     unsafe {
       self
         .backend
-        .clear_texture_data::<D, P>(texture.handle(), offset, size, clear_value)
+        .clear_texture_data::<D, P>(texture.handle(), offset, size, true, clear_value)
     }
   }
 

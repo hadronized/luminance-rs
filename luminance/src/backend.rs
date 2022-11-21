@@ -8,7 +8,7 @@ use crate::{
   render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
   render_state::RenderState,
   shader::{Program, Uni, Uniform, Uniforms},
-  texture::{InUseTexture, Texture, TextureSampling},
+  texture::{InUseTexture, Mipmaps, Texture, TextureSampling},
   vertex::Vertex,
   vertex_entity::{VertexEntity, VertexEntityView},
   vertex_storage::AsVertexStorage,
@@ -532,7 +532,7 @@ pub unsafe trait FramebufferBackend {
     &mut self,
     framebuffer_handle: usize,
     size: D::Size,
-    mipmaps: usize,
+    mipmaps: Mipmaps,
     index: usize,
   ) -> Result<RenderLayer<D, RC>, FramebufferError>
   where
@@ -543,7 +543,7 @@ pub unsafe trait FramebufferBackend {
     &mut self,
     framebuffer_handle: usize,
     size: D::Size,
-    mipmaps: usize,
+    mipmaps: Mipmaps,
   ) -> Result<RenderLayer<D, DC>, FramebufferError>
   where
     D: Dimensionable,
@@ -552,7 +552,7 @@ pub unsafe trait FramebufferBackend {
   unsafe fn new_framebuffer<D, RS, DS>(
     &mut self,
     size: D::Size,
-    mipmaps: usize,
+    mipmaps: Mipmaps,
   ) -> Result<Framebuffer<D, RS, DS>, FramebufferError>
   where
     D: Dimensionable,
@@ -675,11 +675,22 @@ pub unsafe trait ShaderBackend {
 }
 
 pub unsafe trait TextureBackend {
+  unsafe fn reserve_texture<D, P>(
+    &mut self,
+    size: D::Size,
+    mipmaps: Mipmaps,
+    sampling: TextureSampling,
+  ) -> Result<Texture<D, P>, TextureError>
+  where
+    D: Dimensionable,
+    P: Pixel;
+
   unsafe fn new_texture<D, P>(
     &mut self,
     size: D::Size,
-    mipmaps: usize,
+    mipmaps: Mipmaps,
     sampling: TextureSampling,
+    texels: &[P::RawEncoding],
   ) -> Result<Texture<D, P>, TextureError>
   where
     D: Dimensionable,
@@ -689,7 +700,7 @@ pub unsafe trait TextureBackend {
     &mut self,
     handle: usize,
     size: D::Size,
-    mipmaps: usize,
+    mipmaps: Mipmaps,
   ) -> Result<(), TextureError>
   where
     D: Dimensionable,
@@ -700,8 +711,9 @@ pub unsafe trait TextureBackend {
     handle: usize,
     offset: D::Offset,
     size: D::Size,
+    gen_mipmaps: bool,
     texels: &[P::RawEncoding],
-    level: Option<usize>,
+    level: usize,
   ) -> Result<(), TextureError>
   where
     D: Dimensionable,
@@ -712,6 +724,7 @@ pub unsafe trait TextureBackend {
     handle: usize,
     offset: D::Offset,
     size: D::Size,
+    gen_mimaps: bool,
     clear_value: P::RawEncoding,
   ) -> Result<(), TextureError>
   where
