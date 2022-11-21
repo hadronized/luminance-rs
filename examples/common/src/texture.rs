@@ -5,6 +5,10 @@
 //!
 //! <https://docs.rs/luminance>
 
+use crate::{
+  shared::{load_img, FragSlot},
+  Example, InputAction, LoopFeedback, PlatformServices,
+};
 use luminance::{
   backend::Backend,
   blending::{Blending, BlendingMode, Equation, Factor},
@@ -12,19 +16,14 @@ use luminance::{
   dim::{Dim2, Size2},
   framebuffer::{Back, Framebuffer},
   pipeline::PipelineState,
-  pixel::NormUnsigned,
+  pixel::{NormRGB8UI, NormUnsigned},
   primitive::TriangleFan,
   render_state::RenderState,
   shader::{Program, ProgramBuilder, Stage, Uni},
-  texture::{InUseTexture, MagFilter, Mipmaps, TextureSampling},
+  texture::{InUseTexture, Mipmaps, Texture, TextureSampling},
   vertex_entity::{VertexEntity, View},
   vertex_storage::Interleaved,
   Uniforms,
-};
-
-use crate::{
-  shared::{load_texture, FragSlot, RGBTexture},
-  Example, InputAction, LoopFeedback, PlatformServices,
 };
 
 const VS: &'static str = include_str!("texture-vs.glsl");
@@ -37,7 +36,7 @@ struct ShaderUniforms {
 }
 
 pub struct LocalExample {
-  image: RGBTexture,
+  texture: Texture<Dim2, NormRGB8UI>,
   program: Program<(), TriangleFan<()>, FragSlot, ShaderUniforms>,
   vertex_entity: VertexEntity<(), TriangleFan<()>, Interleaved<()>>,
   back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
@@ -53,8 +52,13 @@ impl Example for LocalExample {
     platform: &mut impl PlatformServices,
     ctx: &mut Context<impl Backend>,
   ) -> Result<Self, Self::Err> {
-    let image = load_texture(ctx, platform, Mipmaps::No, &TextureSampling::default())
-      .expect("texture to display");
+    let (img_size, img_texels) = load_img(ctx, platform).expect("image to display");
+    let texture = ctx.new_texture(
+      img_size,
+      Mipmaps::No,
+      &TextureSampling::default(),
+      &img_texels,
+    )?;
 
     let program = ctx.new_program(
       ProgramBuilder::new()
@@ -71,7 +75,7 @@ impl Example for LocalExample {
     let back_buffer = ctx.back_buffer(Size2::new(width, height))?;
 
     Ok(LocalExample {
-      image,
+      texture,
       program,
       vertex_entity,
       back_buffer,
@@ -96,7 +100,7 @@ impl Example for LocalExample {
       }
     }
 
-    let tex = &self.image;
+    let tex = &self.texture;
     let program = &self.program;
     let vertex_entity = &self.vertex_entity;
     let render_state = &RenderState::default().set_blending(BlendingMode::Combined(Blending {
