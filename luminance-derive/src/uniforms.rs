@@ -80,7 +80,7 @@ pub(crate) fn generate_uniforms_impl(
         // renaming
         let build_call = if unbound {
           quote! {
-            backend.new_shader_uni(program_handle, #name).or_else(|| backend.new_shader_uni_unbound(handle))?
+            backend.new_shader_uni(program_handle, #name).or_else(|_| backend.new_shader_uni_unbound(program_handle))?
           }
         } else {
           quote! {

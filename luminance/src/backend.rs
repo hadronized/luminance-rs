@@ -220,11 +220,19 @@ pub enum PipelineError {
   },
 
   ShaderError(ShaderError),
+
+  FramebufferError(FramebufferError),
 }
 
 impl From<ShaderError> for PipelineError {
   fn from(e: ShaderError) -> Self {
     PipelineError::ShaderError(e)
+  }
+}
+
+impl From<FramebufferError> for PipelineError {
+  fn from(e: FramebufferError) -> Self {
+    PipelineError::FramebufferError(e)
   }
 }
 
@@ -279,6 +287,8 @@ impl fmt::Display for PipelineError {
       ),
 
       PipelineError::ShaderError(e) => write!(f, "shader error in pipeline: {}", e),
+
+      PipelineError::FramebufferError(e) => write!(f, "framebuffer error in pipeline: {}", e),
     }
   }
 }

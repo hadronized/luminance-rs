@@ -200,7 +200,7 @@ examples! {
   "shader-uniforms", shader_uniforms,
   "attributeless", attributeless,
   "texture", texture,
-  // "offscreen", offscreen,
+  "offscreen", offscreen,
   // "shader-uniform-adapt", shader_uniform_adapt,
   // "dynamic-uniform-interface", dynamic_uniform_interface,
   // "vertex-instancing", vertex_instancing,

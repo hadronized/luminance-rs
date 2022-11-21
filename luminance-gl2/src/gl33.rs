@@ -112,7 +112,7 @@ pub struct State {
   vertex_entities: HashMap<usize, VertexEntityData>,
   framebuffers: HashMap<usize, FramebufferData>,
   textures: HashMap<usize, TextureData>,
-  texture_units: TextureUnits,
+  texture_units: Rc<RefCell<TextureUnits>>,
   programs: HashMap<usize, ProgramData>,
 
   // viewport
@@ -204,7 +204,7 @@ impl State {
     let vertex_entities = HashMap::new();
     let framebuffers = HashMap::new();
     let textures = HashMap::new();
-    let texture_units = TextureUnits::new();
+    let texture_units = Rc::new(RefCell::new(TextureUnits::new()));
     let programs = HashMap::new();
     let viewport = Cached::empty();
     let clear_color = Cached::empty();
@@ -292,11 +292,11 @@ impl State {
     // check whether we are already bound to a texture unit
     if let Some(unit) = texture_data.unit {
       // remove the unit from the idling ones
-      self.texture_units.mark_nonidle(unit);
+      self.texture_units.borrow_mut().mark_nonidle(unit);
       Ok(unit)
     } else {
       // if we don’t have any unit associated with, ask one
-      let (unit, old_texture_handle) = self.texture_units.get_texture_unit()?;
+      let (unit, old_texture_handle) = self.texture_units.borrow_mut().get_texture_unit()?;
       texture_data.unit = Some(unit);
 
       // if a texture was previously bound there, remove its unit
@@ -309,6 +309,7 @@ impl State {
       // do the bind
       self
         .texture_units
+        .borrow_mut()
         .current_texture_unit
         .set_if_invalid(unit, || unsafe {
           gl::ActiveTexture(gl::TEXTURE0 + unit as GLenum);
@@ -329,7 +330,7 @@ impl State {
       .ok_or_else(|| TextureError::NoData { handle })?;
 
     if let Some(unit) = texture_data.unit {
-      self.texture_units.mark_idle(unit, handle);
+      self.texture_units.borrow_mut().mark_idle(unit, handle);
     }
 
     Ok(())
@@ -354,11 +355,9 @@ impl State {
   }
 
   // we return the [`TextureData`] so that we can drop it in the caller
-  fn remove_texture(&mut self, handle: usize) -> Option<TextureData> {
+  fn drop_texture(&mut self, handle: usize) {
     if self.is_context_active() {
-      self.textures.remove(&handle)
-    } else {
-      None
+      self.textures.remove(&handle);
     }
   }
 }
@@ -673,7 +672,7 @@ impl TextureUnits {
 struct TextureData {
   handle: GLuint,
   unit: Option<usize>, // texture unit the texture is bound to
-  state: StateRef,
+  units: Rc<RefCell<TextureUnits>>,
 }
 
 impl TextureData {
@@ -699,8 +698,9 @@ impl TextureData {
     let texture_data = TextureData {
       handle: texture,
       unit: None,
-      state: state.clone(),
+      units: state.borrow().texture_units.clone(),
     };
+
     {
       let mut st = state.borrow_mut();
       st.textures.insert(handle, texture_data);
@@ -1155,11 +1155,7 @@ impl Drop for TextureData {
   fn drop(&mut self) {
     // ensure we mark the texture unit (if any) idle before dying
     if let Some(unit) = self.unit {
-      self
-        .state
-        .borrow_mut()
-        .texture_units
-        .mark_idle(unit, self.handle as _);
+      self.units.borrow_mut().mark_idle(unit, self.handle as _);
     }
 
     unsafe {
@@ -2829,8 +2825,7 @@ unsafe impl TextureBackend for GL33 {
 
     let state = self.state.clone();
     let dropper = Box::new(move |handle| {
-      let texture_data = state.borrow_mut().remove_texture(handle);
-      drop(texture_data);
+      state.borrow_mut().drop_texture(handle);
     });
 
     Ok(Texture::new(handle, dropper))

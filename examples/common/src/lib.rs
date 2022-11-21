@@ -33,7 +33,7 @@ pub mod hello_world;
 pub mod hello_world_more;
 // pub mod interactive_triangle;
 // pub mod mrt;
-// pub mod offscreen;
+pub mod offscreen;
 // pub mod polymorphic_hello_world;
 // pub mod query_info;
 // pub mod query_texture_texels;
