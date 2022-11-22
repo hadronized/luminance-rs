@@ -1,29 +1,28 @@
+use crate::{primitive::Primitive, vertex::Vertex, vertex_storage::AsVertexStorage};
 use std::{
   marker::PhantomData,
   ops::{Range, RangeFrom, RangeFull, RangeTo, RangeToInclusive},
 };
 
-use crate::{primitive::Primitive, vertex::Vertex, vertex_storage::AsVertexStorage};
-
-pub struct VertexEntity<V, P, S> {
+pub struct VertexEntity<V, P, VS> {
   handle: usize,
-  storage: S,
+  vertices: VS,
   indices: Vec<u32>,
   vertex_count: usize,
   primitive_restart: bool,
   dropper: Box<dyn FnMut(usize)>,
-  _phantom: PhantomData<*const (V, P, S)>,
+  _phantom: PhantomData<*const (V, P, VS)>,
 }
 
-impl<V, P, S> VertexEntity<V, P, S>
+impl<V, P, VS> VertexEntity<V, P, VS>
 where
   V: Vertex,
   P: Primitive,
-  S: AsVertexStorage<V>,
+  VS: AsVertexStorage<V>,
 {
   pub unsafe fn new(
     handle: usize,
-    storage: S,
+    vertices: VS,
     indices: Vec<u32>,
     vertex_count: usize,
     primitive_restart: bool,
@@ -31,7 +30,7 @@ where
   ) -> Self {
     Self {
       handle,
-      storage,
+      vertices,
       indices,
       vertex_count,
       primitive_restart,
@@ -56,8 +55,8 @@ where
     self.primitive_restart
   }
 
-  pub fn storage(&mut self) -> &mut S {
-    &mut self.storage
+  pub fn vertices(&mut self) -> &mut VS {
+    &mut self.vertices
   }
 
   pub fn indices(&mut self) -> &mut Vec<u32> {
@@ -65,7 +64,7 @@ where
   }
 }
 
-impl<V, P, S> Drop for VertexEntity<V, P, S> {
+impl<V, P, VS> Drop for VertexEntity<V, P, VS> {
   fn drop(&mut self) {
     (self.dropper)(self.handle);
   }
@@ -153,11 +152,11 @@ pub trait View<R> {
   fn view(&self, range: R) -> VertexEntityView<Self::Vertex, Self::Primitive>;
 }
 
-impl<V, P, S> View<RangeFull> for VertexEntity<V, P, S>
+impl<V, P, VS> View<RangeFull> for VertexEntity<V, P, VS>
 where
   V: Vertex,
   P: Primitive<Vertex = V>,
-  S: AsVertexStorage<V>,
+  VS: AsVertexStorage<V>,
 {
   type Vertex = V;
   type Primitive = P;
@@ -167,11 +166,11 @@ where
   }
 }
 
-impl<V, P, S> View<Range<usize>> for VertexEntity<V, P, S>
+impl<V, P, VS> View<Range<usize>> for VertexEntity<V, P, VS>
 where
   V: Vertex,
   P: Primitive<Vertex = V>,
-  S: AsVertexStorage<V>,
+  VS: AsVertexStorage<V>,
 {
   type Vertex = V;
   type Primitive = P;
@@ -188,11 +187,11 @@ where
   }
 }
 
-impl<V, P, S> View<RangeFrom<usize>> for VertexEntity<V, P, S>
+impl<V, P, VS> View<RangeFrom<usize>> for VertexEntity<V, P, VS>
 where
   V: Vertex,
   P: Primitive<Vertex = V>,
-  S: AsVertexStorage<V>,
+  VS: AsVertexStorage<V>,
 {
   type Vertex = V;
   type Primitive = P;
@@ -209,11 +208,11 @@ where
   }
 }
 
-impl<V, P, S> View<RangeTo<usize>> for VertexEntity<V, P, S>
+impl<V, P, VS> View<RangeTo<usize>> for VertexEntity<V, P, VS>
 where
   V: Vertex,
   P: Primitive<Vertex = V>,
-  S: AsVertexStorage<V>,
+  VS: AsVertexStorage<V>,
 {
   type Vertex = V;
   type Primitive = P;
@@ -230,11 +229,11 @@ where
   }
 }
 
-impl<V, P, S> View<RangeToInclusive<usize>> for VertexEntity<V, P, S>
+impl<V, P, VS> View<RangeToInclusive<usize>> for VertexEntity<V, P, VS>
 where
   V: Vertex,
   P: Primitive<Vertex = V>,
-  S: AsVertexStorage<V>,
+  VS: AsVertexStorage<V>,
 {
   type Vertex = V;
   type Primitive = P;

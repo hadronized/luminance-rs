@@ -54,44 +54,44 @@ where
     })
   }
 
-  pub fn new_vertex_entity<V, P, S, I>(
+  pub fn new_vertex_entity<V, P, VS, I>(
     &mut self,
-    storage: S,
+    storage: VS,
     indices: I,
-  ) -> Result<VertexEntity<V, P, S>, VertexEntityError>
+  ) -> Result<VertexEntity<V, P, VS>, VertexEntityError>
   where
     V: Vertex,
     P: Primitive,
-    S: AsVertexStorage<V>,
+    VS: AsVertexStorage<V>,
     I: Into<Vec<u32>>,
   {
     unsafe { self.backend.new_vertex_entity(storage, indices) }
   }
 
-  pub fn update_vertices<V, P, S>(
+  pub fn update_vertices<V, P, VS>(
     &mut self,
-    entity: &mut VertexEntity<V, P, S>,
+    entity: &mut VertexEntity<V, P, VS>,
   ) -> Result<(), VertexEntityError>
   where
     V: Vertex,
     P: Primitive,
-    S: AsVertexStorage<V>,
+    VS: AsVertexStorage<V>,
   {
     unsafe {
       self
         .backend
-        .vertex_entity_update_vertices(entity.handle(), entity.storage())
+        .vertex_entity_update_vertices(entity.handle(), entity.vertices())
     }
   }
 
-  pub fn update_indices<V, P, S>(
+  pub fn update_indices<V, P, VS>(
     &mut self,
-    entity: &mut VertexEntity<V, P, S>,
+    entity: &mut VertexEntity<V, P, VS>,
   ) -> Result<(), VertexEntityError>
   where
     V: Vertex,
     P: Primitive,
-    S: AsVertexStorage<V>,
+    VS: AsVertexStorage<V>,
   {
     unsafe {
       self
