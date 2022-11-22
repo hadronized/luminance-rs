@@ -150,9 +150,6 @@ pub struct State {
   // vertex restart
   primitive_restart: Cached<bool>,
 
-  // patch primitive vertex number
-  patch_vertex_nb: Cached<usize>,
-
   // array buffer
   bound_array_buffer: Cached<GLuint>,
 
@@ -225,7 +222,6 @@ impl State {
     let scissor = Cached::empty();
     let scissor_region = Cached::empty();
     let primitive_restart = Cached::empty();
-    let patch_vertex_nb = Cached::empty();
     let bound_array_buffer = Cached::empty();
     let bound_element_array_buffer = Cached::empty();
     let bound_draw_framebuffer = Cached::empty();
@@ -265,7 +261,6 @@ impl State {
       scissor,
       scissor_region,
       primitive_restart,
-      patch_vertex_nb,
       bound_array_buffer,
       bound_element_array_buffer,
       bound_draw_framebuffer,
