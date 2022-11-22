@@ -3341,7 +3341,7 @@ unsafe impl QueryBackend for GL33 {
   fn backend_name(&self) -> Result<String, QueryError> {
     let mut st = self.state.borrow_mut();
 
-    Ok(st.vendor_name.clone().unwrap_or_else(move || {
+    Ok(st.renderer_name.clone().unwrap_or_else(move || {
       let name = Self::opengl_get_string(gl::RENDERER);
       st.vendor_name = Some(name.clone());
       name
@@ -3351,7 +3351,7 @@ unsafe impl QueryBackend for GL33 {
   fn backend_version(&self) -> Result<String, QueryError> {
     let mut st = self.state.borrow_mut();
 
-    Ok(st.vendor_name.clone().unwrap_or_else(move || {
+    Ok(st.gl_version.clone().unwrap_or_else(move || {
       let name = Self::opengl_get_string(gl::VERSION);
       st.vendor_name = Some(name.clone());
       name
@@ -3361,7 +3361,7 @@ unsafe impl QueryBackend for GL33 {
   fn backend_shading_lang_version(&self) -> Result<String, QueryError> {
     let mut st = self.state.borrow_mut();
 
-    Ok(st.vendor_name.clone().unwrap_or_else(move || {
+    Ok(st.glsl_version.clone().unwrap_or_else(move || {
       let name = Self::opengl_get_string(gl::SHADING_LANGUAGE_VERSION);
       st.vendor_name = Some(name.clone());
       name
