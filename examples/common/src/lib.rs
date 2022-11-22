@@ -21,14 +21,13 @@
 //! - If you want to write solid and smart Rust code, you want to handle errors, not rely on panics.
 //! - This is example code, so don’t blindly copy it, try to understand it first.
 
-use std::fmt::Display;
-
 use luminance::{backend::Backend, context::Context};
+use std::fmt::Display;
 
 // examples
 pub mod attributeless;
 // pub mod displacement_map;
-// pub mod dynamic_uniform_interface;
+pub mod dynamic_uniform_interface;
 pub mod hello_world;
 pub mod hello_world_more;
 // pub mod interactive_triangle;

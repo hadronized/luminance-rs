@@ -52,7 +52,7 @@ impl Example for LocalExample {
     platform: &mut impl PlatformServices,
     ctx: &mut Context<impl Backend>,
   ) -> Result<Self, Self::Err> {
-    let (img_size, img_texels) = load_img(ctx, platform).expect("image to display");
+    let (img_size, img_texels) = load_img(platform).expect("image to display");
     let texture = ctx.new_texture(
       img_size,
       Mipmaps::No,

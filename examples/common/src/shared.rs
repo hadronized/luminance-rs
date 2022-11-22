@@ -1,12 +1,4 @@
-use luminance::{
-  backend::Backend,
-  context::Context,
-  dim::{Dim2, Size2},
-  namespace,
-  pixel::NormRGB8UI,
-  texture::{Texture, TextureSampling},
-  RenderSlots, Vertex,
-};
+use luminance::{dim::Size2, namespace, RenderSlots, Vertex};
 use mint::{Vector2, Vector3};
 
 use crate::PlatformServices;
@@ -125,10 +117,7 @@ pub fn cube(size: f32) -> ([CubeVertex; 24], [u32; 30]) {
   (vertices, indices)
 }
 
-pub fn load_img(
-  ctx: &mut Context<impl Backend>,
-  platform: &mut impl PlatformServices,
-) -> Option<(Size2, Vec<u8>)> {
+pub fn load_img(platform: &mut impl PlatformServices) -> Option<(Size2, Vec<u8>)> {
   let img = platform
     .fetch_texture()
     .map_err(|e| log::error!("error while loading image: {}", e))

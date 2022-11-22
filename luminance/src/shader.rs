@@ -468,4 +468,17 @@ where
   {
     unsafe { self.backend.set_shader_uni(self.program_handle, uni, value) }
   }
+
+  pub fn query_set<T>(&mut self, name: impl AsRef<str>, value: &T::Value) -> Result<(), ShaderError>
+  where
+    T: Uniform,
+  {
+    let uni = unsafe {
+      self
+        .backend
+        .new_shader_uni::<T>(self.program_handle, name.as_ref())?
+    };
+
+    self.set(&uni, value)
+  }
 }

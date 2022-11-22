@@ -1,5 +1,3 @@
-//! > This program is a sequel to 08-shader-uniforms-adapt. Be sure to have read it first.
-//!
 //! This example shows you how to lookup dynamically uniforms into shaders to implement various kind
 //! of situations. This feature is very likely to be interesting for anyone who would like to
 //! implement a GUI, where the interface of the shader programs are not known statically, for
@@ -13,18 +11,20 @@
 //! <https://docs.rs/luminance>
 
 use crate::{
-  shared::{Semantics, Vertex, VertexColor, VertexPosition},
+  shared::{FragSlot, Vertex},
   Example, InputAction, LoopFeedback, PlatformServices,
 };
-use luminance_front::{
-  context::GraphicsContext,
-  framebuffer::Framebuffer,
+use luminance::{
+  backend::Backend,
+  context::Context,
+  dim::{Dim2, Size2},
+  framebuffer::{Back, Framebuffer},
   pipeline::PipelineState,
+  primitive::Triangle,
   render_state::RenderState,
-  shader::{types::Vec2, Program},
-  tess::{Mode, Tess},
-  texture::Dim2,
-  Backend,
+  shader::{Program, ProgramBuilder, Stage},
+  vertex_entity::{VertexEntity, View},
+  vertex_storage::Interleaved,
 };
 
 const VS: &'static str = include_str!("displacement-vs.glsl");
@@ -32,126 +32,118 @@ const FS: &'static str = include_str!("displacement-fs.glsl");
 
 // Only one triangle this time.
 const TRI_VERTICES: [Vertex; 3] = [
-  Vertex {
-    pos: VertexPosition::new([0.5, -0.5]),
-    rgb: VertexColor::new([1., 0., 0.]),
-  },
-  Vertex {
-    pos: VertexPosition::new([0.0, 0.5]),
-    rgb: VertexColor::new([0., 1., 0.]),
-  },
-  Vertex {
-    pos: VertexPosition::new([-0.5, -0.5]),
-    rgb: VertexColor::new([0., 0., 1.]),
-  },
+  // triangle – an RGB one
+  //
+  Vertex::new(
+    mint::Vector2 { x: 0.5, y: -0.5 },
+    mint::Vector3 {
+      x: 0.,
+      y: 1.,
+      z: 0.,
+    },
+  ),
+  Vertex::new(
+    mint::Vector2 { x: 0., y: 0.5 },
+    mint::Vector3 {
+      x: 0.,
+      y: 0.,
+      z: 1.,
+    },
+  ),
+  Vertex::new(
+    mint::Vector2 { x: -0.5, y: -0.5 },
+    mint::Vector3 {
+      x: 1.,
+      y: 0.,
+      z: 0.,
+    },
+  ),
 ];
 
 pub struct LocalExample {
-  program: Program<Semantics, (), ()>,
-  triangle: Tess<Vertex>,
-  triangle_pos: Vec2<f32>,
+  program: Program<Vertex, Triangle<Vertex>, FragSlot, ()>, // no uniform environment; we want dynamic lookups
+  triangle: VertexEntity<Vertex, Triangle<Vertex>, Interleaved<Vertex>>,
+  triangle_pos: mint::Vector2<f32>,
+  back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }
 
 impl Example for LocalExample {
+  type Err = luminance::backend::Error;
+
+  const TITLE: &'static str = "Dynamic uniform lookup";
+
   fn bootstrap(
+    [width, height]: [u32; 2],
     _: &mut impl PlatformServices,
-    context: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> Self {
+    ctx: &mut Context<impl Backend>,
+  ) -> Result<Self, Self::Err> {
     // notice that we don’t set a uniform interface here: we’re going to look it up on the fly
-    let program = context
-      .new_shader_program::<Semantics, (), ()>()
-      .from_strings(VS, None, None, FS)
-      .expect("program creation")
-      .ignore_warnings();
+    let program = ctx.new_program(
+      ProgramBuilder::new()
+        .add_vertex_stage(Stage::<Vertex, Vertex, ()>::new(VS))
+        .no_primitive_stage()
+        .add_shading_stage(Stage::<Vertex, FragSlot, ()>::new(FS)),
+    )?;
 
-    let triangle = context
-      .new_tess()
-      .set_vertices(&TRI_VERTICES[..])
-      .set_mode(Mode::Triangle)
-      .build()
-      .unwrap();
+    let triangle = ctx.new_vertex_entity(Interleaved::new().set_vertices(&TRI_VERTICES[..]), [])?;
+    let triangle_pos = mint::Vector2 { x: 0., y: 0. };
+    let back_buffer = ctx.back_buffer(Size2::new(width, height))?;
 
-    let triangle_pos = Vec2::new(0., 0.);
-
-    Self {
+    Ok(Self {
       program,
       triangle,
       triangle_pos,
-    }
+      back_buffer,
+    })
   }
 
   fn render_frame(
     mut self,
     t: f32,
-    back_buffer: Framebuffer<Dim2, (), ()>,
     actions: impl Iterator<Item = InputAction>,
-    context: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> LoopFeedback<Self> {
+    ctx: &mut Context<impl Backend>,
+  ) -> Result<LoopFeedback<Self>, Self::Err> {
     for action in actions {
       match action {
-        InputAction::Quit => return LoopFeedback::Exit,
+        InputAction::Quit => return Ok(LoopFeedback::Exit),
 
         InputAction::Left => {
-          self.triangle_pos[0] -= 0.1;
+          self.triangle_pos.x -= 0.1;
         }
 
         InputAction::Right => {
-          self.triangle_pos[0] += 0.1;
+          self.triangle_pos.x += 0.1;
         }
 
         InputAction::Forward => {
-          self.triangle_pos[1] += 0.1;
+          self.triangle_pos.y += 0.1;
         }
 
         InputAction::Backward => {
-          self.triangle_pos[1] -= 0.1;
+          self.triangle_pos.y -= 0.1;
         }
 
         _ => (),
       }
     }
 
-    let program = &mut self.program;
+    let program = &self.program;
     let triangle = &self.triangle;
-    let triangle_pos = self.triangle_pos;
+    let triangle_pos = &self.triangle_pos;
 
-    let render = context
-      .new_pipeline_gate()
-      .pipeline(
-        &back_buffer,
-        &PipelineState::default(),
-        |_, mut shd_gate| {
-          shd_gate.shade(program, |mut iface, _, mut rdr_gate| {
-            let mut query = iface.query().unwrap();
-            let time_u = query.ask::<f32>("t");
-            let triangle_pos_u = query.ask::<Vec2<f32>>("triangle_pos");
+    ctx.with_framebuffer(&self.back_buffer, &PipelineState::default(), |mut frame| {
+      frame.with_program(program, |mut frame| {
+        frame.update(|mut update, _| {
+          update.query_set::<f32>("t", &t)?;
+          update.query_set::<mint::Vector2<f32>>("triangle_pos", triangle_pos)
+        })?;
 
-            if let Ok(ref time_u) = time_u {
-              iface.set(time_u, t);
-            }
+        frame.with_render_state(&RenderState::default(), |mut frame| {
+          frame.render_vertex_entity(triangle.view(..))
+        })
+      })
+    })?;
 
-            if let Ok(ref triangle_pos_u) = triangle_pos_u {
-              iface.set(triangle_pos_u, triangle_pos);
-            }
-
-            // the `ask` function is type-safe: if you try to get a uniform which type is not
-            // correctly reified from the source, you get a TypeMismatch runtime error
-            //if let Err(e) = query.ask::<i32>("triangle_pos") {
-            //  eprintln!("{:?}", e);
-            //}
-
-            rdr_gate.render(&RenderState::default(), |mut tess_gate| {
-              tess_gate.render(triangle)
-            })
-          })
-        },
-      )
-      .assume();
-
-    if render.is_ok() {
-      LoopFeedback::Continue(self)
-    } else {
-      LoopFeedback::Exit
-    }
+    Ok(LoopFeedback::Continue(self))
   }
 }
