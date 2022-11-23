@@ -43,7 +43,7 @@ pub(crate) fn generate_vertex_impl<'a, A>(
 where
   A: Iterator<Item = &'a Attribute> + Clone,
 {
-  let instancing = get_instancing(&struct_ident, attrs.clone())?;
+  let instanced = get_instanced(&struct_ident, attrs.clone())?;
   let namespace = get_namespace(&struct_ident, attrs.clone())?;
 
   match struct_.fields {
@@ -56,12 +56,8 @@ where
           let field_ident = field.ident.as_ref().unwrap().to_string();
           let field_ty = &field.ty;
 
-          let vertex_attrib_desc = field_vertex_attrib_desc(
-            &field,
-            field.ident.as_ref().unwrap(),
-            &instancing,
-            &namespace,
-          )?;
+          let vertex_attrib_desc =
+            field_vertex_attrib_desc(&field, field.ident.as_ref().unwrap(), &namespace)?;
 
           let deinterleave_impl = quote! {
             impl luminance::has_field::HasField<#field_ident> for #struct_ident {
@@ -87,6 +83,8 @@ where
       let output = quote! {
         // Vertex impl
         unsafe impl luminance::vertex::Vertex for #struct_ident {
+          const INSTANCED: bool = #instanced;
+
           fn vertex_desc() -> Vec<luminance::vertex::VertexBufferDesc> {
             vec![#(#vertex_attrib_descs),*]
           }
@@ -112,7 +110,6 @@ where
 fn field_vertex_attrib_desc(
   field: &Field,
   ident: &Ident,
-  instancing: &proc_macro2::TokenStream,
   namespace: &proc_macro2::TokenStream,
 ) -> Result<proc_macro2::TokenStream, StructImplError> {
   // search for the normalized argument; if not there, we don’t normalize anything
@@ -137,7 +134,6 @@ fn field_vertex_attrib_desc(
     luminance::vertex::VertexBufferDesc::new(
       <#namespace as luminance::named_index::NamedIndex<#field_name>>::INDEX,
       #field_name,
-      #instancing,
       #vertex_attrib_desc,
     )
   };
@@ -145,7 +141,7 @@ fn field_vertex_attrib_desc(
   Ok(q)
 }
 
-fn get_instancing<'a, A>(
+fn get_instanced<'a, A>(
   ident: &Ident,
   attrs: A,
 ) -> Result<proc_macro2::TokenStream, StructImplError>
@@ -154,15 +150,15 @@ where
 {
   // search for the instancing argument; if not there, we don’t use vertex instancing
   get_field_attr_once(&ident, attrs, "vertex", "instanced", KNOWN_SUBKEYS)
-    .map(|b: LitBool| {
-      if b.value {
-        quote! { luminance::vertex::VertexInstancing::On }
-      } else {
-        quote! { luminance::vertex::VertexInstancing::Off }
-      }
-    })
+    // .map(|b: LitBool| {
+    //   if b.value {
+    //     quote! { luminance::vertex::VertexInstancing::On }
+    //   } else {
+    //     quote! { luminance::vertex::VertexInstancing::Off }
+    //   }
+    // })
     .or_else(|e| match e {
-      AttrError::CannotFindAttribute(..) => Ok(quote! { luminance::vertex::VertexInstancing::Off }),
+      AttrError::CannotFindAttribute(..) => Ok(quote! { false }),
 
       _ => Err(e),
     })

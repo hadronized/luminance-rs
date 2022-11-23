@@ -21,6 +21,9 @@ use std::fmt::Debug;
 ///
 /// > Note: implementing this trait is `unsafe`.
 pub unsafe trait Vertex: Copy {
+  /// Whether the vertex is instance data.
+  const INSTANCED: bool;
+
   /// The associated vertex format.
   fn vertex_desc() -> Vec<VertexBufferDesc>;
 
@@ -30,6 +33,8 @@ pub unsafe trait Vertex: Copy {
 }
 
 unsafe impl Vertex for () {
+  const INSTANCED: bool = false;
+
   fn vertex_desc() -> Vec<VertexBufferDesc> {
     Vec::new()
   }
@@ -64,41 +69,19 @@ pub struct VertexBufferDesc {
   /// Such a name is used in vertex shaders to perform mapping.
   pub name: &'static str,
 
-  /// Whether _vertex instancing_ should be used with that vertex attribute.
-  pub instancing: VertexInstancing,
-
   /// Vertex attribute descriptor.
   pub attrib_desc: VertexAttribDesc,
 }
 
 impl VertexBufferDesc {
   /// Create a new [`VertexBufferDesc`].
-  pub fn new(
-    index: usize,
-    name: &'static str,
-    instancing: VertexInstancing,
-    attrib_desc: VertexAttribDesc,
-  ) -> Self {
+  pub fn new(index: usize, name: &'static str, attrib_desc: VertexAttribDesc) -> Self {
     VertexBufferDesc {
       index,
       name,
-      instancing,
       attrib_desc,
     }
   }
-}
-
-/// Should vertex instancing be used for a vertex attribute?
-///
-/// Enabling this is done per attribute but if you enable it for a single attribute of a struct, it
-/// should be enabled for all others (interleaved vertex instancing is not supported).
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum VertexInstancing {
-  /// Use vertex instancing.
-  On,
-
-  /// Disable vertex instancing.
-  Off,
 }
 
 /// Vertex attribute format.

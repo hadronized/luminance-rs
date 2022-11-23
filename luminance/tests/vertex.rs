@@ -4,7 +4,7 @@
 use luminance::{
   has_field::HasField,
   namespace,
-  vertex::{CompatibleVertex, Vertex as _, VertexAttrib, VertexBufferDesc, VertexInstancing},
+  vertex::{CompatibleVertex, Vertex as _, VertexAttrib, VertexBufferDesc},
   Vertex,
 };
 
@@ -24,24 +24,9 @@ struct Vertex {
 #[test]
 fn vertex_desc() {
   let expected_desc = vec![
-    VertexBufferDesc::new(
-      0,
-      "pos",
-      VertexInstancing::Off,
-      <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_DESC,
-    ),
-    VertexBufferDesc::new(
-      1,
-      "nor",
-      VertexInstancing::Off,
-      <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_DESC,
-    ),
-    VertexBufferDesc::new(
-      2,
-      "col",
-      VertexInstancing::Off,
-      <[u8; 4] as VertexAttrib>::VERTEX_ATTRIB_DESC,
-    ),
+    VertexBufferDesc::new(0, "pos", <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_DESC),
+    VertexBufferDesc::new(1, "nor", <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_DESC),
+    VertexBufferDesc::new(2, "col", <[u8; 4] as VertexAttrib>::VERTEX_ATTRIB_DESC),
   ];
 
   assert_eq!(Vertex::vertex_desc(), expected_desc);
@@ -90,4 +75,23 @@ fn compatible_vertex_types() {
   }
 
   is_compatible::<Vertex, VertexInclude>();
+}
+
+#[test]
+fn instanced() {
+  #[derive(Clone, Copy, Vertex)]
+  #[vertex(namespace = "Namespace")]
+  struct V1 {
+    #[allow(unused)]
+    weight: f32,
+  }
+
+  #[derive(Clone, Copy, Vertex)]
+  #[vertex(namespace = "Namespace", instanced = "true")]
+  struct V2 {
+    #[allow(unused)]
+    weight: f32,
+  }
+
+  assert_eq!(V2::INSTANCED, true);
 }

@@ -22,7 +22,6 @@ use luminance::{
   texture::{InUseTexture, MagFilter, MinFilter, Mipmaps, Texture, TextureSampling, Wrap},
   vertex::{
     Normalized, Vertex, VertexAttribDesc, VertexAttribDim, VertexAttribType, VertexBufferDesc,
-    VertexInstancing,
   },
   vertex_entity::{VertexEntity, VertexEntityView},
   vertex_storage::{AsVertexStorage, Deinterleaved, Interleaved, VertexStorage},
@@ -1444,7 +1443,7 @@ impl GL33 {
       .bound_array_buffer
       .set(buffer.handle);
 
-    GL33::set_vertex_pointers(&V::vertex_desc());
+    GL33::set_vertex_pointers(&V::vertex_desc(), V::INSTANCED);
 
     Ok(BuiltVertexBuffers {
       buffers: Some(VertexEntityBuffers::Interleaved(buffer)),
@@ -1486,7 +1485,7 @@ impl GL33 {
           .bound_array_buffer
           .set(buffer.handle);
 
-        GL33::set_vertex_pointers(&[fmt]);
+        GL33::set_vertex_pointers(&[fmt], V::INSTANCED);
 
         Ok(buffer)
       })
@@ -1535,7 +1534,7 @@ impl GL33 {
 
   /// Give OpenGL types information on the content of the VBO by setting vertex descriptors and pointers
   /// to buffer memory.
-  fn set_vertex_pointers(descriptors: &[VertexBufferDesc]) {
+  fn set_vertex_pointers(descriptors: &[VertexBufferDesc], instanced: bool) {
     // this function sets the vertex attribute pointer for the input list by computing:
     //   - The vertex attribute ID: this is the “rank” of the attribute in the input list (order
     //     matters, for short).
@@ -1546,7 +1545,7 @@ impl GL33 {
     let vertex_weight = Self::offset_based_vertex_weight(descriptors, &offsets) as GLsizei;
 
     for (desc, off) in descriptors.iter().zip(offsets) {
-      Self::set_component_format(vertex_weight, off, desc);
+      Self::set_component_format(vertex_weight, off, desc, instanced);
     }
   }
 
@@ -1589,7 +1588,7 @@ impl GL33 {
 
   /// Set the vertex component OpenGL pointers regarding the index of the component and the vertex
   /// stride.
-  fn set_component_format(stride: GLsizei, off: usize, desc: &VertexBufferDesc) {
+  fn set_component_format(stride: GLsizei, off: usize, desc: &VertexBufferDesc, instanced: bool) {
     let attrib_desc = &desc.attrib_desc;
     let index = desc.index as GLuint;
 
@@ -1633,10 +1632,7 @@ impl GL33 {
       }
 
       // set vertex attribute divisor based on the vertex instancing configuration
-      let divisor = match desc.instancing {
-        VertexInstancing::On => 1,
-        VertexInstancing::Off => 0,
-      };
+      let divisor = instanced as GLuint;
       gl::VertexAttribDivisor(index, divisor);
 
       gl::EnableVertexAttribArray(index);
