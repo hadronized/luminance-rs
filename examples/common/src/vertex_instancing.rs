@@ -2,69 +2,78 @@
 //!
 //! <https://docs.rs/luminance>
 
-use crate::{
-  shared::{
-    Instance, Semantics, Vertex, VertexColor, VertexInstancePosition, VertexPosition, VertexWeight,
-  },
-  Example, InputAction, LoopFeedback, PlatformServices,
-};
-use luminance_front::{
-  context::GraphicsContext,
-  framebuffer::Framebuffer,
-  pipeline::PipelineState,
-  render_state::RenderState,
+use luminance::{
+  dim::Dim2,
+  framebuffer::{Back, Framebuffer},
+  primitive::Triangle,
   shader::Program,
-  tess::{Mode, Tess},
-  texture::Dim2,
-  Backend,
+  vertex_entity::VertexEntity,
+  vertex_storage::Interleaved,
 };
+
+use crate::shared::{FragSlot, Instance, Vertex};
 
 const VS: &'static str = include_str!("instancing-vs.glsl");
 const FS: &'static str = include_str!("instancing-fs.glsl");
 
 // Only one triangle this time.
 const TRI_VERTICES: [Vertex; 3] = [
-  Vertex {
-    pos: VertexPosition::new([0.5, -0.5]),
-    rgb: VertexColor::new([1., 0., 0.]),
-  },
-  Vertex {
-    pos: VertexPosition::new([0.0, 0.5]),
-    rgb: VertexColor::new([0., 1., 0.]),
-  },
-  Vertex {
-    pos: VertexPosition::new([-0.5, -0.5]),
-    rgb: VertexColor::new([0., 0., 1.]),
-  },
+  // triangle – an RGB one
+  //
+  Vertex::new(
+    mint::Vector2 { x: 0.5, y: -0.5 },
+    mint::Vector3 {
+      x: 0.,
+      y: 1.,
+      z: 0.,
+    },
+  ),
+  Vertex::new(
+    mint::Vector2 { x: 0., y: 0.5 },
+    mint::Vector3 {
+      x: 0.,
+      y: 0.,
+      z: 1.,
+    },
+  ),
+  Vertex::new(
+    mint::Vector2 { x: -0.5, y: -0.5 },
+    mint::Vector3 {
+      x: 1.,
+      y: 0.,
+      z: 0.,
+    },
+  ),
 ];
 
 // Instances. We’ll be using five triangles.
 const INSTANCES: [Instance; 5] = [
   Instance {
-    pos: VertexInstancePosition::new([0., 0.]),
-    w: VertexWeight::new(1.),
+    position: mint::Vector2 { x: 0., y: 0. },
+    weight: 1.,
   },
   Instance {
-    pos: VertexInstancePosition::new([-0.5, 0.5]),
-    w: VertexWeight::new(1.),
+    position: mint::Vector2 { x: -0.5, y: 0.5 },
+    weight: 1.,
   },
   Instance {
-    pos: VertexInstancePosition::new([-0.25, -0.1]),
-    w: VertexWeight::new(1.),
+    position: mint::Vector2 { x: -0.25, y: -0.1 },
+    weight: 1.,
   },
   Instance {
-    pos: VertexInstancePosition::new([0.45, 0.25]),
-    w: VertexWeight::new(1.),
+    position: mint::Vector2 { x: 0.45, y: 0.25 },
+    weight: 1.,
   },
   Instance {
-    pos: VertexInstancePosition::new([0.6, -0.3]),
-    w: VertexWeight::new(1.),
+    position: mint::Vector2 { x: 0.6, y: -0.3 },
+    weight: 1.,
   },
 ];
 
 pub struct LocalExample {
-  program: Program<Semantics, (), ()>,
-  triangle: Tess<Vertex, (), Instance>,
+  program: Program<Vertex, Triangle<Vertex>, FragSlot, ()>,
+  triangle: VertexEntity<Vertex, Triangle<Vertex>, Interleaved<Vertex>>,
+  back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }
 
 impl Example for LocalExample {

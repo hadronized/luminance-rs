@@ -87,7 +87,7 @@ where
       let output = quote! {
         // Vertex impl
         unsafe impl luminance::vertex::Vertex for #struct_ident {
-          fn vertex_desc() -> luminance::vertex::VertexDesc {
+          fn vertex_desc() -> Vec<luminance::vertex::VertexBufferDesc> {
             vec![#(#vertex_attrib_descs),*]
           }
         }

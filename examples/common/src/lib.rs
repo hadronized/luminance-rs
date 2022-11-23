@@ -45,7 +45,7 @@ pub mod shared;
 pub mod sliced_vertex_entity;
 // pub mod stencil;
 pub mod texture;
-// pub mod vertex_instancing;
+pub mod vertex_instancing;
 
 // functional tests
 //#[cfg(feature = "funtest")]

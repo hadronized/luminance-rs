@@ -12,7 +12,7 @@ use crate::has_field::HasField;
 use std::fmt::Debug;
 
 /// A type that can be used as a [`Vertex`] has to implement that trait – it must provide an
-/// associated [`VertexDesc`] value via a function call. This associated value gives enough
+/// associated list of [`VertexBufferDesc`] value via a function call. This associated value gives enough
 /// information on the types being used as attributes to reify enough memory data to align and, size
 /// and type buffers correctly.
 ///
@@ -22,7 +22,7 @@ use std::fmt::Debug;
 /// > Note: implementing this trait is `unsafe`.
 pub unsafe trait Vertex: Copy {
   /// The associated vertex format.
-  fn vertex_desc() -> VertexDesc;
+  fn vertex_desc() -> Vec<VertexBufferDesc>;
 
   fn components_count() -> usize {
     Self::vertex_desc().len()
@@ -30,7 +30,7 @@ pub unsafe trait Vertex: Copy {
 }
 
 unsafe impl Vertex for () {
-  fn vertex_desc() -> VertexDesc {
+  fn vertex_desc() -> Vec<VertexBufferDesc> {
     Vec::new()
   }
 
@@ -48,9 +48,6 @@ pub trait Deinterleave<const NAME: &'static str>: HasField<NAME> {
   /// Rank of the field.
   const RANK: usize;
 }
-
-/// A [`VertexDesc`] is a list of [`VertexBufferDesc`]s.
-pub type VertexDesc = Vec<VertexBufferDesc>;
 
 /// A vertex attribute descriptor in a vertex buffer.
 ///

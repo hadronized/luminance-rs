@@ -22,7 +22,7 @@ use luminance::{
   texture::{InUseTexture, MagFilter, MinFilter, Mipmaps, Texture, TextureSampling, Wrap},
   vertex::{
     Normalized, Vertex, VertexAttribDesc, VertexAttribDim, VertexAttribType, VertexBufferDesc,
-    VertexDesc, VertexInstancing,
+    VertexInstancing,
   },
   vertex_entity::{VertexEntity, VertexEntityView},
   vertex_storage::{AsVertexStorage, Deinterleaved, Interleaved, VertexStorage},
@@ -1340,7 +1340,7 @@ impl ProgramData {
     Ok(())
   }
 
-  fn bind_vertex_attribs(&self, vertex_desc: VertexDesc) -> Result<(), ProgramError> {
+  fn bind_vertex_attribs(&self, vertex_desc: Vec<VertexBufferDesc>) -> Result<(), ProgramError> {
     let mut warnings = Vec::new();
 
     for desc in vertex_desc {
