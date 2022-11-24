@@ -6,7 +6,7 @@ use std::fmt;
 use syn::{Attribute, DataStruct, Field, Fields, Ident, LitBool};
 
 // accepted sub keys for the "vertex" key
-const KNOWN_SUBKEYS: &[&str] = &["instanced", "normalized", "namespace"];
+const KNOWN_SUBKEYS: &[&str] = &["normalized", "namespace"];
 
 #[derive(Debug)]
 pub(crate) enum StructImplError {
@@ -43,7 +43,6 @@ pub(crate) fn generate_vertex_impl<'a, A>(
 where
   A: Iterator<Item = &'a Attribute> + Clone,
 {
-  let instanced = get_instanced(&struct_ident, attrs.clone())?;
   let namespace = get_namespace(&struct_ident, attrs.clone())?;
 
   match struct_.fields {
@@ -83,8 +82,6 @@ where
       let output = quote! {
         // Vertex impl
         unsafe impl luminance::vertex::Vertex for #struct_ident {
-          const INSTANCED: bool = #instanced;
-
           fn vertex_desc() -> Vec<luminance::vertex::VertexBufferDesc> {
             vec![#(#vertex_attrib_descs),*]
           }
@@ -139,30 +136,6 @@ fn field_vertex_attrib_desc(
   };
 
   Ok(q)
-}
-
-fn get_instanced<'a, A>(
-  ident: &Ident,
-  attrs: A,
-) -> Result<proc_macro2::TokenStream, StructImplError>
-where
-  A: IntoIterator<Item = &'a Attribute>,
-{
-  // search for the instancing argument; if not there, we don’t use vertex instancing
-  get_field_attr_once(&ident, attrs, "vertex", "instanced", KNOWN_SUBKEYS)
-    // .map(|b: LitBool| {
-    //   if b.value {
-    //     quote! { luminance::vertex::VertexInstancing::On }
-    //   } else {
-    //     quote! { luminance::vertex::VertexInstancing::Off }
-    //   }
-    // })
-    .or_else(|e| match e {
-      AttrError::CannotFindAttribute(..) => Ok(quote! { false }),
-
-      _ => Err(e),
-    })
-    .map_err(StructImplError::FieldError)
 }
 
 fn get_namespace<'a, A>(

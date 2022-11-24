@@ -21,9 +21,6 @@ use std::fmt::Debug;
 ///
 /// > Note: implementing this trait is `unsafe`.
 pub unsafe trait Vertex: Copy {
-  /// Whether the vertex is instance data.
-  const INSTANCED: bool;
-
   /// The associated vertex format.
   fn vertex_desc() -> Vec<VertexBufferDesc>;
 
@@ -33,8 +30,6 @@ pub unsafe trait Vertex: Copy {
 }
 
 unsafe impl Vertex for () {
-  const INSTANCED: bool = false;
-
   fn vertex_desc() -> Vec<VertexBufferDesc> {
     Vec::new()
   }

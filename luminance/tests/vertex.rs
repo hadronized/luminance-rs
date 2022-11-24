@@ -76,22 +76,3 @@ fn compatible_vertex_types() {
 
   is_compatible::<Vertex, VertexInclude>();
 }
-
-#[test]
-fn instanced() {
-  #[derive(Clone, Copy, Vertex)]
-  #[vertex(namespace = "Namespace")]
-  struct V1 {
-    #[allow(unused)]
-    weight: f32,
-  }
-
-  #[derive(Clone, Copy, Vertex)]
-  #[vertex(namespace = "Namespace", instanced = "true")]
-  struct V2 {
-    #[allow(unused)]
-    weight: f32,
-  }
-
-  assert_eq!(V2::INSTANCED, true);
-}
