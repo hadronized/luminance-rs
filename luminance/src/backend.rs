@@ -498,16 +498,19 @@ pub unsafe trait Backend:
 }
 
 pub unsafe trait VertexEntityBackend {
-  unsafe fn new_vertex_entity<V, P, S, I>(
+  unsafe fn new_vertex_entity<V, P, S, I, W, WS>(
     &mut self,
-    storage: S,
+    vertices: S,
     indices: I,
-  ) -> Result<VertexEntity<V, P, S>, VertexEntityError>
+    instance_data: WS,
+  ) -> Result<VertexEntity<V, P, S, W, WS>, VertexEntityError>
   where
     V: Vertex,
     P: Primitive,
     S: AsVertexStorage<V>,
-    I: Into<Vec<u32>>;
+    I: Into<Vec<u32>>,
+    W: Vertex,
+    WS: AsVertexStorage<W>;
 
   unsafe fn vertex_entity_render<V, P>(
     &self,
@@ -515,7 +518,6 @@ pub unsafe trait VertexEntityBackend {
     start_index: usize,
     vert_count: usize,
     inst_count: usize,
-    primitive_restart: bool,
   ) -> Result<(), VertexEntityError>
   where
     V: Vertex,
@@ -535,6 +537,15 @@ pub unsafe trait VertexEntityBackend {
     handle: usize,
     indices: &mut Vec<u32>,
   ) -> Result<(), VertexEntityError>;
+
+  unsafe fn vertex_entity_update_instance_data<W, WS>(
+    &mut self,
+    handle: usize,
+    storage: &mut WS,
+  ) -> Result<(), VertexEntityError>
+  where
+    W: Vertex,
+    WS: AsVertexStorage<W>;
 }
 
 pub unsafe trait FramebufferBackend {

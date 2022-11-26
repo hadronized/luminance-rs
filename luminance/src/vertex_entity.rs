@@ -1,39 +1,45 @@
-use crate::{primitive::Primitive, vertex::Vertex, vertex_storage::AsVertexStorage};
+use crate::{
+  primitive::Primitive,
+  vertex::Vertex,
+  vertex_storage::{AsVertexStorage, Interleaved},
+};
 use std::{
   marker::PhantomData,
   ops::{Range, RangeFrom, RangeFull, RangeTo, RangeToInclusive},
 };
 
-pub struct VertexEntity<V, P, VS> {
+pub struct VertexEntity<V, P, VS, W = (), WS = Interleaved<W>> {
   handle: usize,
   vertices: VS,
+  instance_data: WS,
   indices: Vec<u32>,
   vertex_count: usize,
-  primitive_restart: bool,
   dropper: Box<dyn FnMut(usize)>,
-  _phantom: PhantomData<*const (V, P, VS)>,
+  _phantom: PhantomData<*const (V, P, W)>,
 }
 
-impl<V, P, VS> VertexEntity<V, P, VS>
+impl<V, P, VS, W, WS> VertexEntity<V, P, VS, W, WS>
 where
   V: Vertex,
   P: Primitive,
   VS: AsVertexStorage<V>,
+  W: Vertex,
+  WS: AsVertexStorage<W>,
 {
   pub unsafe fn new(
     handle: usize,
     vertices: VS,
+    instance_data: WS,
     indices: Vec<u32>,
     vertex_count: usize,
-    primitive_restart: bool,
     dropper: Box<dyn FnMut(usize)>,
   ) -> Self {
     Self {
       handle,
       vertices,
+      instance_data,
       indices,
       vertex_count,
-      primitive_restart,
       dropper,
       _phantom: PhantomData,
     }
@@ -51,12 +57,12 @@ where
     self.indices.len()
   }
 
-  pub fn primitive_restart(&self) -> bool {
-    self.primitive_restart
-  }
-
   pub fn vertices(&mut self) -> &mut VS {
     &mut self.vertices
+  }
+
+  pub fn instance_data(&mut self) -> &mut WS {
+    &mut self.instance_data
   }
 
   pub fn indices(&mut self) -> &mut Vec<u32> {
@@ -64,7 +70,7 @@ where
   }
 }
 
-impl<V, P, VS> Drop for VertexEntity<V, P, VS> {
+impl<V, P, VS, W, WS> Drop for VertexEntity<V, P, VS, W, WS> {
   fn drop(&mut self) {
     (self.dropper)(self.handle);
   }
@@ -83,23 +89,19 @@ pub struct VertexEntityView<V, P> {
   /// How many instances to render.
   instance_count: usize,
 
-  primitive_restart: bool,
-
   _phantom: PhantomData<*const (V, P)>,
 }
 
 impl<'a, V, P> VertexEntityView<V, P> {
-  pub fn new<S>(vertex_entity: &VertexEntity<V, P, S>) -> Self {
+  pub fn new<S, W, WS>(vertex_entity: &VertexEntity<V, P, S, W, WS>) -> Self {
     let handle = vertex_entity.handle;
     let vertex_count = vertex_entity.vertex_count;
-    let primitive_restart = vertex_entity.primitive_restart;
 
     Self {
       handle,
       start_vertex: 0,
       vertex_count,
       instance_count: 1,
-      primitive_restart,
       _phantom: PhantomData,
     }
   }
@@ -134,15 +136,6 @@ impl<'a, V, P> VertexEntityView<V, P> {
     self.instance_count = count;
     self
   }
-
-  pub fn primitive_restart(&self) -> bool {
-    self.primitive_restart
-  }
-
-  pub fn set_primitive_restart(mut self, primitive_restart: bool) -> Self {
-    self.primitive_restart = primitive_restart;
-    self
-  }
 }
 
 pub trait View<R> {
@@ -152,11 +145,13 @@ pub trait View<R> {
   fn view(&self, range: R) -> VertexEntityView<Self::Vertex, Self::Primitive>;
 }
 
-impl<V, P, VS> View<RangeFull> for VertexEntity<V, P, VS>
+impl<V, P, VS, W, WS> View<RangeFull> for VertexEntity<V, P, VS, W, WS>
 where
   V: Vertex,
   P: Primitive<Vertex = V>,
   VS: AsVertexStorage<V>,
+  W: Vertex,
+  WS: AsVertexStorage<W>,
 {
   type Vertex = V;
   type Primitive = P;
@@ -166,11 +161,13 @@ where
   }
 }
 
-impl<V, P, VS> View<Range<usize>> for VertexEntity<V, P, VS>
+impl<V, P, VS, W, WS> View<Range<usize>> for VertexEntity<V, P, VS, W, WS>
 where
   V: Vertex,
   P: Primitive<Vertex = V>,
   VS: AsVertexStorage<V>,
+  W: Vertex,
+  WS: AsVertexStorage<W>,
 {
   type Vertex = V;
   type Primitive = P;
@@ -181,17 +178,18 @@ where
       start_vertex: range.start,
       vertex_count: range.end,
       instance_count: 1,
-      primitive_restart: false,
       _phantom: PhantomData,
     }
   }
 }
 
-impl<V, P, VS> View<RangeFrom<usize>> for VertexEntity<V, P, VS>
+impl<V, P, VS, W, WS> View<RangeFrom<usize>> for VertexEntity<V, P, VS, W, WS>
 where
   V: Vertex,
   P: Primitive<Vertex = V>,
   VS: AsVertexStorage<V>,
+  W: Vertex,
+  WS: AsVertexStorage<W>,
 {
   type Vertex = V;
   type Primitive = P;
@@ -202,17 +200,18 @@ where
       start_vertex: range.start,
       vertex_count: self.vertex_count,
       instance_count: 1,
-      primitive_restart: false,
       _phantom: PhantomData,
     }
   }
 }
 
-impl<V, P, VS> View<RangeTo<usize>> for VertexEntity<V, P, VS>
+impl<V, P, VS, W, WS> View<RangeTo<usize>> for VertexEntity<V, P, VS, W, WS>
 where
   V: Vertex,
   P: Primitive<Vertex = V>,
   VS: AsVertexStorage<V>,
+  W: Vertex,
+  WS: AsVertexStorage<W>,
 {
   type Vertex = V;
   type Primitive = P;
@@ -223,17 +222,18 @@ where
       start_vertex: 0,
       vertex_count: range.end,
       instance_count: 1,
-      primitive_restart: false,
       _phantom: PhantomData,
     }
   }
 }
 
-impl<V, P, VS> View<RangeToInclusive<usize>> for VertexEntity<V, P, VS>
+impl<V, P, VS, W, WS> View<RangeToInclusive<usize>> for VertexEntity<V, P, VS, W, WS>
 where
   V: Vertex,
   P: Primitive<Vertex = V>,
   VS: AsVertexStorage<V>,
+  W: Vertex,
+  WS: AsVertexStorage<W>,
 {
   type Vertex = V;
   type Primitive = P;
@@ -247,7 +247,6 @@ where
       start_vertex: 0,
       vertex_count: range.end + 1,
       instance_count: 1,
-      primitive_restart: false,
       _phantom: PhantomData,
     }
   }
