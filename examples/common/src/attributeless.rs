@@ -52,7 +52,7 @@ impl Example for LocalExample {
 
     // yet, we still need to tell luminance to render a certain number of vertices (even if we send no
     // attributes / data); in our case, we’ll just render a triangle, which has three vertices
-    let attributeless = ctx.new_vertex_entity(Interleaved::new(), [])?;
+    let attributeless = ctx.new_vertex_entity(Interleaved::new(), [], Interleaved::new())?;
 
     let back_buffer = ctx.back_buffer(Size2::new(width, height))?;
 

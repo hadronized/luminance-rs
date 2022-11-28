@@ -96,7 +96,11 @@ impl Example for LocalExample {
         .no_primitive_stage::<Triangle<Vertex>>()
         .add_shading_stage(Stage::<Vertex, FragSlot, ShaderUniforms>::new(FS)),
     )?;
-    let triangle = ctx.new_vertex_entity(Interleaved::new().set_vertices(&TRI_VERTICES[..]), [])?;
+    let triangle = ctx.new_vertex_entity(
+      Interleaved::new().set_vertices(&TRI_VERTICES[..]),
+      [],
+      Interleaved::new(),
+    )?;
     let triangle_pos = Vector2 { x: 0., y: 0. };
     let back_buffer = ctx.back_buffer(Size2::new(width, height))?;
 

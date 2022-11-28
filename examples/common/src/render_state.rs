@@ -144,11 +144,13 @@ impl Example for LocalExample {
     let red_triangle = ctx.new_vertex_entity(
       Interleaved::new().set_vertices(&TRI_RED_BLUE_VERTICES[0..3]),
       [],
+      Interleaved::new(),
     )?;
 
     let blue_triangle = ctx.new_vertex_entity(
       Interleaved::new().set_vertices(&TRI_RED_BLUE_VERTICES[3..6]),
       [],
+      Interleaved::new(),
     )?;
 
     let blending = BlendingMode::Off;

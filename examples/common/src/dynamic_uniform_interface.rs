@@ -85,7 +85,11 @@ impl Example for LocalExample {
         .add_shading_stage(Stage::<Vertex, FragSlot, ()>::new(FS)),
     )?;
 
-    let triangle = ctx.new_vertex_entity(Interleaved::new().set_vertices(&TRI_VERTICES[..]), [])?;
+    let triangle = ctx.new_vertex_entity(
+      Interleaved::new().set_vertices(&TRI_VERTICES[..]),
+      [],
+      Interleaved::new(),
+    )?;
     let triangle_pos = mint::Vector2 { x: 0., y: 0. };
     let back_buffer = ctx.back_buffer(Size2::new(width, height))?;
 

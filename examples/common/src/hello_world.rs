@@ -144,7 +144,11 @@ impl Example for LocalExample {
       .unwrap();
 
     let triangles = context
-      .new_vertex_entity(Interleaved::new().set_vertices(&TRI_VERTICES[..]), [])
+      .new_vertex_entity(
+        Interleaved::new().set_vertices(&TRI_VERTICES[..]),
+        [],
+        Interleaved::new(),
+      )
       .unwrap();
 
     let back_buffer = context.back_buffer(Size2::new(width, height)).unwrap();

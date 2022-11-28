@@ -429,14 +429,16 @@ impl Buffer {
     }
   }
 
-  fn update<T>(&self, values: &[T], start: usize, len: usize) -> Result<(), BufferError> {
-    self
-      .state
-      .borrow_mut()
-      .bound_array_buffer
-      .set_if_invalid(self.handle, || unsafe {
-        gl::BindBuffer(gl::ARRAY_BUFFER, self.handle);
-      });
+  fn update<T>(
+    &self,
+    bound_array_buffer: &mut Cached<GLuint>,
+    values: &[T],
+    start: usize,
+    len: usize,
+  ) -> Result<(), BufferError> {
+    bound_array_buffer.set_if_invalid(self.handle, || unsafe {
+      gl::BindBuffer(gl::ARRAY_BUFFER, self.handle);
+    });
 
     let ptr = unsafe { gl::MapBuffer(gl::ARRAY_BUFFER, gl::WRITE_ONLY) as *mut T };
 
@@ -2174,8 +2176,9 @@ unsafe impl VertexEntityBackend for GL33 {
     S: AsVertexStorage<V>,
   {
     // get the associated data with the handle first
-    let st = self.state.borrow();
-    let data = st
+    let mut state = self.state.borrow_mut();
+    let state = state.deref_mut();
+    let data = state
       .vertex_entities
       .get(&handle)
       .ok_or_else(|| VertexEntityError::UpdateVertexStorage { cause: None })?;
@@ -2185,11 +2188,11 @@ unsafe impl VertexEntityBackend for GL33 {
     match (storage.as_vertex_storage(), &data.vertex_buffers) {
       (VertexStorage::Interleaved(storage), Some(VertexEntityBuffers::Interleaved(ref buffer))) => {
         let vertices = storage.vertices();
-        buffer.update(&vertices, 0, vertices.len()).map_err(|e| {
-          VertexEntityError::UpdateVertexStorage {
+        buffer
+          .update(&mut state.bound_array_buffer, &vertices, 0, vertices.len())
+          .map_err(|e| VertexEntityError::UpdateVertexStorage {
             cause: Some(Box::new(e)),
-          }
-        })
+          })
       }
 
       (
@@ -2197,11 +2200,11 @@ unsafe impl VertexEntityBackend for GL33 {
         Some(VertexEntityBuffers::Deinterleaved(buffers)),
       ) => {
         for (comp, buffer) in storage.components_list().iter().zip(buffers) {
-          buffer.update(&comp, 0, comp.len()).map_err(|e| {
-            VertexEntityError::UpdateVertexStorage {
+          buffer
+            .update(&mut state.bound_array_buffer, &comp, 0, comp.len())
+            .map_err(|e| VertexEntityError::UpdateVertexStorage {
               cause: Some(Box::new(e)),
-            }
-          })?;
+            })?;
         }
 
         Ok(())
@@ -2217,21 +2220,20 @@ unsafe impl VertexEntityBackend for GL33 {
     indices: &mut Vec<u32>,
   ) -> Result<(), VertexEntityError> {
     // get the associated data with the handle first
-    let st = self.state.borrow();
-    let data = st
+    let mut state = self.state.borrow_mut();
+    let state = state.deref_mut();
+    let data = state
       .vertex_entities
       .get(&handle)
       .ok_or_else(|| VertexEntityError::UpdateIndices { cause: None })?;
 
     // update the index buffer if it exists
     match &data.index_buffer {
-      Some(buffer) => {
-        buffer
-          .update(&indices, 0, indices.len())
-          .map_err(|e| VertexEntityError::UpdateIndices {
-            cause: Some(Box::new(e)),
-          })
-      }
+      Some(buffer) => buffer
+        .update(&mut state.bound_array_buffer, &indices, 0, indices.len())
+        .map_err(|e| VertexEntityError::UpdateIndices {
+          cause: Some(Box::new(e)),
+        }),
       None => Err(VertexEntityError::UpdateIndices { cause: None }),
     }
   }
@@ -2246,8 +2248,9 @@ unsafe impl VertexEntityBackend for GL33 {
     WS: AsVertexStorage<W>,
   {
     // get the associated data with the handle first
-    let st = self.state.borrow();
-    let data = st
+    let mut state = self.state.borrow_mut();
+    let state = state.deref_mut();
+    let data = state
       .vertex_entities
       .get(&handle)
       .ok_or_else(|| VertexEntityError::UpdateVertexStorage { cause: None })?;
@@ -2257,11 +2260,11 @@ unsafe impl VertexEntityBackend for GL33 {
     match (storage.as_vertex_storage(), &data.instance_data) {
       (VertexStorage::Interleaved(storage), Some(VertexEntityBuffers::Interleaved(ref buffer))) => {
         let vertices = storage.vertices();
-        buffer.update(&vertices, 0, vertices.len()).map_err(|e| {
-          VertexEntityError::UpdateVertexStorage {
+        buffer
+          .update(&mut state.bound_array_buffer, &vertices, 0, vertices.len())
+          .map_err(|e| VertexEntityError::UpdateVertexStorage {
             cause: Some(Box::new(e)),
-          }
-        })
+          })
       }
 
       (
@@ -2269,11 +2272,11 @@ unsafe impl VertexEntityBackend for GL33 {
         Some(VertexEntityBuffers::Deinterleaved(buffers)),
       ) => {
         for (comp, buffer) in storage.components_list().iter().zip(buffers) {
-          buffer.update(&comp, 0, comp.len()).map_err(|e| {
-            VertexEntityError::UpdateVertexStorage {
+          buffer
+            .update(&mut state.bound_array_buffer, &comp, 0, comp.len())
+            .map_err(|e| VertexEntityError::UpdateVertexStorage {
               cause: Some(Box::new(e)),
-            }
-          })?;
+            })?;
         }
 
         Ok(())

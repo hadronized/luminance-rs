@@ -70,7 +70,7 @@ impl Example for LocalExample {
     // we’ll use an attributeless render here to display a quad on the screen (two triangles); there
     // are over ways to cover the whole screen but this is easier for you to understand; the
     // TriangleFan creates triangles by connecting the third (and next) vertex to the first one
-    let vertex_entity = ctx.new_vertex_entity(Interleaved::new(), [])?;
+    let vertex_entity = ctx.new_vertex_entity(Interleaved::new(), [], Interleaved::new())?;
 
     let back_buffer = ctx.back_buffer(Size2::new(width, height))?;
 

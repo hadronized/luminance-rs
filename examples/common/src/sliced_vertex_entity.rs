@@ -134,6 +134,7 @@ impl Example for LocalExample {
     let triangles = ctx.new_vertex_entity(
       Interleaved::new().set_vertices(&TRI_RED_BLUE_VERTICES[..]),
       [],
+      Interleaved::new(),
     )?;
 
     let view_method = ViewMethod::Red;

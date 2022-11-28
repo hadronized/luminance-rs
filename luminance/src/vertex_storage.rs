@@ -50,9 +50,14 @@ impl<V> Interleaved<V> {
     self
   }
 
-  /// Gett acces to the vertices.
+  /// Get access to the vertices.
   pub fn vertices(&self) -> &Vec<V> {
     &self.vertices
+  }
+
+  /// Get access to the vertices.
+  pub fn vertices_mut(&mut self) -> &mut Vec<V> {
+    &mut self.vertices
   }
 
   /// Get access to the vertices as bytes.

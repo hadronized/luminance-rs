@@ -213,7 +213,11 @@ impl Example for LocalExample {
     // Create a vertex entity for direct geometry; that is, a vertex entity that will render vertices by
     // taking one after another in the provided slice.
     let direct_triangles = context
-      .new_vertex_entity(Interleaved::new().set_vertices(&TRI_VERTICES[..]), [])
+      .new_vertex_entity(
+        Interleaved::new().set_vertices(&TRI_VERTICES[..]),
+        [],
+        Interleaved::new(),
+      )
       .unwrap();
 
     // Indexed vertex entity; that is, the vertices will be picked by using the indexes provided
@@ -223,6 +227,7 @@ impl Example for LocalExample {
       .new_vertex_entity(
         Interleaved::new().set_vertices(&TRI_VERTICES[..]),
         &TRI_INDICES[..],
+        Interleaved::new(),
       )
       .unwrap();
 
@@ -234,6 +239,7 @@ impl Example for LocalExample {
           .set_components::<"pos">(&TRI_DEINT_POS_VERTICES[..])
           .set_components::<"rgb">(&TRI_DEINT_COLOR_VERTICES[..]),
         [],
+        Interleaved::new(),
       )
       .unwrap();
 
@@ -244,6 +250,7 @@ impl Example for LocalExample {
           .set_components::<"pos">(&TRI_DEINT_POS_VERTICES[..])
           .set_components::<"rgb">(&TRI_DEINT_COLOR_VERTICES[..]),
         &TRI_INDICES[..],
+        Interleaved::new(),
       )
       .unwrap();
 

@@ -103,8 +103,12 @@ impl Example for LocalExample {
         .add_shading_stage(Stage::<(), FragSlot, Uniforms>::new(COPY_FS)),
     )?;
 
-    let triangle = ctx.new_vertex_entity(Interleaved::new().set_vertices(&TRI_VERTICES[..]), [])?;
-    let quad = ctx.new_vertex_entity(Interleaved::new(), [])?;
+    let triangle = ctx.new_vertex_entity(
+      Interleaved::new().set_vertices(&TRI_VERTICES[..]),
+      [],
+      Interleaved::new(),
+    )?;
+    let quad = ctx.new_vertex_entity(Interleaved::new(), [], Interleaved::new())?;
     let fb_size = Size2::new(width, height);
     let offscreen_buffer =
       ctx.new_framebuffer(fb_size, Mipmaps::No, &TextureSampling::default())?;
