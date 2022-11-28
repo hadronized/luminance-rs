@@ -388,7 +388,6 @@ impl DerefMut for StateRef {
 #[derive(Debug)]
 struct Buffer {
   handle: GLuint,
-  state: StateRef,
 }
 
 impl Drop for Buffer {
@@ -423,10 +422,7 @@ impl Buffer {
       );
     }
 
-    Buffer {
-      handle,
-      state: state.clone(),
-    }
+    Buffer { handle }
   }
 
   fn update<T>(
