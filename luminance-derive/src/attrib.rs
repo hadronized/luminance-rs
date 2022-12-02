@@ -129,6 +129,59 @@ where
   lit.ok_or_else(|| AttrError::cannot_find_attribute(field_ident.clone(), key, sub_key))
 }
 
+pub(crate) fn get_field_attr_many<'a, A, T>(
+  field_ident: &Ident,
+  attrs: A,
+  key: &str,
+  sub_key: &str,
+  known_subkeys: &[&str],
+) -> Result<Vec<T>, AttrError>
+where
+  A: IntoIterator<Item = &'a Attribute>,
+  T: Parse,
+{
+  let mut lit = vec![];
+
+  for attr in attrs.into_iter() {
+    match attr.parse_meta() {
+      Ok(Meta::List(ref ml)) if ml.path.is_ident(key) => {
+        let nested = &ml.nested;
+
+        for nested in nested.into_iter() {
+          if let NestedMeta::Meta(Meta::NameValue(ref mnv)) = nested {
+            if mnv.path.is_ident(sub_key) {
+              if let Lit::Str(ref strlit) = mnv.lit {
+                lit.push(strlit.parse().map_err(|_| {
+                  AttrError::cannot_parse_attribute(field_ident.clone(), key, sub_key)
+                })?);
+              }
+            } else {
+              let ident_str = mnv
+                .path
+                .segments
+                .first()
+                .map(|seg| seg.ident.to_string())
+                .unwrap_or_else(String::new);
+
+              if !known_subkeys.contains(&ident_str.as_str()) {
+                return Err(AttrError::unknown_sub_key(
+                  field_ident.clone(),
+                  key,
+                  ident_str,
+                ));
+              }
+            }
+          }
+        }
+      }
+
+      _ => (), // ignore things that might not be ours
+    }
+  }
+
+  Ok(lit)
+}
+
 /// Get and parse an attribute on a field or a variant that must appear only once with the following
 /// syntax:
 ///
