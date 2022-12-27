@@ -59,6 +59,7 @@ pub struct VertexBufferDesc {
   ///
   /// That index is used as a mapping with vertex shaders to know how to fetch vertex attributes.
   pub index: usize,
+
   /// The name of the attribute.
   ///
   /// Such a name is used in vertex shaders to perform mapping.

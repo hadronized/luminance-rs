@@ -447,6 +447,7 @@ impl Buffer {
     unsafe {
       let src = values.as_ptr();
       std::ptr::copy_nonoverlapping(src, ptr.add(start), len);
+      gl::UnmapBuffer(gl::ARRAY_BUFFER);
     }
 
     Ok(())
@@ -1430,11 +1431,6 @@ impl GL33 {
     }
 
     let buffer = Buffer::from_vec(&self.state, storage.vertices());
-
-    // force binding as it’s meaningful when a vao is bound
-    unsafe {
-      gl::BindBuffer(gl::ARRAY_BUFFER, buffer.handle);
-    }
     self
       .state
       .borrow_mut()
@@ -1470,11 +1466,6 @@ impl GL33 {
           len = vertices.len() / field_len;
         } else if vertices.len() / field_len != len {
           return Err(VertexEntityError::Creation { cause: None });
-        }
-
-        // force binding as it’s meaningful when a vao is bound
-        unsafe {
-          gl::BindBuffer(gl::ARRAY_BUFFER, buffer.handle);
         }
 
         self
@@ -1515,11 +1506,6 @@ impl GL33 {
     }
 
     let buffer = Buffer::from_vec(&self.state, indices);
-
-    // force binding as it’s meaningful when a vao is bound
-    unsafe {
-      gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, buffer.handle);
-    }
 
     self
       .state
@@ -2289,7 +2275,6 @@ unsafe impl FramebufferBackend for GL33 {
     _handle: usize,
     size: D::Size,
     mipmaps: Mipmaps,
-
     sampling: &TextureSampling,
     index: usize,
   ) -> Result<RenderLayer<D, RC>, FramebufferError>
