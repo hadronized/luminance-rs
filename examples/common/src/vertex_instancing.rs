@@ -7,14 +7,14 @@ use crate::{
   Example, InputAction, LoopFeedback, PlatformServices,
 };
 use luminance::{
-  backend::Backend,
+  backend::{Backend, Error},
   context::Context,
   dim::{Dim2, Size2},
   framebuffer::{Back, Framebuffer},
   pipeline::PipelineState,
   primitive::Triangle,
   render_state::RenderState,
-  shader::{Program, ProgramBuilder, Stage},
+  shader::{Program, ProgramBuilder},
   vertex_entity::{VertexEntity, View},
   vertex_storage::Interleaved,
 };
@@ -77,14 +77,13 @@ const INSTANCES: [Instance; 5] = [
 ];
 
 pub struct LocalExample {
-  program: Program<Vertex, Triangle<Vertex>, FragSlot, ()>,
-  triangle:
-    VertexEntity<Vertex, Triangle<Vertex>, Interleaved<Vertex>, Instance, Interleaved<Instance>>,
+  program: Program<Vertex, Instance, Triangle, FragSlot, ()>,
+  triangle: VertexEntity<Vertex, Triangle, Interleaved<Vertex>, Instance, Interleaved<Instance>>,
   back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }
 
 impl Example for LocalExample {
-  type Err = luminance::backend::Error;
+  type Err = Error;
 
   const TITLE: &'static str = "Vertex instancing";
 
@@ -95,9 +94,9 @@ impl Example for LocalExample {
   ) -> Result<Self, Self::Err> {
     let program = ctx.new_program(
       ProgramBuilder::new()
-        .add_vertex_stage(Stage::<Vertex, Vertex, ()>::new(VS))
+        .add_vertex_stage(VS)
         .no_primitive_stage()
-        .add_shading_stage(Stage::<Vertex, FragSlot, ()>::new(FS)),
+        .add_shading_stage(FS),
     )?;
 
     let triangle = ctx.new_vertex_entity(

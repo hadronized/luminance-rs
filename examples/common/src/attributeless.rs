@@ -16,7 +16,7 @@ use luminance::{
   pipeline::PipelineState,
   primitive::Triangle,
   render_state::RenderState,
-  shader::{Program, ProgramBuilder, Stage},
+  shader::{Program, ProgramBuilder},
   vertex_entity::{VertexEntity, View},
   vertex_storage::Interleaved,
 };
@@ -27,8 +27,8 @@ const VS: &'static str = include_str!("attributeless-vs.glsl");
 const FS: &'static str = include_str!("simple-fs.glsl");
 
 pub struct LocalExample {
-  program: Program<(), Triangle<()>, FragSlot, ()>,
-  attributeless: VertexEntity<(), Triangle<()>, Interleaved<()>>,
+  program: Program<(), (), Triangle, FragSlot, ()>,
+  attributeless: VertexEntity<(), Triangle, Interleaved<()>>,
   back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }
 
@@ -45,9 +45,9 @@ impl Example for LocalExample {
     // we don’t use a Vertex type anymore (i.e. attributeless, so we use the unit () type)
     let program = ctx.new_program(
       ProgramBuilder::new()
-        .add_vertex_stage(Stage::<(), (), ()>::new(VS))
-        .no_primitive_stage::<Triangle<()>>()
-        .add_shading_stage(Stage::<(), FragSlot, ()>::new(FS)),
+        .add_vertex_stage(VS)
+        .no_primitive_stage()
+        .add_shading_stage(FS),
     )?;
 
     // yet, we still need to tell luminance to render a certain number of vertices (even if we send no

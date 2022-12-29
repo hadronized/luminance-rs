@@ -19,7 +19,7 @@ use luminance::{
   pipeline::PipelineState,
   primitive::Triangle,
   render_state::RenderState,
-  shader::{Program, ProgramBuilder, Stage, Uni},
+  shader::{Program, ProgramBuilder, Uni},
   vertex_entity::{VertexEntity, View},
   vertex_storage::Interleaved,
   Uniforms,
@@ -74,8 +74,8 @@ struct ShaderUniforms {
 }
 
 pub struct LocalExample {
-  program: Program<Vertex, Triangle<Vertex>, FragSlot, ShaderUniforms>,
-  triangle: VertexEntity<Vertex, Triangle<Vertex>, Interleaved<Vertex>>,
+  program: Program<Vertex, (), Triangle, FragSlot, ShaderUniforms>,
+  triangle: VertexEntity<Vertex, Triangle, Interleaved<Vertex>>,
   triangle_pos: Vector2<f32>,
   back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }
@@ -92,9 +92,9 @@ impl Example for LocalExample {
   ) -> Result<Self, Self::Err> {
     let program = ctx.new_program(
       ProgramBuilder::new()
-        .add_vertex_stage(Stage::<Vertex, Vertex, ShaderUniforms>::new(VS))
-        .no_primitive_stage::<Triangle<Vertex>>()
-        .add_shading_stage(Stage::<Vertex, FragSlot, ShaderUniforms>::new(FS)),
+        .add_vertex_stage(VS)
+        .no_primitive_stage()
+        .add_shading_stage(FS),
     )?;
     let triangle = ctx.new_vertex_entity(
       Interleaved::new().set_vertices(&TRI_VERTICES[..]),

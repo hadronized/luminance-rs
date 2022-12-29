@@ -2475,14 +2475,15 @@ unsafe impl FramebufferBackend for GL33 {
 static mut BOOL_CACHE: Vec<u32> = Vec::new();
 
 unsafe impl ShaderBackend for GL33 {
-  unsafe fn new_program<V, P, S, E>(
+  unsafe fn new_program<V, W, P, S, E>(
     &mut self,
     vertex_code: String,
     primitive_code: String,
     shading_code: String,
-  ) -> Result<Program<V, P, S, E>, ShaderError>
+  ) -> Result<Program<V, W, P, S, E>, ShaderError>
   where
     V: Vertex,
+    W: Vertex,
     P: Primitive,
     S: RenderSlots,
     E: Uniforms,
@@ -2515,6 +2516,7 @@ unsafe impl ShaderBackend for GL33 {
     let data = ProgramData { handle };
     data.link()?;
     data.bind_vertex_attribs(V::vertex_desc())?;
+    data.bind_vertex_attribs(W::vertex_desc())?;
 
     // everything went okay, just track the program and let’s gooooooo
     let handle = handle as usize;
@@ -3136,13 +3138,14 @@ unsafe impl PipelineBackend for GL33 {
     f(WithFramebuffer::new(self))
   }
 
-  unsafe fn with_program<V, P, S, E, Err>(
+  unsafe fn with_program<V, W, P, S, E, Err>(
     &mut self,
-    program: &Program<V, P, S, E>,
-    f: impl for<'a> FnOnce(luminance::pipeline::WithProgram<'a, Self, V, P, S, E>) -> Result<(), Err>,
+    program: &Program<V, W, P, S, E>,
+    f: impl for<'a> FnOnce(luminance::pipeline::WithProgram<'a, Self, V, W, P, S, E>) -> Result<(), Err>,
   ) -> Result<(), Err>
   where
     V: Vertex,
+    W: Vertex,
     P: Primitive,
     S: RenderSlots,
     E: Uniforms,
@@ -3160,10 +3163,10 @@ unsafe impl PipelineBackend for GL33 {
     f(WithProgram::new(self, program))
   }
 
-  unsafe fn with_render_state<V, P, Err>(
+  unsafe fn with_render_state<V, W, P, Err>(
     &mut self,
     render_state: &luminance::render_state::RenderState,
-    f: impl for<'a> FnOnce(luminance::pipeline::WithRenderState<'a, Self, V, P>) -> Result<(), Err>,
+    f: impl for<'a> FnOnce(WithRenderState<'a, Self, V, W, P>) -> Result<(), Err>,
   ) -> Result<(), Err>
   where
     V: Vertex,
@@ -3335,12 +3338,13 @@ unsafe impl PipelineBackend for GL33 {
     f(WithRenderState::new(self))
   }
 
-  unsafe fn render_vertex_entity<V, P>(
+  unsafe fn render_vertex_entity<V, W, P>(
     &mut self,
-    view: VertexEntityView<V, P>,
+    view: VertexEntityView<V, W, P>,
   ) -> Result<(), PipelineError>
   where
     V: Vertex,
+    W: Vertex,
     P: Primitive,
   {
     self

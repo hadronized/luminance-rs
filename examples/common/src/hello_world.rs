@@ -4,7 +4,7 @@
 
 use crate::{Example, InputAction, LoopFeedback, PlatformServices};
 use luminance::{
-  backend::Backend,
+  backend::{Backend, Error},
   context::Context,
   dim::{Dim2, Size2},
   framebuffer::{Back, Framebuffer},
@@ -12,7 +12,7 @@ use luminance::{
   pipeline::PipelineState,
   primitive::Triangle,
   render_state::RenderState,
-  shader::{Program, ProgramBuilder, Stage},
+  shader::{Program, ProgramBuilder},
   vertex_entity::{VertexEntity, View},
   vertex_storage::Interleaved,
   RenderSlots, Vertex,
@@ -119,12 +119,12 @@ pub struct Slots {
 pub struct LocalExample {
   back_buffer: Framebuffer<Dim2, Back<Slots>, Back<()>>,
   // the program will render by mapping our Vertex type as triangles to the color slot, containing a single color
-  program: Program<Vertex, Triangle<Vertex>, Slots, ()>,
-  triangles: VertexEntity<Vertex, Triangle<Vertex>, Interleaved<Vertex>>,
+  program: Program<Vertex, (), Triangle, Slots, ()>,
+  triangles: VertexEntity<Vertex, Triangle, Interleaved<Vertex>>,
 }
 
 impl Example for LocalExample {
-  type Err = luminance::backend::Error;
+  type Err = Error;
 
   const TITLE: &'static str = "Hello, world!";
 
@@ -137,9 +137,9 @@ impl Example for LocalExample {
     let program = context
       .new_program(
         ProgramBuilder::new()
-          .add_vertex_stage(Stage::<Vertex, Vertex, ()>::new(VS))
-          .no_primitive_stage::<Triangle<Vertex>>()
-          .add_shading_stage(Stage::<Vertex, Slots, ()>::new(FS)),
+          .add_vertex_stage(VS)
+          .no_primitive_stage()
+          .add_shading_stage(FS),
       )
       .unwrap();
 

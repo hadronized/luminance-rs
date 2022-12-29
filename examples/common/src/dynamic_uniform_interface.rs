@@ -22,7 +22,7 @@ use luminance::{
   pipeline::PipelineState,
   primitive::Triangle,
   render_state::RenderState,
-  shader::{Program, ProgramBuilder, Stage},
+  shader::{Program, ProgramBuilder},
   vertex_entity::{VertexEntity, View},
   vertex_storage::Interleaved,
 };
@@ -61,8 +61,8 @@ const TRI_VERTICES: [Vertex; 3] = [
 ];
 
 pub struct LocalExample {
-  program: Program<Vertex, Triangle<Vertex>, FragSlot, ()>, // no uniform environment; we want dynamic lookups
-  triangle: VertexEntity<Vertex, Triangle<Vertex>, Interleaved<Vertex>>,
+  program: Program<Vertex, (), Triangle, FragSlot, ()>, // no uniform environment; we want dynamic lookups
+  triangle: VertexEntity<Vertex, Triangle, Interleaved<Vertex>>,
   triangle_pos: mint::Vector2<f32>,
   back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }
@@ -80,9 +80,9 @@ impl Example for LocalExample {
     // notice that we don’t set a uniform interface here: we’re going to look it up on the fly
     let program = ctx.new_program(
       ProgramBuilder::new()
-        .add_vertex_stage(Stage::<Vertex, Vertex, ()>::new(VS))
+        .add_vertex_stage(VS)
         .no_primitive_stage()
-        .add_shading_stage(Stage::<Vertex, FragSlot, ()>::new(FS)),
+        .add_shading_stage(FS),
     )?;
 
     let triangle = ctx.new_vertex_entity(

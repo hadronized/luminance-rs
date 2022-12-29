@@ -21,7 +21,7 @@ use luminance::{
   pipeline::PipelineState,
   primitive::Triangle,
   render_state::RenderState,
-  shader::{Program, ProgramBuilder, Stage},
+  shader::{Program, ProgramBuilder},
   vertex_entity::{VertexEntity, View as _},
   vertex_storage::Interleaved,
 };
@@ -107,8 +107,8 @@ impl ViewMethod {
 }
 
 pub struct LocalExample {
-  program: Program<Vertex, Triangle<Vertex>, FragSlot, ()>,
-  triangles: VertexEntity<Vertex, Triangle<Vertex>, Interleaved<Vertex>>,
+  program: Program<Vertex, (), Triangle, FragSlot, ()>,
+  triangles: VertexEntity<Vertex, Triangle, Interleaved<Vertex>>,
   view_method: ViewMethod,
   back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }
@@ -125,9 +125,9 @@ impl Example for LocalExample {
   ) -> Result<Self, Self::Err> {
     let program = ctx.new_program(
       ProgramBuilder::new()
-        .add_vertex_stage(Stage::<Vertex, Vertex, ()>::new(VS))
-        .no_primitive_stage::<Triangle<Vertex>>()
-        .add_shading_stage(Stage::<Vertex, FragSlot, ()>::new(FS)),
+        .add_vertex_stage(VS)
+        .no_primitive_stage()
+        .add_shading_stage(FS),
     )?;
 
     // create a single GPU tessellation that holds both the triangles (like in 01-hello-world)

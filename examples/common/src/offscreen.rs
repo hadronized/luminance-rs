@@ -4,7 +4,7 @@
 //! <https://docs.rs/luminance>
 
 use luminance::{
-  backend::Backend,
+  backend::{Backend, Error},
   context::Context,
   dim::{Dim2, Size2},
   framebuffer::{Back, Framebuffer},
@@ -12,7 +12,7 @@ use luminance::{
   pixel::Floating,
   primitive::{Triangle, TriangleFan},
   render_state::RenderState,
-  shader::{Program, ProgramBuilder, Stage, Uni},
+  shader::{Program, ProgramBuilder, Uni},
   texture::{InUseTexture, Mipmaps, TextureSampling},
   vertex_entity::{VertexEntity, View},
   vertex_storage::Interleaved,
@@ -71,16 +71,16 @@ struct Uniforms {
 }
 
 pub struct LocalExample {
-  program: Program<Vertex, Triangle<Vertex>, FragSlot, ()>,
-  copy_program: Program<(), TriangleFan<()>, FragSlot, Uniforms>,
-  triangle: VertexEntity<Vertex, Triangle<Vertex>, Interleaved<Vertex>>,
-  quad: VertexEntity<(), TriangleFan<()>, Interleaved<()>>,
+  program: Program<Vertex, (), Triangle, FragSlot, ()>,
+  copy_program: Program<(), (), TriangleFan, FragSlot, Uniforms>,
+  triangle: VertexEntity<Vertex, Triangle, Interleaved<Vertex>>,
+  quad: VertexEntity<(), TriangleFan, Interleaved<()>>,
   offscreen_buffer: Framebuffer<Dim2, FragSlot, ()>,
   back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }
 
 impl Example for LocalExample {
-  type Err = luminance::backend::Error;
+  type Err = Error;
 
   const TITLE: &'static str = "Offscreen";
 
@@ -91,16 +91,16 @@ impl Example for LocalExample {
   ) -> Result<Self, Self::Err> {
     let program = ctx.new_program(
       ProgramBuilder::new()
-        .add_vertex_stage(Stage::<Vertex, Vertex, ()>::new(VS))
+        .add_vertex_stage(VS)
         .no_primitive_stage()
-        .add_shading_stage(Stage::<Vertex, FragSlot, ()>::new(FS)),
+        .add_shading_stage(FS),
     )?;
 
     let copy_program = ctx.new_program(
       ProgramBuilder::new()
-        .add_vertex_stage(Stage::<(), (), Uniforms>::new(COPY_VS))
-        .no_primitive_stage::<TriangleFan<()>>()
-        .add_shading_stage(Stage::<(), FragSlot, Uniforms>::new(COPY_FS)),
+        .add_vertex_stage(COPY_VS)
+        .no_primitive_stage()
+        .add_shading_stage(COPY_FS),
     )?;
 
     let triangle = ctx.new_vertex_entity(

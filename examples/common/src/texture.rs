@@ -10,7 +10,7 @@ use crate::{
   Example, InputAction, LoopFeedback, PlatformServices,
 };
 use luminance::{
-  backend::Backend,
+  backend::{Backend, Error},
   blending::{Blending, BlendingMode, Equation, Factor},
   context::Context,
   dim::{Dim2, Size2},
@@ -19,7 +19,7 @@ use luminance::{
   pixel::{NormRGB8UI, NormUnsigned},
   primitive::TriangleFan,
   render_state::RenderState,
-  shader::{Program, ProgramBuilder, Stage, Uni},
+  shader::{Program, ProgramBuilder, Uni},
   texture::{InUseTexture, Mipmaps, Texture, TextureSampling},
   vertex_entity::{VertexEntity, View},
   vertex_storage::Interleaved,
@@ -37,13 +37,13 @@ struct ShaderUniforms {
 
 pub struct LocalExample {
   texture: Texture<Dim2, NormRGB8UI>,
-  program: Program<(), TriangleFan<()>, FragSlot, ShaderUniforms>,
-  vertex_entity: VertexEntity<(), TriangleFan<()>, Interleaved<()>>,
+  program: Program<(), (), TriangleFan, FragSlot, ShaderUniforms>,
+  vertex_entity: VertexEntity<(), TriangleFan, Interleaved<()>>,
   back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }
 
 impl Example for LocalExample {
-  type Err = luminance::backend::Error;
+  type Err = Error;
 
   const TITLE: &'static str = "Texture";
 
@@ -62,9 +62,9 @@ impl Example for LocalExample {
 
     let program = ctx.new_program(
       ProgramBuilder::new()
-        .add_vertex_stage(Stage::new(VS))
+        .add_vertex_stage(VS)
         .no_primitive_stage()
-        .add_shading_stage(Stage::new(FS)),
+        .add_shading_stage(FS),
     )?;
 
     // we’ll use an attributeless render here to display a quad on the screen (two triangles); there

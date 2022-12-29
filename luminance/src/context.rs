@@ -153,15 +153,14 @@ where
     unsafe { self.backend.back_buffer(size) }
   }
 
-  pub fn new_program<V, W, P, Q, S, E>(
+  pub fn new_program<V, W, P, S, E>(
     &mut self,
-    builder: ProgramBuilder<V, W, P, Q, S, E>,
-  ) -> Result<Program<V, P, S, E>, ShaderError>
+    builder: ProgramBuilder<V, W, P, S, E>,
+  ) -> Result<Program<V, W, P, S, E>, ShaderError>
   where
     V: Vertex,
     W: Vertex,
-    P: Primitive<Vertex = W>,
-    Q: Primitive,
+    P: Primitive,
     S: RenderSlots,
     E: Uniforms,
   {
@@ -174,13 +173,14 @@ where
     }
   }
 
-  pub fn update_program<'a, V, P, S, E>(
+  pub fn update_program<'a, V, W, P, S, E>(
     &'a mut self,
-    program: &Program<V, P, S, E>,
+    program: &Program<V, W, P, S, E>,
     updater: impl FnOnce(ProgramUpdate<'a, B>, &E) -> Result<(), ShaderError>,
   ) -> Result<(), ShaderError>
   where
     V: Vertex,
+    W: Vertex,
     P: Primitive,
     S: RenderSlots,
   {

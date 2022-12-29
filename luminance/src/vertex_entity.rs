@@ -77,7 +77,7 @@ impl<V, P, VS, W, WS> Drop for VertexEntity<V, P, VS, W, WS> {
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct VertexEntityView<V, P> {
+pub struct VertexEntityView<V, W, P> {
   handle: usize,
 
   /// First vertex to start rendering from.
@@ -89,11 +89,11 @@ pub struct VertexEntityView<V, P> {
   /// How many instances to render.
   instance_count: usize,
 
-  _phantom: PhantomData<*const (V, P)>,
+  _phantom: PhantomData<*const (V, W, P)>,
 }
 
-impl<'a, V, P> VertexEntityView<V, P> {
-  pub fn new<S, W, WS>(vertex_entity: &VertexEntity<V, P, S, W, WS>) -> Self {
+impl<'a, V, W, P> VertexEntityView<V, W, P> {
+  pub fn new<S, WS>(vertex_entity: &VertexEntity<V, P, S, W, WS>) -> Self {
     let handle = vertex_entity.handle;
     let vertex_count = vertex_entity.vertex_count;
 
@@ -140,23 +140,25 @@ impl<'a, V, P> VertexEntityView<V, P> {
 
 pub trait View<R> {
   type Vertex: Vertex;
-  type Primitive: Primitive<Vertex = Self::Vertex>;
+  type Instance: Vertex;
+  type Primitive: Primitive;
 
-  fn view(&self, range: R) -> VertexEntityView<Self::Vertex, Self::Primitive>;
+  fn view(&self, range: R) -> VertexEntityView<Self::Vertex, Self::Instance, Self::Primitive>;
 }
 
 impl<V, P, VS, W, WS> View<RangeFull> for VertexEntity<V, P, VS, W, WS>
 where
   V: Vertex,
-  P: Primitive<Vertex = V>,
+  P: Primitive,
   VS: AsVertexStorage<V>,
   W: Vertex,
   WS: AsVertexStorage<W>,
 {
   type Vertex = V;
+  type Instance = W;
   type Primitive = P;
 
-  fn view(&self, _: RangeFull) -> VertexEntityView<Self::Vertex, Self::Primitive> {
+  fn view(&self, _: RangeFull) -> VertexEntityView<Self::Vertex, Self::Instance, Self::Primitive> {
     VertexEntityView::new(self)
   }
 }
@@ -164,15 +166,19 @@ where
 impl<V, P, VS, W, WS> View<Range<usize>> for VertexEntity<V, P, VS, W, WS>
 where
   V: Vertex,
-  P: Primitive<Vertex = V>,
+  P: Primitive,
   VS: AsVertexStorage<V>,
   W: Vertex,
   WS: AsVertexStorage<W>,
 {
   type Vertex = V;
+  type Instance = W;
   type Primitive = P;
 
-  fn view(&self, range: Range<usize>) -> VertexEntityView<Self::Vertex, Self::Primitive> {
+  fn view(
+    &self,
+    range: Range<usize>,
+  ) -> VertexEntityView<Self::Vertex, Self::Instance, Self::Primitive> {
     VertexEntityView {
       handle: self.handle(),
       start_vertex: range.start,
@@ -186,15 +192,19 @@ where
 impl<V, P, VS, W, WS> View<RangeFrom<usize>> for VertexEntity<V, P, VS, W, WS>
 where
   V: Vertex,
-  P: Primitive<Vertex = V>,
+  P: Primitive,
   VS: AsVertexStorage<V>,
   W: Vertex,
   WS: AsVertexStorage<W>,
 {
   type Vertex = V;
+  type Instance = W;
   type Primitive = P;
 
-  fn view(&self, range: RangeFrom<usize>) -> VertexEntityView<Self::Vertex, Self::Primitive> {
+  fn view(
+    &self,
+    range: RangeFrom<usize>,
+  ) -> VertexEntityView<Self::Vertex, Self::Instance, Self::Primitive> {
     VertexEntityView {
       handle: self.handle(),
       start_vertex: range.start,
@@ -208,15 +218,19 @@ where
 impl<V, P, VS, W, WS> View<RangeTo<usize>> for VertexEntity<V, P, VS, W, WS>
 where
   V: Vertex,
-  P: Primitive<Vertex = V>,
+  P: Primitive,
   VS: AsVertexStorage<V>,
   W: Vertex,
   WS: AsVertexStorage<W>,
 {
   type Vertex = V;
+  type Instance = W;
   type Primitive = P;
 
-  fn view(&self, range: RangeTo<usize>) -> VertexEntityView<Self::Vertex, Self::Primitive> {
+  fn view(
+    &self,
+    range: RangeTo<usize>,
+  ) -> VertexEntityView<Self::Vertex, Self::Instance, Self::Primitive> {
     VertexEntityView {
       handle: self.handle(),
       start_vertex: 0,
@@ -230,18 +244,19 @@ where
 impl<V, P, VS, W, WS> View<RangeToInclusive<usize>> for VertexEntity<V, P, VS, W, WS>
 where
   V: Vertex,
-  P: Primitive<Vertex = V>,
+  P: Primitive,
   VS: AsVertexStorage<V>,
   W: Vertex,
   WS: AsVertexStorage<W>,
 {
   type Vertex = V;
+  type Instance = W;
   type Primitive = P;
 
   fn view(
     &self,
     range: RangeToInclusive<usize>,
-  ) -> VertexEntityView<Self::Vertex, Self::Primitive> {
+  ) -> VertexEntityView<Self::Vertex, Self::Instance, Self::Primitive> {
     VertexEntityView {
       handle: self.handle(),
       start_vertex: 0,

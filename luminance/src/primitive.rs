@@ -1,9 +1,4 @@
-use crate::vertex::Vertex;
-use std::marker::PhantomData;
-
 pub trait Primitive {
-  type Vertex: Vertex;
-
   const CONNECTOR: Connector;
 }
 
@@ -21,13 +16,9 @@ pub enum Connector {
 macro_rules! impl_Primitive {
   ($t:ident) => {
     #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-    pub struct $t<V> {
-      _phantom: PhantomData<V>,
-    }
+    pub struct $t;
 
-    impl<V: Vertex> Primitive for $t<V> {
-      type Vertex = V;
-
+    impl Primitive for $t {
       const CONNECTOR: Connector = Connector::$t;
     }
   };
@@ -41,12 +32,8 @@ impl_Primitive!(TriangleStrip);
 impl_Primitive!(TriangleFan);
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub struct Patch<const SIZE: usize, V> {
-  _phantom: PhantomData<V>,
-}
+pub struct Patch<const SIZE: usize>;
 
-impl<const SIZE: usize, V: Vertex> Primitive for Patch<SIZE, V> {
-  type Vertex = V;
-
+impl<const SIZE: usize> Primitive for Patch<SIZE> {
   const CONNECTOR: Connector = Connector::Patch(SIZE);
 }

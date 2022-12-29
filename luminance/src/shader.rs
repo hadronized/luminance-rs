@@ -11,14 +11,14 @@ use crate::{
 };
 use std::marker::PhantomData;
 
-pub struct ProgramBuilder<V, W, P, Q, S, E> {
+pub struct ProgramBuilder<V, W, P, S, E> {
   pub(crate) vertex_code: String,
   pub(crate) primitive_code: String,
   pub(crate) shading_code: String,
-  _phantom: PhantomData<*const (V, W, P, Q, S, E)>,
+  _phantom: PhantomData<*const (V, W, P, S, E)>,
 }
 
-impl<E> ProgramBuilder<(), (), (), (), (), E> {
+impl<E> ProgramBuilder<(), (), (), (), E> {
   pub fn new() -> Self {
     Self {
       vertex_code: String::new(),
@@ -29,14 +29,14 @@ impl<E> ProgramBuilder<(), (), (), (), (), E> {
   }
 }
 
-impl<P, Q, S, E> ProgramBuilder<(), (), P, Q, S, E> {
-  pub fn add_vertex_stage<V, W>(self, stage: Stage<V, W, E>) -> ProgramBuilder<V, W, P, Q, S, E>
+impl<P, S, E> ProgramBuilder<(), (), P, S, E> {
+  pub fn add_vertex_stage<V, W>(self, code: impl Into<String>) -> ProgramBuilder<V, W, P, S, E>
   where
     V: Vertex,
     W: Vertex,
   {
     ProgramBuilder {
-      vertex_code: stage.code,
+      vertex_code: code.into(),
       primitive_code: self.primitive_code,
       shading_code: self.shading_code,
       _phantom: PhantomData,
@@ -44,23 +44,22 @@ impl<P, Q, S, E> ProgramBuilder<(), (), P, Q, S, E> {
   }
 }
 
-impl<V, W, S, E> ProgramBuilder<V, W, (), (), S, E> {
-  pub fn add_primitive_stage<P, Q>(self, stage: Stage<P, Q, E>) -> ProgramBuilder<V, W, P, Q, S, E>
+impl<V, W, S, E> ProgramBuilder<V, W, (), S, E> {
+  pub fn add_primitive_stage<P>(self, code: impl Into<String>) -> ProgramBuilder<V, W, P, S, E>
   where
-    P: Primitive<Vertex = W>,
-    Q: Primitive,
+    P: Primitive,
   {
     ProgramBuilder {
       vertex_code: self.vertex_code,
-      primitive_code: stage.code,
+      primitive_code: code.into(),
       shading_code: self.shading_code,
       _phantom: PhantomData,
     }
   }
 
-  pub fn no_primitive_stage<P>(self) -> ProgramBuilder<V, W, P, P, S, E>
+  pub fn no_primitive_stage<P>(self) -> ProgramBuilder<V, W, P, S, E>
   where
-    P: Primitive<Vertex = W>,
+    P: Primitive,
   {
     ProgramBuilder {
       vertex_code: self.vertex_code,
@@ -71,53 +70,31 @@ impl<V, W, S, E> ProgramBuilder<V, W, (), (), S, E> {
   }
 }
 
-impl<V, W, P, Q, E> ProgramBuilder<V, W, P, Q, (), E> {
-  pub fn add_shading_stage<S>(
-    self,
-    stage: Stage<Q::Vertex, S, E>,
-  ) -> ProgramBuilder<V, W, P, Q, S, E>
+impl<V, W, P, E> ProgramBuilder<V, W, P, (), E> {
+  pub fn add_shading_stage<S>(self, code: impl Into<String>) -> ProgramBuilder<V, W, P, S, E>
   where
-    Q: Primitive,
     S: RenderSlots,
   {
     ProgramBuilder {
       vertex_code: self.vertex_code,
       primitive_code: self.primitive_code,
-      shading_code: stage.code,
+      shading_code: code.into(),
       _phantom: PhantomData,
     }
   }
 }
 
-#[derive(Debug)]
-pub struct Stage<I, O, E> {
-  code: String,
-  _phantom: PhantomData<*const (I, O, E)>,
-}
-
-impl<I, O, E> Stage<I, O, E> {
-  pub fn new(code: impl Into<String>) -> Self {
-    Self {
-      code: code.into(),
-      _phantom: PhantomData,
-    }
-  }
-
-  pub fn code(&self) -> &str {
-    &self.code
-  }
-}
-
-pub struct Program<V, P, S, E> {
+pub struct Program<V, W, P, S, E> {
   handle: usize,
   pub(crate) uniforms: E,
   dropper: Box<dyn FnMut(usize)>,
-  _phantom: PhantomData<*const (V, P, S, E)>,
+  _phantom: PhantomData<*const (V, W, P, S, E)>,
 }
 
-impl<V, P, S, E> Program<V, P, S, E>
+impl<V, W, P, S, E> Program<V, W, P, S, E>
 where
   V: Vertex,
+  W: Vertex,
   P: Primitive,
   S: RenderSlots,
 {
@@ -135,7 +112,7 @@ where
   }
 }
 
-impl<V, P, S, E> Drop for Program<V, P, S, E> {
+impl<V, W, P, S, E> Drop for Program<V, W, P, S, E> {
   fn drop(&mut self) {
     (self.dropper)(self.handle);
   }

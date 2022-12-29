@@ -17,7 +17,7 @@ use luminance::{
   pipeline::PipelineState,
   primitive::Triangle,
   render_state::RenderState,
-  shader::{Program, ProgramBuilder, Stage},
+  shader::{Program, ProgramBuilder},
   vertex_entity::{VertexEntity, View},
   vertex_storage::{Deinterleaved, Interleaved},
   RenderSlots, Vertex,
@@ -182,11 +182,11 @@ impl Method {
 pub struct LocalExample {
   back_buffer: Framebuffer<Dim2, Back<Slots>, Back<()>>,
   // the program will render by mapping our Vertex type as triangles to the color slot, containing a single color
-  program: Program<Vertex, Triangle<Vertex>, Slots, ()>,
-  direct_triangles: VertexEntity<Vertex, Triangle<Vertex>, Interleaved<Vertex>>,
-  indexed_triangles: VertexEntity<Vertex, Triangle<Vertex>, Interleaved<Vertex>>,
-  direct_deinterleaved_triangles: VertexEntity<Vertex, Triangle<Vertex>, Deinterleaved<Vertex>>,
-  indexed_deinterleaved_triangles: VertexEntity<Vertex, Triangle<Vertex>, Deinterleaved<Vertex>>,
+  program: Program<Vertex, (), Triangle, Slots, ()>,
+  direct_triangles: VertexEntity<Vertex, Triangle, Interleaved<Vertex>>,
+  indexed_triangles: VertexEntity<Vertex, Triangle, Interleaved<Vertex>>,
+  direct_deinterleaved_triangles: VertexEntity<Vertex, Triangle, Deinterleaved<Vertex>>,
+  indexed_deinterleaved_triangles: VertexEntity<Vertex, Triangle, Deinterleaved<Vertex>>,
   method: Method,
 }
 
@@ -204,9 +204,9 @@ impl Example for LocalExample {
     let program = context
       .new_program(
         ProgramBuilder::new()
-          .add_vertex_stage(Stage::<Vertex, Vertex, ()>::new(VS))
-          .no_primitive_stage::<Triangle<Vertex>>()
-          .add_shading_stage(Stage::<Vertex, Slots, ()>::new(FS)),
+          .add_vertex_stage(VS)
+          .no_primitive_stage()
+          .add_shading_stage(FS),
       )
       .unwrap();
 

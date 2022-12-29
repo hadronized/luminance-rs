@@ -624,14 +624,15 @@ macro_rules! mk_uniform_visit {
 }
 
 pub unsafe trait ShaderBackend {
-  unsafe fn new_program<V, P, S, E>(
+  unsafe fn new_program<V, W, P, S, E>(
     &mut self,
     vertex_code: String,
     primitive_code: String,
     shading_code: String,
-  ) -> Result<Program<V, P, S, E>, ShaderError>
+  ) -> Result<Program<V, W, P, S, E>, ShaderError>
   where
     V: Vertex,
+    W: Vertex,
     P: Primitive,
     S: RenderSlots,
     E: Uniforms;
@@ -781,34 +782,37 @@ pub unsafe trait PipelineBackend:
     DS: DepthRenderSlot,
     Err: From<PipelineError>;
 
-  unsafe fn with_program<V, P, S, E, Err>(
+  unsafe fn with_program<V, W, P, S, E, Err>(
     &mut self,
-    program: &Program<V, P, S, E>,
-    f: impl for<'a> FnOnce(WithProgram<'a, Self, V, P, S, E>) -> Result<(), Err>,
+    program: &Program<V, W, P, S, E>,
+    f: impl for<'a> FnOnce(WithProgram<'a, Self, V, W, P, S, E>) -> Result<(), Err>,
   ) -> Result<(), Err>
   where
     V: Vertex,
+    W: Vertex,
     P: Primitive,
     S: RenderSlots,
     E: Uniforms,
     Err: From<PipelineError>;
 
-  unsafe fn with_render_state<V, P, Err>(
+  unsafe fn with_render_state<V, W, P, Err>(
     &mut self,
     render_state: &RenderState,
-    f: impl for<'a> FnOnce(WithRenderState<'a, Self, V, P>) -> Result<(), Err>,
+    f: impl for<'a> FnOnce(WithRenderState<'a, Self, V, W, P>) -> Result<(), Err>,
   ) -> Result<(), Err>
   where
     V: Vertex,
+    W: Vertex,
     P: Primitive,
     Err: From<PipelineError>;
 
-  unsafe fn render_vertex_entity<V, P>(
+  unsafe fn render_vertex_entity<V, W, P>(
     &mut self,
-    view: VertexEntityView<V, P>,
+    view: VertexEntityView<V, W, P>,
   ) -> Result<(), PipelineError>
   where
     V: Vertex,
+    W: Vertex,
     P: Primitive;
 }
 

@@ -203,13 +203,14 @@ where
     }
   }
 
-  pub fn with_program<V, P, T, E, Err>(
+  pub fn with_program<V, W, P, T, E, Err>(
     &mut self,
-    program: &Program<V, P, T, E>,
-    f: impl for<'b> FnOnce(WithProgram<'b, B, V, P, T, E>) -> Result<(), Err>,
+    program: &Program<V, W, P, T, E>,
+    f: impl for<'b> FnOnce(WithProgram<'b, B, V, W, P, T, E>) -> Result<(), Err>,
   ) -> Result<(), Err>
   where
     V: Vertex,
+    W: Vertex,
     P: Primitive,
     S: CompatibleRenderSlots<T>,
     T: RenderSlots,
@@ -256,34 +257,30 @@ where
   }
 }
 
-pub struct WithProgram<'a, B, V, P, S, E>
+pub struct WithProgram<'a, B, V, W, P, S, E>
 where
   B: 'a + ?Sized,
 {
   backend: &'a mut B,
-  program: &'a Program<V, P, S, E>,
-  _phantom: PhantomData<*const (V, P, S, E)>,
+  program: &'a Program<V, W, P, S, E>,
 }
 
-impl<'a, B, V, P, S, E> WithProgram<'a, B, V, P, S, E>
+impl<'a, B, V, W, P, S, E> WithProgram<'a, B, V, W, P, S, E>
 where
   B: 'a + PipelineBackend,
   V: Vertex,
+  W: Vertex,
   P: Primitive,
   S: RenderSlots,
 {
-  pub unsafe fn new(backend: &'a mut B, program: &'a Program<V, P, S, E>) -> Self {
-    Self {
-      backend,
-      program,
-      _phantom: PhantomData,
-    }
+  pub unsafe fn new(backend: &'a mut B, program: &'a Program<V, W, P, S, E>) -> Self {
+    Self { backend, program }
   }
 
   pub fn with_render_state<Err>(
     &mut self,
     render_state: &RenderState,
-    f: impl for<'b> FnOnce(WithRenderState<'b, B, V, P>) -> Result<(), Err>,
+    f: impl for<'b> FnOnce(WithRenderState<'b, B, V, W, P>) -> Result<(), Err>,
   ) -> Result<(), Err>
   where
     Err: From<PipelineError>,
@@ -341,15 +338,15 @@ where
 }
 
 #[derive(Debug)]
-pub struct WithRenderState<'a, B, V, P>
+pub struct WithRenderState<'a, B, V, W, P>
 where
   B: 'a + ?Sized,
 {
   backend: &'a mut B,
-  _phantom: PhantomData<*const (V, P)>,
+  _phantom: PhantomData<*const (V, W, P)>,
 }
 
-impl<'a, B, V, P> WithRenderState<'a, B, V, P>
+impl<'a, B, V, W, P> WithRenderState<'a, B, V, W, P>
 where
   B: 'a + PipelineBackend,
   V: Vertex,
@@ -362,13 +359,15 @@ where
     }
   }
 
-  pub fn render_vertex_entity<W>(
+  pub fn render_vertex_entity<V2, W2>(
     &mut self,
-    view: VertexEntityView<W, P>,
+    view: VertexEntityView<V2, W2, P>,
   ) -> Result<(), PipelineError>
   where
-    V: CompatibleVertex<W>,
-    W: Vertex,
+    V: CompatibleVertex<V2>,
+    W: CompatibleVertex<W2>,
+    V2: Vertex,
+    W2: Vertex,
   {
     unsafe { self.backend.render_vertex_entity(view) }
   }
