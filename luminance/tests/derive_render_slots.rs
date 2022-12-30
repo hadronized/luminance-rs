@@ -4,21 +4,22 @@
 
 use luminance::{
   has_field::HasField,
-  render_channel::RenderChannelDesc,
+  pixel::{Pixel, R32F, RGB32F},
+  render_slots::RenderChannelDesc,
   render_slots::{CompatibleRenderSlots, RenderSlots},
   RenderSlots,
 };
 
 #[derive(RenderSlots)]
 struct Slots {
-  _diffuse: mint::Vector3<f32>,
-  _normal: mint::Vector3<f32>,
-  _test: f32,
+  _diffuse: RGB32F,
+  _normal: RGB32F,
+  _test: R32F,
 }
 
 #[derive(RenderSlots)]
 struct Slots1 {
-  _diffuse: mint::Vector3<f32>,
+  _diffuse: RGB32F,
 }
 
 #[test]
@@ -35,35 +36,29 @@ fn compatible_render_slots() {
   {
   }
 
-  has_field::<"_diffuse", mint::Vector3<f32>, Slots>();
-  has_field::<"_normal", mint::Vector3<f32>, Slots>();
-  has_field::<"_test", f32, Slots>();
+  has_field::<"_diffuse", RGB32F, Slots>();
+  has_field::<"_normal", RGB32F, Slots>();
+  has_field::<"_test", R32F, Slots>();
 
-  has_field::<"_diffuse", mint::Vector3<f32>, Slots1>();
+  has_field::<"_diffuse", RGB32F, Slots1>();
 
   compatible::<Slots, Slots>();
   compatible::<Slots1, Slots>();
 }
 
 #[test]
-fn render_channels() {
+fn render_slots() {
   let diffuse = RenderChannelDesc {
     name: "_diffuse",
-    ty: luminance::render_channel::RenderChannelType::Floating(
-      luminance::render_channel::RenderChannelDim::Dim3,
-    ),
+    fmt: RGB32F::PIXEL_FMT,
   };
   let normal = RenderChannelDesc {
     name: "_normal",
-    ty: luminance::render_channel::RenderChannelType::Floating(
-      luminance::render_channel::RenderChannelDim::Dim3,
-    ),
+    fmt: RGB32F::PIXEL_FMT,
   };
   let test = RenderChannelDesc {
     name: "_test",
-    ty: luminance::render_channel::RenderChannelType::Floating(
-      luminance::render_channel::RenderChannelDim::Dim1,
-    ),
+    fmt: R32F::PIXEL_FMT,
   };
 
   assert_eq!(Slots::color_channel_descs(), &[diffuse, normal, test]);

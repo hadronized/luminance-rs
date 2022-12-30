@@ -18,7 +18,6 @@ pub mod named_index;
 pub mod pipeline;
 pub mod pixel;
 pub mod primitive;
-pub mod render_channel;
 pub mod render_slots;
 // pub mod query;
 pub mod dim;

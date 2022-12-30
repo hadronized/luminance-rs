@@ -10,6 +10,7 @@ use luminance::{
   framebuffer::{Back, Framebuffer},
   namespace,
   pipeline::PipelineState,
+  pixel::RGB32F,
   primitive::Triangle,
   render_state::RenderState,
   shader::{Program, ProgramBuilder},
@@ -112,7 +113,7 @@ namespace! {
 #[derive(Clone, Copy, Debug, PartialEq, RenderSlots)]
 #[slot(namespace = "RenderSlotNamespace")]
 pub struct Slots {
-  frag: mint::Vector3<f32>,
+  frag: RGB32F,
 }
 
 /// Local example; this will be picked by the example runner.

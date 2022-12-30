@@ -30,7 +30,7 @@ pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
           };
 
           let render_layer_field = quote! {
-            pub #field_ident: luminance::render_slots::RenderLayer<D, #field_ty>
+            pub #field_ident: luminance::texture::Texture<D, #field_ty>
           };
 
           let render_layer_decl = quote! {
@@ -44,9 +44,9 @@ pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
           };
 
           let render_channel_desc = quote! {
-            luminance::render_channel::RenderChannelDesc {
+            luminance::render_slots::RenderChannelDesc {
               name: #field_name,
-              ty: <#field_ty as luminance::render_channel::RenderChannel>::CHANNEL_TY,
+              fmt: <#field_ty as luminance::pixel::Pixel>::PIXEL_FMT,
             }
           };
 
@@ -78,7 +78,6 @@ pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
         }
 
         // generate a type that will act as RenderSlots::RenderLayers
-        #[derive(Debug)]
         pub struct #render_layers_ty<D> where D: luminance::dim::Dimensionable {
           #(#render_layer_fields),*
         }
@@ -87,7 +86,7 @@ pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
         impl luminance::render_slots::RenderSlots for #type_ident {
           type RenderLayers<D> = #render_layers_ty<D> where D: luminance::dim::Dimensionable;
 
-          fn color_channel_descs() -> &'static [luminance::render_channel::RenderChannelDesc] {
+          fn color_channel_descs() -> &'static [luminance::render_slots::RenderChannelDesc] {
             &[#(#render_channel_descs),*]
           }
 

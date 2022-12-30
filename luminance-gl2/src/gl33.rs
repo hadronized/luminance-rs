@@ -15,8 +15,7 @@ use luminance::{
   pipeline::{PipelineState, Viewport, WithFramebuffer, WithProgram, WithRenderState},
   pixel::{Format, Pixel, PixelFormat, PixelType, Size, Type},
   primitive::{Connector, Primitive},
-  render_channel::{DepthChannel, RenderChannel},
-  render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
+  render_slots::{DepthChannel, DepthRenderSlot, RenderChannel, RenderSlots},
   scissor::Scissor,
   shader::{Program, Uni, Uniform, Uniforms},
   texture::{InUseTexture, MagFilter, MinFilter, Mipmaps, Texture, TextureSampling, Wrap},
@@ -1021,7 +1020,7 @@ impl TextureData {
     D: Dimensionable,
     P: Pixel,
   {
-    let pf = P::pixel_format();
+    let pf = P::PIXEL_FMT;
     let pf_size = pf.format.bytes_len();
     let expected_bytes = D::count(size) * pf_size;
 
@@ -2277,7 +2276,7 @@ unsafe impl FramebufferBackend for GL33 {
     mipmaps: Mipmaps,
     sampling: &TextureSampling,
     index: usize,
-  ) -> Result<RenderLayer<D, RC>, FramebufferError>
+  ) -> Result<Texture<D, RC>, FramebufferError>
   where
     D: Dimensionable,
     RC: RenderChannel,
@@ -2289,29 +2288,21 @@ unsafe impl FramebufferBackend for GL33 {
       index
     );
 
-    // a render layer is a texture, so there is no need to wrap it
-    let pixel_format = RC::CHANNEL_TY.to_pixel_format();
-    let tex = TextureData::new::<D>(
-      &self.state,
-      GL33::opengl_target(D::dim()),
-      size,
-      mipmaps,
-      pixel_format,
-      sampling,
-    )
-    .map_err(|e| FramebufferError::RenderLayerCreation {
-      cause: Some(Box::new(e)),
+    let tex = self.reserve_texture(size, mipmaps, sampling).map_err(|e| {
+      FramebufferError::RenderLayerCreation {
+        cause: Some(Box::new(e)),
+      }
     })?;
 
     // attach the texture to the framebuffer
     gl::FramebufferTexture(
       gl::FRAMEBUFFER,
       gl::COLOR_ATTACHMENT0 + index as GLenum,
-      tex as GLuint,
+      tex.handle() as GLuint,
       0,
     );
 
-    Ok(RenderLayer::new(tex))
+    Ok(tex)
   }
 
   unsafe fn new_depth_render_layer<D, DC>(
@@ -2320,29 +2311,26 @@ unsafe impl FramebufferBackend for GL33 {
     size: D::Size,
     mipmaps: Mipmaps,
     sampling: &TextureSampling,
-  ) -> Result<RenderLayer<D, DC>, FramebufferError>
+  ) -> Result<Texture<D, DC>, FramebufferError>
   where
     D: Dimensionable,
     DC: DepthChannel,
   {
-    // a depth render layer is also a texture, attached to the depth attachment of the framebuffer
-    let pixel_format = DC::CHANNEL_TY.to_pixel_format();
-    let tex = TextureData::new::<D>(
-      &self.state,
-      GL33::opengl_target(D::dim()),
-      size,
-      mipmaps,
-      pixel_format,
-      sampling,
-    )
-    .map_err(|e| FramebufferError::RenderLayerCreation {
-      cause: Some(Box::new(e)),
+    let tex = self.reserve_texture(size, mipmaps, sampling).map_err(|e| {
+      FramebufferError::RenderLayerCreation {
+        cause: Some(Box::new(e)),
+      }
     })?;
 
     // attach the texture to the framebuffer
-    gl::FramebufferTexture(gl::FRAMEBUFFER, gl::DEPTH_ATTACHMENT, tex as GLuint, 0);
+    gl::FramebufferTexture(
+      gl::FRAMEBUFFER,
+      gl::DEPTH_ATTACHMENT,
+      tex.handle() as GLuint,
+      0,
+    );
 
-    Ok(RenderLayer::new(tex))
+    Ok(tex)
   }
 
   unsafe fn new_framebuffer<D, RS, DS>(
@@ -2377,7 +2365,7 @@ unsafe impl FramebufferBackend for GL33 {
     }
 
     // depth channel
-    let depth_channel = DS::DEPTH_CHANNEL_TY;
+    let depth_channel = DS::DEPTH_CHANNEL_FMT;
     let renderbuffer = if depth_channel.is_none() {
       let mut renderbuffer: GLuint = 0;
 
@@ -2438,36 +2426,6 @@ unsafe impl FramebufferBackend for GL33 {
     DS: DepthRenderSlot,
   {
     Ok(Framebuffer::new(0, size, (), (), Box::new(|_| {})))
-  }
-
-  unsafe fn use_render_layer<D, P>(
-    &mut self,
-    handle: usize,
-  ) -> Result<InUseTexture<D, P>, FramebufferError>
-  where
-    D: Dimensionable,
-    P: PixelType,
-  {
-    self
-      .use_texture(handle)
-      .map_err(|cause| FramebufferError::RenderLayerUsage {
-        cause: Some(Box::new(cause)),
-      })
-  }
-
-  unsafe fn use_depth_render_layer<D, P>(
-    &mut self,
-    handle: usize,
-  ) -> Result<InUseTexture<D, P>, FramebufferError>
-  where
-    D: Dimensionable,
-    P: PixelType,
-  {
-    self
-      .use_texture(handle)
-      .map_err(|cause| FramebufferError::RenderLayerUsage {
-        cause: Some(Box::new(cause)),
-      })
   }
 }
 
@@ -2873,7 +2831,7 @@ unsafe impl TextureBackend for GL33 {
       GL33::opengl_target(D::dim()),
       size,
       mipmaps,
-      P::pixel_format(),
+      P::PIXEL_FMT,
       sampling,
     )?;
 
@@ -2918,7 +2876,7 @@ unsafe impl TextureBackend for GL33 {
   {
     let target = GL33::opengl_target(D::dim());
     self.state.borrow_mut().bind_texture(target, handle)?;
-    TextureData::create_texture_storage::<D>(&size, mipmaps, P::pixel_format())
+    TextureData::create_texture_storage::<D>(&size, mipmaps, P::PIXEL_FMT)
   }
 
   unsafe fn set_texture_data<D, P>(
@@ -2970,7 +2928,10 @@ unsafe impl TextureBackend for GL33 {
     self.set_texture_data::<D, P>(handle, offset, size, gen_mipmaps, &texels, 0)
   }
 
-  unsafe fn get_texels<D, P>(&mut self, handle: usize) -> Result<Vec<P::RawEncoding>, TextureError>
+  unsafe fn read_texture<D, P>(
+    &mut self,
+    handle: usize,
+  ) -> Result<Vec<P::RawEncoding>, TextureError>
   where
     D: Dimensionable,
     P: Pixel,
@@ -2985,7 +2946,7 @@ unsafe impl TextureBackend for GL33 {
     gl::GetTexLevelParameteriv(target, 0, gl::TEXTURE_HEIGHT, &mut h);
 
     // set the packing alignment based on the number of bytes to skip
-    let pf = P::pixel_format();
+    let pf = P::PIXEL_FMT;
     let skip_bytes = (pf.format.bytes_len() * w as usize) % 8;
     TextureData::set_pack_alignment(skip_bytes);
 

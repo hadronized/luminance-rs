@@ -35,7 +35,7 @@ pub mod hello_world_more;
 pub mod offscreen;
 // pub mod polymorphic_hello_world;
 // pub mod query_info;
-// pub mod query_texture_texels;
+pub mod query_texture_texels;
 pub mod render_state;
 // pub mod shader_data;
 // pub mod shader_uniform_adapt;

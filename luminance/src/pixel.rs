@@ -7,12 +7,11 @@ pub trait Pixel {
 
   type Type: PixelType;
 
-  /// Reify to [`PixelFormat`].
-  fn pixel_format() -> PixelFormat;
+  const PIXEL_FMT: PixelFormat;
 }
 
 /// A `PixelFormat` gathers a `Type` along with a `Format`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub struct PixelFormat {
   /// Encoding type of the pixel format.
   pub encoding: Type,
@@ -81,7 +80,7 @@ pub enum Type {
 ///
 /// Whichever the constructor you choose, the carried [`Size`]s represent how many bits are used to
 /// represent each channel.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum Format {
   /// Holds a red-only channel.
   R(Size),
@@ -120,7 +119,7 @@ impl Format {
 }
 
 /// Size in bits a pixel channel can be.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum Size {
   /// 8-bit.
   Eight,
@@ -149,7 +148,7 @@ impl Size {
 
 macro_rules! mk_pixel_type {
   ($name:ident) => {
-    #[derive(Copy, Clone, Debug, PartialEq, Eq)]
+    #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
     pub struct $name;
 
     impl PixelType for $name {
@@ -173,102 +172,100 @@ macro_rules! impl_Pixel {
 
       type Type = $encoding_ty;
 
-      fn pixel_format() -> PixelFormat {
-        PixelFormat {
-          encoding: Type::$encoding_ty,
-          format: $format,
-        }
-      }
+      const PIXEL_FMT: PixelFormat = PixelFormat {
+        encoding: Type::$encoding_ty,
+        format: $format,
+      };
     }
   };
 }
 
 /// A red 8-bit signed integral pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct R8I;
 
 impl_Pixel!(R8I, i8, Integral, Format::R(Size::Eight));
 
 /// A red 8-bit signed integral pixel format, accessed as normalized floating pixels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct NormR8I;
 
 impl_Pixel!(NormR8I, i8, NormIntegral, Format::R(Size::Eight));
 
 /// A red 8-bit unsigned integral pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct R8UI;
 
 impl_Pixel!(R8UI, u8, Unsigned, Format::R(Size::Eight));
 
 /// A red 8-bit unsigned integral pixel format, accessed as normalized floating pixels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct NormR8UI;
 
 impl_Pixel!(NormR8UI, u8, NormUnsigned, Format::R(Size::Eight));
 
 /// A red 16-bit signed integral pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct R16I;
 
 impl_Pixel!(R16I, i16, Integral, Format::R(Size::Sixteen));
 
 /// A red 16-bit signed integral pixel format, accessed as normalized floating pixels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct NormR16I;
 
 impl_Pixel!(NormR16I, i16, NormIntegral, Format::R(Size::Sixteen));
 
 /// A red 16-bit unsigned integral pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct R16UI;
 
 impl_Pixel!(R16UI, u16, Unsigned, Format::R(Size::Sixteen));
 
 /// A red 16-bit unsigned integral pixel format, accessed as normalized floating pixels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct NormR16UI;
 
 impl_Pixel!(NormR16UI, u16, NormUnsigned, Format::R(Size::Sixteen));
 
 /// A red 32-bit signed integral pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct R32I;
 
 impl_Pixel!(R32I, i32, Integral, Format::R(Size::ThirtyTwo));
 
 /// A red 32-bit signed integral pixel format, accessed as normalized floating pixels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct NormR32I;
 
 impl_Pixel!(NormR32I, i32, NormIntegral, Format::R(Size::ThirtyTwo));
 
 /// A red 32-bit unsigned integral pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct R32UI;
 
 impl_Pixel!(R32UI, u32, Unsigned, Format::R(Size::ThirtyTwo));
 
 /// A red 32-bit unsigned integral pixel format, accessed as normalized floating pixels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct NormR32UI;
 
 impl_Pixel!(NormR32UI, u32, NormUnsigned, Format::R(Size::ThirtyTwo));
 
 /// A red 32-bit floating pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct R32F;
 
 impl_Pixel!(R32F, f32, Floating, Format::R(Size::ThirtyTwo));
 
 /// A red and green 8-bit signed integral pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct RG8I;
 
 impl_Pixel!(RG8I, i8, Integral, Format::RG(Size::Eight, Size::Eight));
 
 /// A red and green 8-bit integral pixel format, accessed as normalized floating pixels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct NormRG8I;
 
 impl_Pixel!(
@@ -279,13 +276,13 @@ impl_Pixel!(
 );
 
 /// A red and green 8-bit unsigned integral pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct RG8UI;
 
 impl_Pixel!(RG8UI, u8, Unsigned, Format::RG(Size::Eight, Size::Eight));
 
 /// A red and green 8-bit unsigned integral pixel format, accessed as normalized floating pixels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct NormRG8UI;
 
 impl_Pixel!(
@@ -296,7 +293,7 @@ impl_Pixel!(
 );
 
 /// A red and green 16-bit signed integral pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct RG16I;
 
 impl_Pixel!(
@@ -307,7 +304,7 @@ impl_Pixel!(
 );
 
 /// A red and green 16-bit integral pixel format, accessed as normalized floating pixels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct NormRG16I;
 
 impl_Pixel!(
@@ -318,7 +315,7 @@ impl_Pixel!(
 );
 
 /// A red and green 16-bit unsigned integral pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct RG16UI;
 
 impl_Pixel!(
@@ -329,7 +326,7 @@ impl_Pixel!(
 );
 
 /// A red and green 16-bit unsigned integral pixel format, accessed as normalized floating pixels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct NormRG16UI;
 
 impl_Pixel!(
@@ -340,7 +337,7 @@ impl_Pixel!(
 );
 
 /// A red and green 32-bit signed integral pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct RG32I;
 
 impl_Pixel!(
@@ -351,7 +348,7 @@ impl_Pixel!(
 );
 
 /// A red and green 32-bit signed integral pixel format, accessed as normalized floating pixels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct NormRG32I;
 
 impl_Pixel!(
@@ -362,7 +359,7 @@ impl_Pixel!(
 );
 
 /// A red and green 32-bit unsigned integral pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct RG32UI;
 
 impl_Pixel!(
@@ -373,7 +370,7 @@ impl_Pixel!(
 );
 
 /// A red and green 32-bit unsigned integral pixel format, accessed as normalized floating pixels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct NormRG32UI;
 
 impl_Pixel!(
@@ -384,7 +381,7 @@ impl_Pixel!(
 );
 
 /// A red and green 32-bit floating pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct RG32F;
 
 impl_Pixel!(
@@ -395,7 +392,7 @@ impl_Pixel!(
 );
 
 /// A red, green and blue 8-bit signed integral pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct RGB8I;
 
 impl_Pixel!(
@@ -407,7 +404,7 @@ impl_Pixel!(
 
 /// A red, green and blue 8-bit signed integral pixel format, accessed as normalized floating
 /// pixels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct NormRGB8I;
 
 impl_Pixel!(
@@ -418,7 +415,7 @@ impl_Pixel!(
 );
 
 /// A red, green and blue 8-bit unsigned integral pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct RGB8UI;
 
 impl_Pixel!(
@@ -430,7 +427,7 @@ impl_Pixel!(
 
 /// A red, green and blue 8-bit unsigned integral pixel format, accessed as normalized floating
 /// pixels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct NormRGB8UI;
 
 impl_Pixel!(
@@ -441,7 +438,7 @@ impl_Pixel!(
 );
 
 /// A red, green and blue 16-bit signed integral pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct RGB16I;
 
 impl_Pixel!(
@@ -453,7 +450,7 @@ impl_Pixel!(
 
 /// A red, green and blue 16-bit signed integral pixel format, accessed as normalized floating
 /// pixels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct NormRGB16I;
 
 impl_Pixel!(
@@ -464,7 +461,7 @@ impl_Pixel!(
 );
 
 /// A red, green and blue 16-bit unsigned integral pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct RGB16UI;
 
 impl_Pixel!(
@@ -476,7 +473,7 @@ impl_Pixel!(
 
 /// A red, green and blue 16-bit unsigned integral pixel format, accessed as normalized floating
 /// pixels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct NormRGB16UI;
 
 impl_Pixel!(
@@ -487,7 +484,7 @@ impl_Pixel!(
 );
 
 /// A red, green and blue 32-bit signed integral pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct RGB32I;
 
 impl_Pixel!(
@@ -499,7 +496,7 @@ impl_Pixel!(
 
 /// A red, green and blue 32-bit signed integral pixel format, accessed as normalized floating
 /// pixels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct NormRGB32I;
 
 impl_Pixel!(
@@ -510,7 +507,7 @@ impl_Pixel!(
 );
 
 /// A red, green and blue 32-bit unsigned integral pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct RGB32UI;
 
 impl_Pixel!(
@@ -522,7 +519,7 @@ impl_Pixel!(
 
 /// A red, green and blue 32-bit unsigned integral pixel format, accessed as normalized floating
 /// pixels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct NormRGB32UI;
 
 impl_Pixel!(
@@ -533,7 +530,7 @@ impl_Pixel!(
 );
 
 /// A red, green and blue 32-bit floating pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct RGB32F;
 
 impl_Pixel!(
@@ -544,7 +541,7 @@ impl_Pixel!(
 );
 
 /// A red, green, blue and alpha 8-bit signed integral pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct RGBA8I;
 
 impl_Pixel!(
@@ -556,7 +553,7 @@ impl_Pixel!(
 
 /// A red, green, blue and alpha 8-bit signed integral pixel format, accessed as normalized floating
 /// pixels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct NormRGBA8I;
 
 impl_Pixel!(
@@ -567,7 +564,7 @@ impl_Pixel!(
 );
 
 /// A red, green, blue and alpha 8-bit unsigned integral pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct RGBA8UI;
 
 impl_Pixel!(
@@ -579,7 +576,7 @@ impl_Pixel!(
 
 /// A red, green, blue and alpha 8-bit unsigned integral pixel format, accessed as normalized
 /// floating pixels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct NormRGBA8UI;
 
 impl_Pixel!(
@@ -590,7 +587,7 @@ impl_Pixel!(
 );
 
 /// A red, green, blue and alpha 16-bit signed integral pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct RGBA16I;
 
 impl_Pixel!(
@@ -602,7 +599,7 @@ impl_Pixel!(
 
 /// A red, green, blue and alpha 16-bit signed integral pixel format, accessed as normalized
 /// floating pixels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct NormRGBA16I;
 
 impl_Pixel!(
@@ -613,7 +610,7 @@ impl_Pixel!(
 );
 
 /// A red, green, blue and alpha 16-bit unsigned integral pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct RGBA16UI;
 
 impl_Pixel!(
@@ -625,7 +622,7 @@ impl_Pixel!(
 
 /// A red, green, blue and alpha 16-bit unsigned integral pixel format, accessed as normalized
 /// floating pixels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct NormRGBA16UI;
 
 impl_Pixel!(
@@ -636,7 +633,7 @@ impl_Pixel!(
 );
 
 /// A red, green, blue and alpha 32-bit signed integral pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct RGBA32I;
 
 impl_Pixel!(
@@ -653,7 +650,7 @@ impl_Pixel!(
 
 /// A red, green, blue and alpha 32-bit signed integral pixel format, accessed as normalized
 /// floating pixels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct NormRGBA32I;
 
 impl_Pixel!(
@@ -669,7 +666,7 @@ impl_Pixel!(
 );
 
 /// A red, green, blue and alpha 32-bit unsigned integral pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct RGBA32UI;
 
 impl_Pixel!(
@@ -686,7 +683,7 @@ impl_Pixel!(
 
 /// A red, green, blue and alpha 32-bit unsigned integral pixel format, accessed as normalized
 /// floating pixels.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct NormRGBA32UI;
 
 impl_Pixel!(
@@ -702,7 +699,7 @@ impl_Pixel!(
 );
 
 /// A red, green, blue and alpha 32-bit floating pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct RGBA32F;
 
 impl_Pixel!(
@@ -722,7 +719,7 @@ impl_Pixel!(
 ///   - The red channel is on 11 bits.
 ///   - The green channel is on 11 bits, too.
 ///   - The blue channel is on 10 bits.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct R11G11B10F;
 
 impl_Pixel!(
@@ -733,7 +730,7 @@ impl_Pixel!(
 );
 
 /// An 8-bit unsigned integral red, green and blue pixel format in sRGB colorspace.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct SRGB8UI;
 
 impl_Pixel!(
@@ -744,7 +741,7 @@ impl_Pixel!(
 );
 
 /// An 8-bit unsigned integral red, green and blue pixel format in sRGB colorspace, with linear alpha channel.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct SRGBA8UI;
 
 impl_Pixel!(
@@ -755,13 +752,13 @@ impl_Pixel!(
 );
 
 /// A depth 32-bit floating pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Depth32F;
 
 impl_Pixel!(Depth32F, f32, Floating, Format::Depth(Size::ThirtyTwo));
 
 /// A depth 24-bit + stencil 8-bit pixel format.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Depth32FStencil8;
 
 impl_Pixel!(

@@ -9,7 +9,7 @@ use luminance::{
   dim::{Dim2, Size2},
   framebuffer::{Back, Framebuffer},
   pipeline::PipelineState,
-  pixel::Floating,
+  pixel::NormUnsigned,
   primitive::{Triangle, TriangleFan},
   render_state::RenderState,
   shader::{Program, ProgramBuilder, Uni},
@@ -67,7 +67,7 @@ const TRI_VERTICES: [Vertex; 3] = [
 struct Uniforms {
   // we only need the source texture (from the framebuffer) to fetch from
   #[uniform(unbound, name = "source_texture")]
-  texture: Uni<InUseTexture<Dim2, Floating>>,
+  texture: Uni<InUseTexture<Dim2, NormUnsigned>>,
 }
 
 pub struct LocalExample {
@@ -164,7 +164,7 @@ impl Example for LocalExample {
     ctx.with_framebuffer(back_buffer, &PipelineState::default(), |mut frame| {
       frame.with_program(copy_program, |mut frame| {
         // we must bind the offscreen framebuffer color content so that we can pass it to a shader
-        let used_render_layer = frame.use_render_layer(&offscreen_buffer.layers().frag)?;
+        let used_render_layer = frame.use_texture(&offscreen_buffer.layers().frag)?;
         // we update the texture with the bound texture
         frame.update(|mut update, unis| update.set(&unis.texture, &used_render_layer))?;
 

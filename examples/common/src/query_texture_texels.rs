@@ -6,22 +6,24 @@
 //! <https://docs.rs/luminance>
 
 use crate::{
-  shared::{Semantics, Vertex, VertexColor, VertexPosition},
+  shared::{FragSlot, Vertex},
   Example, LoopFeedback, PlatformServices,
 };
 use image::{save_buffer, ColorType};
-use luminance::context::GraphicsContext;
-use luminance::Vertex;
-use luminance_front::{
+use luminance::{
+  backend::{Backend, Error},
+  context::Context,
+  dim::{Dim2, Size2},
   framebuffer::Framebuffer,
   pipeline::PipelineState,
-  pixel::NormRGBA8UI,
+  primitive::Triangle,
   render_state::RenderState,
-  shader::Program,
-  tess::{Mode, Tess},
-  texture::{Dim2, Sampler},
-  Backend,
+  shader::{Program, ProgramBuilder},
+  texture::{Mipmaps, TextureSampling},
+  vertex_entity::{VertexEntity, View},
+  vertex_storage::Interleaved,
 };
+use mint::{Vector2, Vector3};
 
 // We get the shader at compile time from local files
 const VS: &'static str = include_str!("simple-vs.glsl");
@@ -31,122 +33,129 @@ const FS: &'static str = include_str!("simple-fs.glsl");
 const TRI_VERTICES: [Vertex; 6] = [
   // first triangle – an RGB one
   Vertex {
-    pos: VertexPosition::new([0.5, -0.5]),
-    rgb: VertexColor::new([0., 1., 0.]),
+    co: Vector2 { x: 0.5, y: -0.5 },
+    color: Vector3 {
+      x: 0.,
+      y: 1.,
+      z: 0.,
+    },
   },
   Vertex {
-    pos: VertexPosition::new([0.0, 0.5]),
-    rgb: VertexColor::new([0., 0., 1.]),
+    co: Vector2 { x: 0.0, y: 0.5 },
+    color: Vector3 {
+      x: 0.,
+      y: 0.,
+      z: 1.,
+    },
   },
   Vertex {
-    pos: VertexPosition::new([-0.5, -0.5]),
-    rgb: VertexColor::new([1., 0., 0.]),
+    co: Vector2 { x: -0.5, y: -0.5 },
+    color: Vector3 {
+      x: 1.,
+      y: 0.,
+      z: 0.,
+    },
   },
   // second triangle, a purple one, positioned differently
   Vertex {
-    pos: VertexPosition::new([-0.5, 0.5]),
-    rgb: VertexColor::new([1., 0.2, 1.]),
+    co: Vector2 { x: -0.5, y: 0.5 },
+    color: Vector3 {
+      x: 1.,
+      y: 0.2,
+      z: 1.,
+    },
   },
   Vertex {
-    pos: VertexPosition::new([0.0, -0.5]),
-    rgb: VertexColor::new([0.2, 1., 1.]),
+    co: Vector2 { x: 0.0, y: -0.5 },
+    color: Vector3 {
+      x: 0.2,
+      y: 1.,
+      z: 1.,
+    },
   },
   Vertex {
-    pos: VertexPosition::new([0.5, 0.5]),
-    rgb: VertexColor::new([0.2, 0.2, 1.]),
+    co: Vector2 { x: 0.5, y: 0.5 },
+    color: Vector3 {
+      x: 0.2,
+      y: 0.2,
+      z: 1.,
+    },
   },
 ];
 
-#[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq, Vertex)]
-#[vertex(sem = "Semantics")]
-struct Positions {
-  pos: VertexPosition,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq, Vertex)]
-#[vertex(sem = "Semantics")]
-struct Colors {
-  color: VertexColor,
-}
-
 pub struct LocalExample {
-  program: Program<Semantics, (), ()>,
-  triangles: Tess<Vertex>,
-  framebuffer: luminance_front::framebuffer::Framebuffer<Dim2, NormRGBA8UI, ()>,
+  program: Program<Vertex, (), Triangle, FragSlot, ()>,
+  triangles: VertexEntity<Vertex, Triangle, Interleaved<Vertex>>,
+  framebuffer: Framebuffer<Dim2, FragSlot, ()>,
 }
 
 impl Example for LocalExample {
+  type Err = Error;
+
+  const TITLE: &'static str = "Query Texture Texels";
+
   fn bootstrap(
+    [width, height]: [u32; 2],
     _: &mut impl PlatformServices,
-    context: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> Self {
+    ctx: &mut Context<impl Backend>,
+  ) -> Result<Self, Self::Err> {
     // we need a program to “shade” our triangles and to tell luminance which is the input vertex
     // type, and we’re not interested in the other two type variables for this sample
-    let program = context
-      .new_shader_program::<Semantics, (), ()>()
-      .from_strings(VS, None, None, FS)
-      .expect("program creation")
-      .ignore_warnings();
+    let program = ctx.new_program(
+      ProgramBuilder::new()
+        .add_vertex_stage(VS)
+        .no_primitive_stage()
+        .add_shading_stage(FS),
+    )?;
 
     // create tessellation for direct geometry; that is, tessellation that will render vertices by
     // taking one after another in the provided slice
-    let triangles = context
-      .new_tess()
-      .set_vertices(&TRI_VERTICES[..])
-      .set_mode(Mode::Triangle)
-      .build()
-      .unwrap();
+    let triangles = ctx.new_vertex_entity(
+      Interleaved::new().set_vertices(TRI_VERTICES),
+      [],
+      Interleaved::new(),
+    )?;
 
     // the back buffer, which we will make our render into (we make it mutable so that we can change
     // it whenever the window dimensions change)
-    let framebuffer = context
-      .new_framebuffer::<Dim2, NormRGBA8UI, ()>([960, 540], 0, Sampler::default())
-      .unwrap();
+    let framebuffer = ctx.new_framebuffer(
+      Size2::new(width, height),
+      Mipmaps::No,
+      &TextureSampling::default(),
+    )?;
 
-    Self {
+    Ok(Self {
       program,
       triangles,
       framebuffer,
-    }
+    })
   }
 
   fn render_frame(
     mut self,
     _: f32,
-    _: Framebuffer<Dim2, (), ()>,
     _: impl Iterator<Item = crate::InputAction>,
-    context: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> LoopFeedback<Self> {
+    ctx: &mut Context<impl Backend>,
+  ) -> Result<LoopFeedback<Self>, Self::Err> {
     let program = &mut self.program;
     let triangles = &self.triangles;
-    let framebuffer = &mut self.framebuffer;
 
     // create a new dynamic pipeline that will render to the back buffer and must clear it with
     // pitch black prior to do any render to it
-    context
-      .new_pipeline_gate()
-      .pipeline(framebuffer, &PipelineState::default(), |_, mut shd_gate| {
-        // start shading with our program
-        shd_gate.shade(program, |_, _, mut rdr_gate| {
-          // start rendering things with the default render state provided by luminance
-          rdr_gate.render(&RenderState::default(), |mut tess_gate| {
-            // pick the right tessellation to use depending on the mode chosen
-            // render the tessellation to the surface
-            tess_gate.render(triangles)
-          })
+    ctx.with_framebuffer(&self.framebuffer, &PipelineState::default(), |mut frame| {
+      frame.with_program(program, |mut frame| {
+        frame.with_render_state(&RenderState::default(), |mut frame| {
+          frame.render_vertex_entity(triangles.view(..))
         })
       })
-      .assume()
-      .into_result()
-      .expect("offscreen render");
+    })?;
 
     // the backbuffer contains our texels
-    let texels = framebuffer.color_slot().get_raw_texels().unwrap();
-    // create a .png file and output it
-    save_buffer("./rendered.png", &texels, 960, 540, ColorType::Rgba8).unwrap();
+    let texels = ctx.read_texture(&self.framebuffer.layers().frag)?;
 
-    LoopFeedback::Exit
+    // create a .png file and output it
+    save_buffer("./rendered.png", &texels[..], 960, 540, ColorType::Rgb32F).unwrap();
+
+    Ok(LoopFeedback::Exit)
   }
 }

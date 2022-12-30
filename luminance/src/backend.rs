@@ -4,8 +4,7 @@ use crate::{
   pipeline::{PipelineState, WithFramebuffer, WithProgram, WithRenderState},
   pixel::{Pixel, PixelFormat, PixelType},
   primitive::Primitive,
-  render_channel::{DepthChannel, RenderChannel},
-  render_slots::{DepthRenderSlot, RenderLayer, RenderSlots},
+  render_slots::{DepthChannel, DepthRenderSlot, RenderChannel, RenderSlots},
   render_state::RenderState,
   shader::{Program, Uni, Uniform, Uniforms},
   texture::{InUseTexture, Mipmaps, Texture, TextureSampling},
@@ -77,6 +76,7 @@ pub enum FramebufferError {
   DepthRenderLayerCreation { cause: Option<Box<dyn ErrorTrait>> },
   RetrieveBackBuffer { cause: Option<Box<dyn ErrorTrait>> },
   RenderLayerUsage { cause: Option<Box<dyn ErrorTrait>> },
+  ReadRenderLayer { cause: Option<Box<dyn ErrorTrait>> },
 }
 
 impl fmt::Display for FramebufferError {
@@ -121,6 +121,15 @@ impl fmt::Display for FramebufferError {
       FramebufferError::RenderLayerUsage { cause } => write!(
         f,
         "error when using a render layer: {}",
+        cause
+          .as_ref()
+          .map(|cause| cause.to_string())
+          .unwrap_or_else(|| "unknown cause".to_string())
+      ),
+
+      FramebufferError::ReadRenderLayer { cause } => write!(
+        f,
+        "error when reading a render layer: {}",
         cause
           .as_ref()
           .map(|cause| cause.to_string())
@@ -222,6 +231,8 @@ pub enum PipelineError {
   ShaderError(ShaderError),
 
   FramebufferError(FramebufferError),
+
+  TextureError(TextureError),
 }
 
 impl From<ShaderError> for PipelineError {
@@ -233,6 +244,12 @@ impl From<ShaderError> for PipelineError {
 impl From<FramebufferError> for PipelineError {
   fn from(e: FramebufferError) -> Self {
     PipelineError::FramebufferError(e)
+  }
+}
+
+impl From<TextureError> for PipelineError {
+  fn from(e: TextureError) -> Self {
+    PipelineError::TextureError(e)
   }
 }
 
@@ -289,6 +306,8 @@ impl fmt::Display for PipelineError {
       PipelineError::ShaderError(e) => write!(f, "shader error in pipeline: {}", e),
 
       PipelineError::FramebufferError(e) => write!(f, "framebuffer error in pipeline: {}", e),
+
+      PipelineError::TextureError(e) => write!(f, "texture error in pipeline: {}", e),
     }
   }
 }
@@ -549,28 +568,28 @@ pub unsafe trait VertexEntityBackend {
 }
 
 pub unsafe trait FramebufferBackend {
-  unsafe fn new_render_layer<D, RC>(
+  unsafe fn new_render_layer<D, P>(
     &mut self,
     framebuffer_handle: usize,
     size: D::Size,
     mipmaps: Mipmaps,
     sampling: &TextureSampling,
     index: usize,
-  ) -> Result<RenderLayer<D, RC>, FramebufferError>
+  ) -> Result<Texture<D, P>, FramebufferError>
   where
     D: Dimensionable,
-    RC: RenderChannel;
+    P: RenderChannel;
 
-  unsafe fn new_depth_render_layer<D, DC>(
+  unsafe fn new_depth_render_layer<D, P>(
     &mut self,
     framebuffer_handle: usize,
     size: D::Size,
     mipmaps: Mipmaps,
     sampling: &TextureSampling,
-  ) -> Result<RenderLayer<D, DC>, FramebufferError>
+  ) -> Result<Texture<D, P>, FramebufferError>
   where
     D: Dimensionable,
-    DC: DepthChannel;
+    P: DepthChannel;
 
   unsafe fn new_framebuffer<D, RS, DS>(
     &mut self,
@@ -591,22 +610,6 @@ pub unsafe trait FramebufferBackend {
     D: Dimensionable,
     RS: RenderSlots,
     DS: DepthRenderSlot;
-
-  unsafe fn use_render_layer<D, P>(
-    &mut self,
-    handle: usize,
-  ) -> Result<InUseTexture<D, P>, FramebufferError>
-  where
-    D: Dimensionable,
-    P: PixelType;
-
-  unsafe fn use_depth_render_layer<D, P>(
-    &mut self,
-    handle: usize,
-  ) -> Result<InUseTexture<D, P>, FramebufferError>
-  where
-    D: Dimensionable,
-    P: PixelType;
 }
 
 macro_rules! mk_uniform_visit {
@@ -756,7 +759,10 @@ pub unsafe trait TextureBackend {
     D: Dimensionable,
     P: Pixel;
 
-  unsafe fn get_texels<D, P>(&mut self, handle: usize) -> Result<Vec<P::RawEncoding>, TextureError>
+  unsafe fn read_texture<D, P>(
+    &mut self,
+    handle: usize,
+  ) -> Result<Vec<P::RawEncoding>, TextureError>
   where
     D: Dimensionable,
     P: Pixel;
