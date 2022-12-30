@@ -101,23 +101,29 @@ where
 {
   handle: usize,
   dropper: Box<dyn FnMut(usize)>,
-  _phantom: PhantomData<*const (D, P)>,
+  size: D::Size,
+  _phantom: PhantomData<*const P>,
 }
 
 impl<D, P> Texture<D, P>
 where
   D: Dimensionable,
 {
-  pub unsafe fn new(handle: usize, dropper: Box<dyn FnMut(usize)>) -> Self {
+  pub unsafe fn new(handle: usize, dropper: Box<dyn FnMut(usize)>, size: D::Size) -> Self {
     Self {
       handle,
       dropper,
+      size,
       _phantom: PhantomData,
     }
   }
 
   pub fn handle(&self) -> usize {
     self.handle
+  }
+
+  pub fn size(&self) -> D::Size {
+    self.size
   }
 }
 

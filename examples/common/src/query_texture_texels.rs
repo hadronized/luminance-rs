@@ -152,9 +152,17 @@ impl Example for LocalExample {
 
     // the backbuffer contains our texels
     let texels = ctx.read_texture(&self.framebuffer.layers().frag)?;
+    let size = self.framebuffer.layers().frag.size();
 
     // create a .png file and output it
-    save_buffer("./rendered.png", &texels[..], 960, 540, ColorType::Rgb32F).unwrap();
+    save_buffer(
+      "./rendered.png",
+      &texels[..],
+      size.width,
+      size.height,
+      ColorType::Rgb8,
+    )
+    .unwrap();
 
     Ok(LoopFeedback::Exit)
   }

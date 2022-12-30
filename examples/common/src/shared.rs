@@ -1,7 +1,6 @@
-use luminance::{dim::Size2, namespace, pixel::NormR8UI, RenderSlots, Vertex};
-use mint::{Vector2, Vector3};
-
 use crate::PlatformServices;
+use luminance::{dim::Size2, namespace, pixel::NormRGB8UI, RenderSlots, Vertex};
+use mint::{Vector2, Vector3};
 
 // Render slots.
 //
@@ -10,7 +9,7 @@ use crate::PlatformServices;
 // color.
 #[derive(Clone, Copy, Debug, PartialEq, RenderSlots)]
 pub struct FragSlot {
-  frag: NormR8UI,
+  frag: NormRGB8UI,
 }
 
 namespace! {

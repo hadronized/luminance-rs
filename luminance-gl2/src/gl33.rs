@@ -2842,7 +2842,7 @@ unsafe impl TextureBackend for GL33 {
       state.borrow_mut().drop_texture(handle);
     });
 
-    Ok(Texture::new(handle, dropper))
+    Ok(Texture::new(handle, dropper, size))
   }
 
   unsafe fn new_texture<D, P>(
