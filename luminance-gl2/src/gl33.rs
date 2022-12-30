@@ -398,13 +398,13 @@ impl Drop for Buffer {
 }
 
 impl Buffer {
-  fn from_vec<T>(state: &StateRef, vec: &Vec<T>) -> Self {
+  fn from_vec<T>(state: &StateRef, target: GLenum, vec: &Vec<T>) -> Self {
     let mut st = state.borrow_mut();
     let mut handle: GLuint = 0;
 
     unsafe {
       gl::GenBuffers(1, &mut handle);
-      gl::BindBuffer(gl::ARRAY_BUFFER, handle);
+      gl::BindBuffer(target, handle);
     }
 
     st.bound_array_buffer.set(handle);
@@ -413,12 +413,7 @@ impl Buffer {
     let bytes = mem::size_of::<T>() * len;
 
     unsafe {
-      gl::BufferData(
-        gl::ARRAY_BUFFER,
-        bytes as isize,
-        vec.as_ptr() as _,
-        gl::STREAM_DRAW,
-      );
+      gl::BufferData(target, bytes as isize, vec.as_ptr() as _, gl::STREAM_DRAW);
     }
 
     Buffer { handle }
@@ -464,7 +459,7 @@ struct VertexEntityData {
   vao: GLuint,
   vertex_buffers: Option<VertexEntityBuffers>,
   index_buffer: Option<Buffer>,
-  instance_data: Option<VertexEntityBuffers>,
+  instance_buffers: Option<VertexEntityBuffers>,
 }
 
 impl Drop for VertexEntityData {
@@ -1429,7 +1424,7 @@ impl GL33 {
       });
     }
 
-    let buffer = Buffer::from_vec(&self.state, storage.vertices());
+    let buffer = Buffer::from_vec(&self.state, gl::ARRAY_BUFFER, storage.vertices());
     self
       .state
       .borrow_mut()
@@ -1458,7 +1453,7 @@ impl GL33 {
       .iter()
       .zip(V::vertex_desc())
       .map(|(vertices, fmt)| {
-        let buffer = Buffer::from_vec(&self.state, vertices);
+        let buffer = Buffer::from_vec(&self.state, gl::ARRAY_BUFFER, vertices);
         let field_len = fmt.attrib_desc.unit_size * fmt.attrib_desc.dim.size();
 
         if len == 0 {
@@ -1504,7 +1499,7 @@ impl GL33 {
       return None;
     }
 
-    let buffer = Buffer::from_vec(&self.state, indices);
+    let buffer = Buffer::from_vec(&self.state, gl::ELEMENT_ARRAY_BUFFER, indices);
 
     self
       .state
@@ -2029,15 +2024,21 @@ unsafe impl VertexEntityBackend for GL33 {
 
     let built_vertex_buffers = self.build_vertex_buffers(&mut vertices, false)?;
     let vertex_buffers = built_vertex_buffers.buffers;
-    let vertex_count = built_vertex_buffers.len;
     let index_buffer = self.build_index_buffer(&indices);
     let built_instance_buffers = self.build_vertex_buffers(&mut instance_data, true)?;
+    let instance_buffers = built_instance_buffers.buffers;
+
+    let vertex_count = if indices.is_empty() {
+      built_vertex_buffers.len
+    } else {
+      indices.len()
+    };
 
     let data = VertexEntityData {
       vao,
       vertex_buffers,
       index_buffer,
-      instance_data: built_instance_buffers.buffers,
+      instance_buffers,
     };
 
     let vao = vao as usize;
@@ -2110,6 +2111,7 @@ unsafe impl VertexEntityBackend for GL33 {
         });
 
       if inst_count == 1 {
+        // FIXME: bug here
         gl::DrawElements(
           GL33::opengl_connector(P::CONNECTOR),
           vert_count as _,
@@ -2238,7 +2240,7 @@ unsafe impl VertexEntityBackend for GL33 {
 
     // allow updating only if the instance data storage has the same shape as the one used to create the vertex entity
     // (interleaved/interleaved or deinterleaved/deinterleaved)
-    match (storage.as_vertex_storage(), &data.instance_data) {
+    match (storage.as_vertex_storage(), &data.instance_buffers) {
       (VertexStorage::Interleaved(storage), Some(VertexEntityBuffers::Interleaved(ref buffer))) => {
         let vertices = storage.vertices();
         buffer
