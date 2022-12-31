@@ -204,7 +204,7 @@ examples! {
   "dynamic-uniform-interface", dynamic_uniform_interface,
   "vertex-instancing", vertex_instancing,
   "query-texture-texels", query_texture_texels,
-  // "displacement-map", displacement_map,
+  "displacement-map", displacement_map,
   // "interactive-triangle", interactive_triangle,
   // "query-info", query_info,
   // "mrt", mrt,

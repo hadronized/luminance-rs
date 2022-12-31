@@ -26,7 +26,7 @@ use std::fmt::Display;
 
 // examples
 pub mod attributeless;
-// pub mod displacement_map;
+pub mod displacement_map;
 pub mod dynamic_uniform_interface;
 pub mod hello_world;
 pub mod hello_world_more;

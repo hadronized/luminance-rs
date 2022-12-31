@@ -15,164 +15,176 @@
 //!
 //! <https://docs.rs/luminance>
 
-use crate::{
-  shared::{load_texture, RGBTexture},
-  Example, InputAction, LoopFeedback, PlatformServices,
-};
-use luminance::UniformInterface;
-use luminance_front::{
-  blending::{Blending, Equation, Factor},
-  context::GraphicsContext,
-  framebuffer::Framebuffer,
-  pipeline::{PipelineState, TextureBinding},
-  pixel::NormUnsigned,
+use luminance::{
+  backend::{Backend, Error},
+  blending::{Blending, BlendingMode, Equation, Factor},
+  context::Context,
+  dim::{Dim2, Size2},
+  framebuffer::{Back, Framebuffer},
+  pipeline::PipelineState,
+  pixel::{NormRGB8UI, NormUnsigned},
+  primitive::TriangleFan,
   render_state::RenderState,
-  shader::{types::Vec2, Program, Uniform},
-  tess::{Mode, Tess},
-  texture::{Dim2, Sampler, TexelUpload},
-  Backend,
+  shader::{Program, ProgramBuilder, Uni},
+  texture::{InUseTexture, Mipmaps, Texture, TextureSampling},
+  vertex_entity::{VertexEntity, View},
+  vertex_storage::Interleaved,
+  Uniforms,
+};
+use mint::Vector2;
+
+use crate::{
+  shared::{load_img, FragSlot},
+  Example, InputAction, LoopFeedback, PlatformServices,
 };
 
 const VS: &str = include_str!("./displacement-map-resources/displacement-map-vs.glsl");
 const FS: &str = include_str!("./displacement-map-resources/displacement-map-fs.glsl");
 
-#[derive(UniformInterface)]
+#[derive(Uniforms)]
 struct ShaderInterface {
-  image: Uniform<TextureBinding<Dim2, NormUnsigned>>,
-  displacement_map_1: Uniform<TextureBinding<Dim2, NormUnsigned>>,
-  displacement_map_2: Uniform<TextureBinding<Dim2, NormUnsigned>>,
-  displacement_scale: Uniform<f32>,
-  time: Uniform<f32>,
-  window_dimensions: Uniform<Vec2<f32>>,
+  image: Uni<InUseTexture<Dim2, NormUnsigned>>,
+  displacement_map_1: Uni<InUseTexture<Dim2, NormUnsigned>>,
+  displacement_map_2: Uni<InUseTexture<Dim2, NormUnsigned>>,
+  displacement_scale: Uni<f32>,
+  time: Uni<f32>,
+  window_dimensions: Uni<Vector2<f32>>,
 }
 
 pub struct LocalExample {
-  image: RGBTexture,
-  displacement_maps: [RGBTexture; 2],
-  program: Program<(), (), ShaderInterface>,
-  tess: Tess<()>,
+  img_tex: Texture<Dim2, NormRGB8UI>,
+  displacement_maps: [Texture<Dim2, NormRGB8UI>; 2],
+  program: Program<(), (), TriangleFan, FragSlot, ShaderInterface>,
+  quad: VertexEntity<(), TriangleFan, Interleaved<()>>,
   displacement_scale: f32,
+  back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }
 
 impl Example for LocalExample {
+  type Err = Error;
+
+  const TITLE: &'static str = "Displacement Map";
+
   fn bootstrap(
+    [width, height]: [u32; 2],
     platform: &mut impl PlatformServices,
-    context: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> Self {
-    let image = load_texture(context, platform).expect("texture to displace");
+    ctx: &mut Context<impl Backend>,
+  ) -> Result<Self, Self::Err> {
+    let (img_size, img) = load_img(platform).expect("image to displace");
+    let img_tex = ctx.new_texture(img_size, Mipmaps::No, &TextureSampling::default(), &img[..])?;
+
     let displacement_maps = [
       load_displacement_map(
-        context,
+        ctx,
         include_bytes!("./displacement-map-resources/displacement_1.png"),
       ),
       load_displacement_map(
-        context,
+        ctx,
         include_bytes!("./displacement-map-resources/displacement_2.png"),
       ),
     ];
 
-    let program = context
-      .new_shader_program::<(), (), ShaderInterface>()
-      .from_strings(VS, None, None, FS)
-      .expect("Could not create shader program")
-      .ignore_warnings();
+    let program = ctx.new_program(
+      ProgramBuilder::new()
+        .add_vertex_stage(VS)
+        .no_primitive_stage()
+        .add_shading_stage(FS),
+    )?;
 
-    let tess = context
-      .new_tess()
-      .set_render_vertex_nb(4)
-      .set_mode(Mode::TriangleFan)
-      .build()
-      .unwrap();
-
+    let quad = ctx.new_vertex_entity(Interleaved::new(), [], Interleaved::new())?;
     let displacement_scale = 0.01;
 
-    Self {
-      image,
+    let back_buffer = ctx.back_buffer(Size2::new(width, height))?;
+
+    Ok(Self {
+      img_tex,
       displacement_maps,
       program,
-      tess,
+      quad,
       displacement_scale,
-    }
+      back_buffer,
+    })
   }
 
   fn render_frame(
     mut self,
     t: f32,
-    back_buffer: Framebuffer<Dim2, (), ()>,
     actions: impl Iterator<Item = InputAction>,
-    context: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> LoopFeedback<Self> {
+    ctx: &mut Context<impl Backend>,
+  ) -> Result<LoopFeedback<Self>, Self::Err> {
     for action in actions {
       match action {
-        InputAction::Quit => return LoopFeedback::Exit,
-        InputAction::Forward => self.displacement_scale = (self.displacement_scale + 0.01).min(1.),
-        InputAction::Backward => self.displacement_scale = (self.displacement_scale - 0.01).max(0.),
+        InputAction::Quit => return Ok(LoopFeedback::Exit),
+        InputAction::Forward => {
+          self.displacement_scale = (self.displacement_scale + 0.01).min(1.);
+          log::info!("new displacement scale: {}", self.displacement_scale);
+        }
+        InputAction::Backward => {
+          self.displacement_scale = (self.displacement_scale - 0.01).max(0.);
+          log::info!("new displacement scale: {}", self.displacement_scale);
+        }
         _ => (),
       }
     }
 
-    let image = &mut self.image;
-    let [ref mut displacement_map_0, ref mut displacement_map_1] = self.displacement_maps;
+    let img_tex = &self.img_tex;
+    let [ref displacement_map_1, ref displacement_map_2] = self.displacement_maps;
     let displacement_scale = self.displacement_scale;
-    let render_state = &RenderState::default().set_blending(Blending {
+    let render_state = &RenderState::default().set_blending(BlendingMode::Combined(Blending {
       equation: Equation::Additive,
       src: Factor::SrcAlpha,
       dst: Factor::Zero,
-    });
-    let tess = &self.tess;
-    let program = &mut self.program;
+    }));
+    let quad = &self.quad;
+    let program = &self.program;
+    let frame_size = self.back_buffer.size();
 
-    let render = context
-      .new_pipeline_gate()
-      .pipeline(
-        &back_buffer,
-        &PipelineState::default(),
-        |pipeline, mut shading_gate| {
-          let bound_texture = pipeline.bind_texture(image).unwrap();
-          let bound_displacement_1 = pipeline.bind_texture(displacement_map_0)?;
-          let bound_displacement_2 = pipeline.bind_texture(displacement_map_1)?;
+    ctx.with_framebuffer(&self.back_buffer, &PipelineState::default(), |mut frame| {
+      let bound_tex = frame.use_texture(img_tex)?;
+      let bound_displacement_1 = frame.use_texture(displacement_map_1)?;
+      let bound_displacement_2 = frame.use_texture(displacement_map_2)?;
+      frame.with_program(program, |mut frame| {
+        frame.update(|mut p, unis| {
+          p.set(&unis.image, &bound_tex)?;
+          p.set(&unis.displacement_map_1, &bound_displacement_1)?;
+          p.set(&unis.displacement_map_2, &bound_displacement_2)?;
+          p.set(&unis.time, &t)?;
+          p.set(&unis.displacement_scale, &displacement_scale)?;
+          p.set(
+            &unis.window_dimensions,
+            &Vector2 {
+              x: frame_size.width as f32,
+              y: frame_size.height as f32,
+            },
+          )
+        })?;
 
-          shading_gate.shade(program, |mut interface, uni, mut render_gate| {
-            let back_buffer_size = back_buffer.size();
-            interface.set(&uni.image, bound_texture.binding());
-            interface.set(&uni.displacement_map_1, bound_displacement_1.binding());
-            interface.set(&uni.displacement_map_2, bound_displacement_2.binding());
-            interface.set(&uni.displacement_scale, displacement_scale);
-            interface.set(&uni.time, t);
-            interface.set(
-              &uni.window_dimensions,
-              Vec2::new(back_buffer_size[0] as f32, back_buffer_size[1] as f32),
-            );
+        frame.with_render_state(render_state, |mut frame| {
+          frame.render_vertex_entity(quad.view(..4))
+        })
+      })
+    })?;
 
-            render_gate.render(render_state, |mut tess_gate| tess_gate.render(tess))
-          })
-        },
-      )
-      .assume();
-
-    if render.is_ok() {
-      LoopFeedback::Continue(self)
-    } else {
-      LoopFeedback::Exit
-    }
+    Ok(LoopFeedback::Continue(self))
   }
 }
 
 fn load_displacement_map(
-  context: &mut impl GraphicsContext<Backend = Backend>,
+  ctx: &mut Context<impl Backend>,
   bytes: &[u8],
-) -> RGBTexture {
+) -> Texture<Dim2, NormRGB8UI> {
   let img = image::load_from_memory_with_format(bytes, image::ImageFormat::Png)
     .expect("Could not load displacement map")
     .to_rgb8();
   let (width, height) = img.dimensions();
   let texels = img.as_raw();
 
-  context
-    .new_texture_raw(
-      [width, height],
-      Sampler::default(),
-      TexelUpload::base_level(texels, 0),
+  ctx
+    .new_texture(
+      Size2::new(width, height),
+      Mipmaps::No,
+      &TextureSampling::default(),
+      texels,
     )
     .map_err(|e| log::error!("error while creating texture: {}", e))
     .ok()
