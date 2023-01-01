@@ -206,9 +206,9 @@ examples! {
   "query-texture-texels", query_texture_texels,
   "displacement-map", displacement_map,
   "interactive-triangle", interactive_triangle,
+  "skybox", skybox,
   // "query-info", query_info,
   // "mrt", mrt,
-  // "skybox", skybox,
   // "shader-data", shader_data,
   // "stencil", stencil,
 

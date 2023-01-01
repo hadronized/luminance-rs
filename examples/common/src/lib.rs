@@ -41,7 +41,7 @@ pub mod render_state;
 // pub mod shader_uniform_adapt;
 pub mod shader_uniforms;
 pub mod shared;
-// pub mod skybox;
+pub mod skybox;
 pub mod sliced_vertex_entity;
 // pub mod stencil;
 pub mod texture;
