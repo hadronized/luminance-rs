@@ -205,7 +205,7 @@ examples! {
   "vertex-instancing", vertex_instancing,
   "query-texture-texels", query_texture_texels,
   "displacement-map", displacement_map,
-  // "interactive-triangle", interactive_triangle,
+  "interactive-triangle", interactive_triangle,
   // "query-info", query_info,
   // "mrt", mrt,
   // "skybox", skybox,
