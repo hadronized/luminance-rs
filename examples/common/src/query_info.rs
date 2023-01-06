@@ -5,39 +5,37 @@
 //! <https://docs.rs/luminance>
 
 use crate::{Example, InputAction, LoopFeedback, PlatformServices};
-use luminance_front::{context::GraphicsContext, framebuffer::Framebuffer, texture::Dim2, Backend};
+use luminance::{backend::Backend, context::Context};
 
 pub struct LocalExample;
 
 impl Example for LocalExample {
-  fn bootstrap(
-    _: &mut impl PlatformServices,
-    context: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> Self {
-    let q = context.query();
+  type Err = luminance::backend::Error;
 
-    log::info!("Backend author: {:?}", q.backend_author());
-    log::info!("Backend name: {:?}", q.backend_name());
-    log::info!("Backend version: {:?}", q.backend_version());
+  const TITLE: &'static str = "Query Info";
+
+  fn bootstrap(
+    _: [u32; 2],
+    _: &mut impl PlatformServices,
+    ctx: &mut Context<impl Backend>,
+  ) -> Result<Self, Self::Err> {
+    log::info!("Backend author: {:?}", ctx.backend_author());
+    log::info!("Backend name: {:?}", ctx.backend_name());
+    log::info!("Backend version: {:?}", ctx.backend_version());
     log::info!(
       "Backend shading language version: {:?}",
-      q.backend_shading_lang_version()
-    );
-    log::info!(
-      "Maximum number of elements in a texture array: {:?}",
-      q.max_texture_array_elements()
+      ctx.backend_shading_lang_version()
     );
 
-    LocalExample
+    Ok(LocalExample)
   }
 
   fn render_frame(
     self,
     _: f32,
-    _: Framebuffer<Dim2, (), ()>,
     _: impl Iterator<Item = InputAction>,
-    _: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> LoopFeedback<Self> {
-    LoopFeedback::Exit
+    _: &mut Context<impl Backend>,
+  ) -> Result<LoopFeedback<Self>, Self::Err> {
+    Ok(LoopFeedback::Exit)
   }
 }

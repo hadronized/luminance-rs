@@ -207,7 +207,7 @@ examples! {
   "displacement-map", displacement_map,
   "interactive-triangle", interactive_triangle,
   "skybox", skybox,
-  // "query-info", query_info,
+  "query-info", query_info,
   // "mrt", mrt,
   // "shader-data", shader_data,
   // "stencil", stencil,

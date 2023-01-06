@@ -2,7 +2,8 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
   backend::{
-    Backend, FramebufferError, PipelineError, ShaderError, TextureError, VertexEntityError,
+    Backend, FramebufferError, PipelineError, QueryError, ShaderError, TextureError,
+    VertexEntityError,
   },
   dim::Dimensionable,
   framebuffer::{Back, Framebuffer},
@@ -51,6 +52,22 @@ where
       backend,
       context_active,
     })
+  }
+
+  pub fn backend_author(&self) -> Result<String, QueryError> {
+    self.backend.backend_author()
+  }
+
+  pub fn backend_name(&self) -> Result<String, QueryError> {
+    self.backend.backend_name()
+  }
+
+  pub fn backend_version(&self) -> Result<String, QueryError> {
+    self.backend.backend_version()
+  }
+
+  pub fn backend_shading_lang_version(&self) -> Result<String, QueryError> {
+    self.backend.backend_shading_lang_version()
   }
 
   pub fn new_vertex_entity<V, P, VS, I, W, WS>(
