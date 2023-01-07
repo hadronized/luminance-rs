@@ -208,7 +208,7 @@ examples! {
   "interactive-triangle", interactive_triangle,
   "skybox", skybox,
   "query-info", query_info,
-  // "mrt", mrt,
+  "mrt", mrt,
   // "shader-data", shader_data,
   // "stencil", stencil,
 
