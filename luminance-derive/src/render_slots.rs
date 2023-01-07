@@ -45,7 +45,7 @@ pub fn impl_render_slots(item: DeriveInput) -> TokenStream {
 
           let render_channel_desc = quote! {
             luminance::render_slots::RenderChannelDesc {
-              name: #field_name,
+              name: #field_name, // TODO: we need to be able to change that with #[???(name = "something else"]
               fmt: <#field_ty as luminance::pixel::Pixel>::PIXEL_FMT,
             }
           };
