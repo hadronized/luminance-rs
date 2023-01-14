@@ -6,7 +6,7 @@ use crate::{
   primitive::Primitive,
   render_slots::{DepthChannel, DepthRenderSlot, RenderChannel, RenderSlots},
   render_state::RenderState,
-  shader::{Program, Uni, Uniform, Uniforms},
+  shader::{MemoryLayout, Program, Uni, Uniform, UniformBuffer, Uniforms},
   texture::{InUseTexture, Mipmaps, Texture, TextureSampling},
   vertex::Vertex,
   vertex_entity::{VertexEntity, VertexEntityView},
@@ -700,6 +700,13 @@ pub unsafe trait ShaderBackend {
   where
     D: Dimensionable,
     P: PixelType;
+
+  unsafe fn new_uniform_buffer<T, Scheme>(
+    &mut self,
+    value: T::Aligned,
+  ) -> Result<UniformBuffer<T, Scheme>, ShaderError>
+  where
+    T: MemoryLayout<Scheme>;
 }
 
 pub unsafe trait TextureBackend {

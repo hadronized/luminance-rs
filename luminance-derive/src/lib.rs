@@ -1,12 +1,14 @@
-#![feature(proc_macro_diagnostic)]
+#![feature(const_cmp, proc_macro_diagnostic)]
 
 mod attrib;
+mod memory_layout;
 mod render_slots;
 mod uniforms;
 mod vertex;
 
 use crate::vertex::generate_vertex_impl;
 use crate::{render_slots::impl_render_slots, uniforms::generate_uniforms_impl};
+use memory_layout::{impl_memory_layout, Layout};
 use proc_macro::TokenStream;
 use syn::{self, parse_macro_input, Data, DeriveInput};
 
@@ -44,4 +46,16 @@ pub fn derive_uniforms(input: TokenStream) -> TokenStream {
 pub fn derive_render_slots(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
   let item: DeriveInput = parse_macro_input!(input);
   impl_render_slots(item).into()
+}
+
+#[proc_macro_derive(Std140)]
+pub fn derive_std140(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+  let item: DeriveInput = parse_macro_input!(input);
+  impl_memory_layout(item, Layout::Std140).into()
+}
+
+#[proc_macro_derive(Std430)]
+pub fn derive_std430(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+  let item: DeriveInput = parse_macro_input!(input);
+  impl_memory_layout(item, Layout::Std430).into()
 }

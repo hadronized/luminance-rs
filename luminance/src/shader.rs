@@ -153,6 +153,8 @@ pub enum UniType {
   Matrix(UniMatDim),
 
   Sampler(pixel::Type, Dim),
+
+  Buffer,
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -426,6 +428,121 @@ impl Uniforms for () {
     B: ShaderBackend,
   {
     Ok(())
+  }
+}
+
+#[derive(Debug)]
+pub enum Std140 {}
+
+#[derive(Debug)]
+pub enum Std430 {}
+
+pub unsafe trait MemoryLayout<Scheme>: Sized {
+  /// The aligned associated type.
+  type Aligned: From<Self>;
+}
+
+/// Aligment rules.
+pub unsafe trait MemoryAlign<Scheme> {
+  const ALIGNMENT: usize;
+}
+
+macro_rules! impl_MemoryAlign {
+  ($t:ty, $scheme:ty, $alignment:expr) => {
+    unsafe impl MemoryAlign<$scheme> for $t {
+      const ALIGNMENT: usize = $alignment;
+    }
+  };
+}
+
+impl_MemoryAlign!(f32, Std140, 4);
+impl_MemoryAlign!(u32, Std140, 4);
+impl_MemoryAlign!(i32, Std140, 4);
+
+#[cfg(feature = "mint")]
+impl_MemoryAlign!(mint::Vector2<f32>, Std140, 8);
+#[cfg(feature = "mint")]
+impl_MemoryAlign!(mint::Vector2<u32>, Std140, 8);
+#[cfg(feature = "mint")]
+impl_MemoryAlign!(mint::Vector2<i32>, Std140, 8);
+
+#[cfg(feature = "mint")]
+impl_MemoryAlign!(mint::Vector3<f32>, Std140, 16);
+#[cfg(feature = "mint")]
+impl_MemoryAlign!(mint::Vector3<u32>, Std140, 16);
+#[cfg(feature = "mint")]
+impl_MemoryAlign!(mint::Vector3<i32>, Std140, 16);
+
+#[cfg(feature = "mint")]
+impl_MemoryAlign!(mint::Vector4<f32>, Std140, 16);
+#[cfg(feature = "mint")]
+impl_MemoryAlign!(mint::Vector4<u32>, Std140, 16);
+#[cfg(feature = "mint")]
+impl_MemoryAlign!(mint::Vector4<i32>, Std140, 16);
+
+unsafe impl<T, const N: usize> MemoryAlign<Std140> for [T; N]
+where
+  T: MemoryAlign<Std140>,
+{
+  // T::ALIGNMENT rounded-up to the next 16 multiple (alignment of vec4)
+  const ALIGNMENT: usize = (T::ALIGNMENT + 15) & !15;
+}
+
+impl_MemoryAlign!(f32, Std430, 4);
+impl_MemoryAlign!(u32, Std430, 4);
+impl_MemoryAlign!(i32, Std430, 4);
+
+#[cfg(feature = "mint")]
+impl_MemoryAlign!(mint::Vector2<f32>, Std430, 8);
+#[cfg(feature = "mint")]
+impl_MemoryAlign!(mint::Vector2<u32>, Std430, 8);
+#[cfg(feature = "mint")]
+impl_MemoryAlign!(mint::Vector2<i32>, Std430, 8);
+
+#[cfg(feature = "mint")]
+impl_MemoryAlign!(mint::Vector3<f32>, Std430, 16);
+#[cfg(feature = "mint")]
+impl_MemoryAlign!(mint::Vector3<u32>, Std430, 16);
+#[cfg(feature = "mint")]
+impl_MemoryAlign!(mint::Vector3<i32>, Std430, 16);
+
+#[cfg(feature = "mint")]
+impl_MemoryAlign!(mint::Vector4<f32>, Std430, 16);
+#[cfg(feature = "mint")]
+impl_MemoryAlign!(mint::Vector4<u32>, Std430, 16);
+#[cfg(feature = "mint")]
+impl_MemoryAlign!(mint::Vector4<i32>, Std430, 16);
+
+unsafe impl<T, const N: usize> MemoryAlign<Std430> for [T; N]
+where
+  T: MemoryAlign<Std430>,
+{
+  const ALIGNMENT: usize = T::ALIGNMENT;
+}
+
+pub struct UniformBuffer<T, Scheme> {
+  handle: usize,
+  dropper: Box<dyn FnMut(usize)>,
+  _phantom: PhantomData<*const (T, Scheme)>,
+}
+
+impl<T, Scheme> UniformBuffer<T, Scheme> {
+  pub unsafe fn new(handle: usize, dropper: Box<dyn FnMut(usize)>) -> Self {
+    Self {
+      handle,
+      dropper,
+      _phantom: PhantomData,
+    }
+  }
+
+  pub fn handle(&self) -> usize {
+    self.handle
+  }
+}
+
+impl<T, Scheme> Drop for UniformBuffer<T, Scheme> {
+  fn drop(&mut self) {
+    (self.dropper)(self.handle)
   }
 }
 
