@@ -12,7 +12,140 @@ use crate::{
   vertex_entity::{VertexEntity, VertexEntityView},
   vertex_storage::AsVertexStorage,
 };
-use std::{error::Error as ErrorTrait, fmt};
+use std::{collections::HashMap, error::Error as ErrorTrait, fmt};
+
+/// Cached value.
+///
+/// A cached value is used to prevent issuing costy GPU commands if we know the target value is
+/// already set to what the command tries to set. For instance, if you ask to use a texture ID
+/// `34` once, that value will be set on the GPU and cached on our side. Later, if no other texture
+/// setting has occurred, if you ask to use the texture ID `34` again, because the value is cached,
+/// we know the GPU is already using it, so we don’t have to perform anything GPU-wise.
+///
+/// This optimization has limits and sometimes, because of side-effects, it is not possible to cache
+/// something correctly.
+#[derive(Debug)]
+pub struct Cached<T>(Option<T>);
+
+impl<T> Cached<T>
+where
+  T: PartialEq,
+{
+  /// Start with no value.
+  pub fn empty() -> Self {
+    Cached(None)
+  }
+
+  /// Explicitly invalidate a value.
+  ///
+  /// This is necessary when we want to be able to force a GPU command to run.
+  pub fn invalidate(&mut self) {
+    self.0 = None;
+  }
+
+  pub fn set(&mut self, value: T) -> Option<T> {
+    self.0.replace(value)
+  }
+
+  // Set the value if invalid or never set (and call the function).
+  //
+  // If the value was still valid, returns `true`.
+  pub fn set_if_invalid(&mut self, value: T, f: impl FnOnce()) -> bool {
+    match self.0 {
+      Some(ref x) if x == &value => false,
+
+      _ => {
+        self.0 = Some(value);
+        f();
+        true
+      }
+    }
+  }
+
+  /// Check whether the cached value is invalid regarding a value.
+  ///
+  /// A non-cached value (i.e. empty) is always invalid whatever compared value. If a value is already cached, then it’s
+  /// invalid if it’s not equal ([`PartialEq`]) to the input value.
+  pub fn is_invalid(&self, new_val: &T) -> bool {
+    match &self.0 {
+      Some(ref t) => t != new_val,
+      _ => true,
+    }
+  }
+}
+
+/// Map a resource handle to a given “binding” name.
+///
+/// The mapper will always try to exhaust the max number of concurrent bound resources. Once it’s exhausted, it will
+/// reused the ones that are marked as “idle.” An “idle” resource might reuse it soon, but the ownership is not removed
+/// just yet so that if the mapper doesn’t ask the resource back, the resource can rebind it without having to go
+/// through a new lookup procedure again, removing back-and-forth interactions.
+#[derive(Debug)]
+pub struct ResourceMapper {
+  current_binding: Cached<usize>,
+  next_binding: usize,
+  max_binding: usize,
+  idling_bindings: HashMap<usize, usize>, // binding -> resource handle
+}
+
+#[derive(Debug)]
+pub enum ResourceMapperError {
+  NotEnoughBindings { max: usize },
+}
+
+impl ResourceMapper {
+  pub fn new(max_binding: usize) -> Self {
+    Self {
+      current_binding: Cached::empty(),
+      next_binding: 0,
+      max_binding,
+      idling_bindings: HashMap::new(),
+    }
+  }
+
+  pub fn current_binding(&mut self) -> &mut Cached<usize> {
+    &mut self.current_binding
+  }
+
+  /// Get a new binding.
+  ///
+  /// We always try to get a fresh binding, and if we can’t, we will try to reuse an idling one.
+  pub fn get_binding(&mut self) -> Result<(usize, Option<usize>), ResourceMapperError> {
+    if self.next_binding < self.max_binding {
+      // we still can use a fresh unit
+      let unit = self.next_binding;
+      self.next_binding += 1;
+
+      Ok((unit, None))
+    } else {
+      // we have exhausted the hardware bindings; try to reuse an idling one and if we cannot, then it’s an error
+      self
+        .reuse_binding()
+        .ok_or_else(|| ResourceMapperError::NotEnoughBindings {
+          max: self.max_binding,
+        })
+    }
+  }
+
+  /// Try to reuse a binding. Return `None` if no binding is available, and `Some((unit, old_resource_handle))`
+  /// otherwise.
+  fn reuse_binding(&mut self) -> Option<(usize, Option<usize>)> {
+    let unit = self.idling_bindings.keys().next().cloned()?;
+    let old_resource_handle = self.idling_bindings.remove(&unit)?;
+
+    Some((unit, Some(old_resource_handle)))
+  }
+
+  /// Mark a binding as idle.
+  pub fn mark_idle(&mut self, unit: usize, handle: usize) {
+    self.idling_bindings.insert(unit, handle);
+  }
+
+  /// Mark a binding as non-idle.
+  pub fn mark_nonidle(&mut self, unit: usize) {
+    self.idling_bindings.remove(&unit);
+  }
+}
 
 #[derive(Debug)]
 #[non_exhaustive]
@@ -424,6 +557,14 @@ impl fmt::Display for TextureError {
 }
 
 impl std::error::Error for TextureError {}
+
+impl From<ResourceMapperError> for TextureError {
+  fn from(value: ResourceMapperError) -> Self {
+    match value {
+      ResourceMapperError::NotEnoughBindings { max } => TextureError::NotEnoughTextureUnits { max },
+    }
+  }
+}
 
 /// Query error.
 #[derive(Debug)]

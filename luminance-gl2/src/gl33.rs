@@ -3,8 +3,8 @@ use gl::types::{GLboolean, GLchar, GLenum, GLfloat, GLint, GLsizei, GLubyte, GLu
 use luminance::{
   backend::{
     Backend, FramebufferBackend, FramebufferError, PipelineBackend, PipelineError, QueryBackend,
-    QueryError, ShaderBackend, ShaderError, TextureBackend, TextureError, VertexEntityBackend,
-    VertexEntityError,
+    QueryError, ResourceMapper, ShaderBackend, ShaderError, TextureBackend, TextureError,
+    VertexEntityBackend, VertexEntityError,
   },
   blending::{BlendingMode, Equation, Factor},
   context::ContextActive,
@@ -17,7 +17,7 @@ use luminance::{
   primitive::{Connector, Primitive},
   render_slots::{DepthChannel, DepthRenderSlot, RenderChannel, RenderSlots},
   scissor::Scissor,
-  shader::{Program, Uni, Uniform, Uniforms},
+  shader::{MemoryLayout, Program, Uni, Uniform, UniformBuffer, Uniforms},
   texture::{InUseTexture, MagFilter, MinFilter, Mipmaps, Texture, TextureSampling, Wrap},
   vertex::{
     Normalized, Vertex, VertexAttribDesc, VertexAttribDim, VertexAttribType, VertexBufferDesc,
@@ -110,8 +110,9 @@ pub struct State {
   vertex_entities: HashMap<usize, VertexEntityData>,
   framebuffers: HashMap<usize, FramebufferData>,
   textures: HashMap<usize, TextureData>,
-  texture_units: Rc<RefCell<TextureUnits>>,
+  texture_units: Rc<RefCell<ResourceMapper>>,
   programs: HashMap<usize, ProgramData>,
+  uni_buffers: HashMap<usize, Buffer>,
 
   // viewport
   viewport: Cached<[GLint; 4]>,
@@ -199,8 +200,11 @@ impl State {
     let vertex_entities = HashMap::new();
     let framebuffers = HashMap::new();
     let textures = HashMap::new();
-    let texture_units = Rc::new(RefCell::new(TextureUnits::new()));
+    let texture_units = Rc::new(RefCell::new(ResourceMapper::new(
+      GL33::get_max_texture_units(),
+    )));
     let programs = HashMap::new();
+    let uni_buffers = HashMap::new();
     let viewport = Cached::empty();
     let clear_color = Cached::empty();
     let clear_depth = Cached::empty();
@@ -239,6 +243,7 @@ impl State {
       textures,
       texture_units,
       programs,
+      uni_buffers,
       context_active,
       viewport,
       clear_color,
@@ -289,7 +294,7 @@ impl State {
       Ok(unit)
     } else {
       // if we don’t have any unit associated with, ask one
-      let (unit, old_texture_handle) = self.texture_units.borrow_mut().get_texture_unit()?;
+      let (unit, old_texture_handle) = self.texture_units.borrow_mut().get_binding()?;
       texture_data.unit = Some(unit);
 
       // if a texture was previously bound there, remove its unit
@@ -303,7 +308,7 @@ impl State {
       self
         .texture_units
         .borrow_mut()
-        .current_texture_unit
+        .current_binding()
         .set_if_invalid(unit, || unsafe {
           gl::ActiveTexture(gl::TEXTURE0 + unit as GLenum);
         });
@@ -347,10 +352,15 @@ impl State {
     }
   }
 
-  // we return the [`TextureData`] so that we can drop it in the caller
   fn drop_texture(&mut self, handle: usize) {
     if self.is_context_active() {
       self.textures.remove(&handle);
+    }
+  }
+
+  fn drop_uni_buffer(&mut self, handle: usize) {
+    if self.is_context_active() {
+      self.uni_buffers.remove(&handle);
     }
   }
 }
@@ -398,7 +408,7 @@ impl Drop for Buffer {
 }
 
 impl Buffer {
-  fn from_vec<T>(state: &StateRef, target: GLenum, vec: &Vec<T>) -> Self {
+  fn from_slice<T>(state: &StateRef, target: GLenum, slice: &[T]) -> Self {
     let mut st = state.borrow_mut();
     let mut handle: GLuint = 0;
 
@@ -409,11 +419,11 @@ impl Buffer {
 
     st.bound_array_buffer.set(handle);
 
-    let len = vec.len();
+    let len = slice.len();
     let bytes = mem::size_of::<T>() * len;
 
     unsafe {
-      gl::BufferData(target, bytes as isize, vec.as_ptr() as _, gl::STREAM_DRAW);
+      gl::BufferData(target, bytes as isize, slice.as_ptr() as _, gl::STREAM_DRAW);
     }
 
     Buffer { handle }
@@ -590,76 +600,10 @@ impl From<IncompleteReason> for FramebufferError {
 }
 
 #[derive(Debug)]
-struct TextureUnits {
-  current_texture_unit: Cached<usize>,
-  next_texture_unit: usize,
-  max_texture_units: usize,
-  idling_texture_units: HashMap<usize, usize>, // texture unit -> texture handle
-}
-
-impl TextureUnits {
-  fn new() -> Self {
-    Self {
-      current_texture_unit: Cached::empty(),
-      next_texture_unit: 0,
-      max_texture_units: Self::get_max_texture_units(),
-      idling_texture_units: HashMap::new(),
-    }
-  }
-
-  fn get_max_texture_units() -> usize {
-    let mut max: GLint = 0;
-    unsafe {
-      gl::GetIntegerv(gl::MAX_COMBINED_TEXTURE_IMAGE_UNITS, &mut max);
-    }
-    max as _
-  }
-
-  /// Get a texture unit for binding.
-  ///
-  /// We always try to get a fresh texture unit, and if we can’t, we will try to use an idling one.
-  fn get_texture_unit(&mut self) -> Result<(usize, Option<usize>), TextureError> {
-    if self.next_texture_unit < self.max_texture_units {
-      // we still can use a fresh unit
-      let unit = self.next_texture_unit;
-      self.next_texture_unit += 1;
-
-      Ok((unit, None))
-    } else {
-      // we have exhausted the hardware texture units; try to reuse an idling one and if we cannot, then it’s an error
-      self
-        .reuse_texture_unit()
-        .ok_or_else(|| TextureError::NotEnoughTextureUnits {
-          max: self.max_texture_units,
-        })
-    }
-  }
-
-  /// Try to reuse a texture unit. Return `None` if no texture unit is available, and `Some((unit, old_texture_handle))`
-  /// otherwise.
-  fn reuse_texture_unit(&mut self) -> Option<(usize, Option<usize>)> {
-    let unit = self.idling_texture_units.keys().next().cloned()?;
-    let old_texture_handle = self.idling_texture_units.remove(&unit)?;
-
-    Some((unit, Some(old_texture_handle)))
-  }
-
-  /// Mark a unit as idle.
-  fn mark_idle(&mut self, unit: usize, handle: usize) {
-    self.idling_texture_units.insert(unit, handle);
-  }
-
-  /// Mark a unit as non-idle.
-  fn mark_nonidle(&mut self, unit: usize) {
-    self.idling_texture_units.remove(&unit);
-  }
-}
-
-#[derive(Debug)]
 struct TextureData {
   handle: GLuint,
   unit: Option<usize>, // texture unit the texture is bound to
-  units: Rc<RefCell<TextureUnits>>,
+  units: Rc<RefCell<ResourceMapper>>,
 }
 
 impl TextureData {
@@ -1405,6 +1349,14 @@ impl GL33 {
     unsafe { gl::PrimitiveRestartIndex(u32::MAX) };
   }
 
+  fn get_max_texture_units() -> usize {
+    let mut max: GLint = 0;
+    unsafe {
+      gl::GetIntegerv(gl::MAX_COMBINED_TEXTURE_IMAGE_UNITS, &mut max);
+    }
+    max as _
+  }
+
   fn build_interleaved_buffer<V>(
     &self,
     storage: &Interleaved<V>,
@@ -1424,7 +1376,7 @@ impl GL33 {
       });
     }
 
-    let buffer = Buffer::from_vec(&self.state, gl::ARRAY_BUFFER, storage.vertices());
+    let buffer = Buffer::from_slice(&self.state, gl::ARRAY_BUFFER, &storage.vertices());
     self
       .state
       .borrow_mut()
@@ -1453,7 +1405,7 @@ impl GL33 {
       .iter()
       .zip(V::vertex_desc())
       .map(|(vertices, fmt)| {
-        let buffer = Buffer::from_vec(&self.state, gl::ARRAY_BUFFER, vertices);
+        let buffer = Buffer::from_slice(&self.state, gl::ARRAY_BUFFER, &vertices);
         let field_len = fmt.attrib_desc.unit_size * fmt.attrib_desc.dim.size();
 
         if len == 0 {
@@ -1499,7 +1451,7 @@ impl GL33 {
       return None;
     }
 
-    let buffer = Buffer::from_vec(&self.state, gl::ELEMENT_ARRAY_BUFFER, indices);
+    let buffer = Buffer::from_slice(&self.state, gl::ELEMENT_ARRAY_BUFFER, &indices);
 
     self
       .state
@@ -2814,6 +2766,25 @@ unsafe impl ShaderBackend for GL33 {
     }
 
     Ok(())
+  }
+
+  unsafe fn new_uniform_buffer<T, Scheme>(
+    &mut self,
+    value: T::Aligned,
+  ) -> Result<UniformBuffer<T, Scheme>, ShaderError>
+  where
+    T: MemoryLayout<Scheme>,
+  {
+    let buffer = Buffer::from_slice(&self.state, gl::UNIFORM_BUFFER, &[value]);
+    let handle = buffer.handle as usize;
+    self.state.borrow_mut().uni_buffers.insert(handle, buffer);
+
+    let state = self.state.clone();
+    let dropper = Box::new(move |handle| {
+      state.borrow_mut().drop_uni_buffer(handle);
+    });
+
+    Ok(UniformBuffer::new(handle, dropper))
   }
 }
 
