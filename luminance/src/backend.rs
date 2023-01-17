@@ -6,7 +6,7 @@ use crate::{
   primitive::Primitive,
   render_slots::{DepthChannel, DepthRenderSlot, RenderChannel, RenderSlots},
   render_state::RenderState,
-  shader::{MemoryLayout, Program, Uni, Uniform, UniformBuffer, Uniforms},
+  shader::{InUseUniBuffer, MemoryLayout, Program, Uni, UniBuffer, Uniform, Uniforms},
   texture::{InUseTexture, Mipmaps, Texture, TextureSampling},
   vertex::Vertex,
   vertex_entity::{VertexEntity, VertexEntityView},
@@ -274,6 +274,14 @@ impl fmt::Display for FramebufferError {
 
 #[derive(Debug)]
 pub enum ShaderError {
+  NoData {
+    handle: usize,
+  },
+
+  NotEnoughBindings {
+    max: usize,
+  },
+
   Creation {
     cause: Option<Box<dyn ErrorTrait>>,
   },
@@ -296,6 +304,12 @@ pub enum ShaderError {
 impl fmt::Display for ShaderError {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
+      ShaderError::NoData { handle } => write!(f, "buffer {handle} has no associated data with"),
+
+      ShaderError::NotEnoughBindings { max } => {
+        write!(f, "not enough uniform buffer bindings (max = {max})")
+      }
+
       ShaderError::Creation { cause } => writeln!(
         f,
         "cannot create shader program: {}",
@@ -333,6 +347,14 @@ impl fmt::Display for ShaderError {
           .map(|cause| cause.to_string())
           .unwrap_or_else(|| "unknown cause".to_string())
       ),
+    }
+  }
+}
+
+impl From<ResourceMapperError> for ShaderError {
+  fn from(value: ResourceMapperError) -> Self {
+    match value {
+      ResourceMapperError::NotEnoughBindings { max } => ShaderError::NotEnoughBindings { max },
     }
   }
 }
@@ -781,6 +803,13 @@ pub unsafe trait ShaderBackend {
     S: RenderSlots,
     E: Uniforms;
 
+  unsafe fn new_uni_buffer<T, Scheme>(
+    &mut self,
+    value: T::Aligned,
+  ) -> Result<UniBuffer<T, Scheme>, ShaderError>
+  where
+    T: MemoryLayout<Scheme>;
+
   unsafe fn new_shader_uni<T>(&mut self, handle: usize, name: &str) -> Result<Uni<T>, ShaderError>
   where
     T: Uniform;
@@ -835,17 +864,25 @@ pub unsafe trait ShaderBackend {
 
   fn visit_texture<D, P>(
     &mut self,
-    uni: &Uni<InUseTexture<D, P>>,
-    value: &InUseTexture<D, P>,
+    uni: &Uni<InUseTexture<D, P>>, // FIXME: probably wrong too?
+    value: &InUseTexture<D, P>,    // FIXME: ditto
   ) -> Result<(), ShaderError>
   where
     D: Dimensionable,
     P: PixelType;
 
-  unsafe fn new_uniform_buffer<T, Scheme>(
+  fn visit_uni_buffer<T, Scheme>(
     &mut self,
-    value: T::Aligned,
-  ) -> Result<UniformBuffer<T, Scheme>, ShaderError>
+    uni: &Uni<UniBuffer<T, Scheme>>,
+    value: &InUseUniBuffer<T, Scheme>,
+  ) -> Result<(), ShaderError>
+  where
+    T: MemoryLayout<Scheme>;
+
+  unsafe fn use_uni_buffer<T, Scheme>(
+    &mut self,
+    handle: usize,
+  ) -> Result<InUseUniBuffer<T, Scheme>, ShaderError>
   where
     T: MemoryLayout<Scheme>;
 }

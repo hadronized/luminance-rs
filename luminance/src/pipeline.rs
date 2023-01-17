@@ -1,12 +1,14 @@
 use crate::{
-  backend::{PipelineBackend, PipelineError, ShaderError, TextureBackend, TextureError},
+  backend::{
+    PipelineBackend, PipelineError, ShaderBackend, ShaderError, TextureBackend, TextureError,
+  },
   dim::Dimensionable,
   pixel::Pixel,
   primitive::Primitive,
   render_slots::{CompatibleRenderSlots, RenderSlots},
   render_state::RenderState,
   scissor::Scissor,
-  shader::{Program, ProgramUpdate, Uniforms},
+  shader::{InUseUniBuffer, MemoryLayout, Program, ProgramUpdate, UniBuffer, Uniforms},
   texture::{InUseTexture, Texture},
   vertex::{CompatibleVertex, Vertex},
   vertex_entity::VertexEntityView,
@@ -227,6 +229,17 @@ where
   {
     unsafe { self.backend.use_texture(texture.handle()) }
   }
+
+  pub fn use_uni_buffer<T, Scheme>(
+    &mut self,
+    uni_buffer: &UniBuffer<T, Scheme>,
+  ) -> Result<InUseUniBuffer<T, Scheme>, ShaderError>
+  where
+    B: ShaderBackend,
+    T: MemoryLayout<Scheme>,
+  {
+    unsafe { self.backend.use_uni_buffer(uni_buffer.handle()) }
+  }
 }
 
 pub struct WithProgram<'a, B, V, W, P, S, E>
@@ -283,6 +296,17 @@ where
   {
     unsafe { self.backend.use_texture(texture.handle()) }
   }
+
+  pub fn use_uni_buffer<T, Scheme>(
+    &mut self,
+    uni_buffer: &UniBuffer<T, Scheme>,
+  ) -> Result<InUseUniBuffer<T, Scheme>, ShaderError>
+  where
+    B: ShaderBackend,
+    T: MemoryLayout<Scheme>,
+  {
+    unsafe { self.backend.use_uni_buffer(uni_buffer.handle()) }
+  }
 }
 
 #[derive(Debug)]
@@ -330,5 +354,16 @@ where
     Px: Pixel,
   {
     unsafe { self.backend.use_texture(texture.handle()) }
+  }
+
+  pub fn use_uni_buffer<T, Scheme>(
+    &mut self,
+    uni_buffer: &UniBuffer<T, Scheme>,
+  ) -> Result<InUseUniBuffer<T, Scheme>, ShaderError>
+  where
+    B: ShaderBackend,
+    T: MemoryLayout<Scheme>,
+  {
+    unsafe { self.backend.use_uni_buffer(uni_buffer.handle()) }
   }
 }

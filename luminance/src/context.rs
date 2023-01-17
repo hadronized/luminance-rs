@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::{
   backend::{
-    Backend, FramebufferError, PipelineError, QueryError, ShaderError, TextureError,
+    Backend, FramebufferError, PipelineError, QueryError, ShaderBackend, ShaderError, TextureError,
     VertexEntityError,
   },
   dim::Dimensionable,
@@ -11,7 +11,9 @@ use crate::{
   pixel::Pixel,
   primitive::Primitive,
   render_slots::{DepthRenderSlot, RenderSlots},
-  shader::{MemoryLayout, Program, ProgramBuilder, ProgramUpdate, UniformBuffer, Uniforms},
+  shader::{
+    InUseUniBuffer, MemoryLayout, Program, ProgramBuilder, ProgramUpdate, UniBuffer, Uniforms,
+  },
   texture::{InUseTexture, Mipmaps, Texture, TextureSampling},
   vertex::Vertex,
   vertex_entity::VertexEntity,
@@ -208,14 +210,14 @@ where
     updater(program_update, &program.uniforms)
   }
 
-  pub fn new_uniform_buffer<V, W, P, S, E, T, Scheme>(
+  pub fn new_uni_buffer<V, W, P, S, E, T, Scheme>(
     &mut self,
     value: T::Aligned,
-  ) -> Result<UniformBuffer<T, Scheme>, ShaderError>
+  ) -> Result<UniBuffer<T, Scheme>, ShaderError>
   where
     T: MemoryLayout<Scheme>,
   {
-    unsafe { self.backend.new_uniform_buffer(value) }
+    unsafe { self.backend.new_uni_buffer(value) }
   }
 
   pub fn reserve_texture<D, P>(
@@ -381,6 +383,17 @@ where
     P: Pixel,
   {
     unsafe { self.backend.use_texture(texture.handle()) }
+  }
+
+  pub fn use_uniform_buffer<T, Scheme>(
+    &mut self,
+    uni_buffer: &UniBuffer<T, Scheme>,
+  ) -> Result<InUseUniBuffer<T, Scheme>, ShaderError>
+  where
+    B: ShaderBackend,
+    T: MemoryLayout<Scheme>,
+  {
+    unsafe { self.backend.use_uni_buffer(uni_buffer.handle()) }
   }
 }
 

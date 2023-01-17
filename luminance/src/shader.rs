@@ -394,6 +394,7 @@ impl_Uniform!(
   UniMatDim::Mat44
 );
 
+// FIXME: I think we should be using Texture<D, P> and use InUseTexture<D, P::Type> as Value?!
 impl<D, P> Uniform for InUseTexture<D, P>
 where
   D: Dimensionable,
@@ -413,6 +414,27 @@ where
     value: &Self::Value,
   ) -> Result<(), ShaderError> {
     backend.visit_texture(uni, value)
+  }
+}
+
+impl<T, Scheme> Uniform for UniBuffer<T, Scheme>
+where
+  T: MemoryLayout<Scheme>,
+{
+  type Value = InUseUniBuffer<T, Scheme>;
+
+  const LEN: usize = 1;
+
+  fn uni_type() -> UniType {
+    UniType::Buffer
+  }
+
+  fn set(
+    backend: &mut impl ShaderBackend,
+    uni: &Uni<Self>,
+    value: &Self::Value,
+  ) -> Result<(), ShaderError> {
+    backend.visit_uni_buffer(uni, value)
   }
 }
 
@@ -520,13 +542,13 @@ where
   const ALIGNMENT: usize = T::ALIGNMENT;
 }
 
-pub struct UniformBuffer<T, Scheme> {
+pub struct UniBuffer<T, Scheme> {
   handle: usize,
   dropper: Box<dyn FnMut(usize)>,
   _phantom: PhantomData<*const (T, Scheme)>,
 }
 
-impl<T, Scheme> UniformBuffer<T, Scheme> {
+impl<T, Scheme> UniBuffer<T, Scheme> {
   pub unsafe fn new(handle: usize, dropper: Box<dyn FnMut(usize)>) -> Self {
     Self {
       handle,
@@ -540,7 +562,33 @@ impl<T, Scheme> UniformBuffer<T, Scheme> {
   }
 }
 
-impl<T, Scheme> Drop for UniformBuffer<T, Scheme> {
+impl<T, Scheme> Drop for UniBuffer<T, Scheme> {
+  fn drop(&mut self) {
+    (self.dropper)(self.handle)
+  }
+}
+
+pub struct InUseUniBuffer<T, Scheme> {
+  handle: usize,
+  dropper: Box<dyn FnMut(usize)>,
+  _phantom: PhantomData<*const (T, Scheme)>,
+}
+
+impl<T, Scheme> InUseUniBuffer<T, Scheme> {
+  pub unsafe fn new(handle: usize, dropper: Box<dyn FnMut(usize)>) -> Self {
+    Self {
+      handle,
+      dropper,
+      _phantom: PhantomData,
+    }
+  }
+
+  pub fn handle(&self) -> usize {
+    self.handle
+  }
+}
+
+impl<T, Scheme> Drop for InUseUniBuffer<T, Scheme> {
   fn drop(&mut self) {
     (self.dropper)(self.handle)
   }

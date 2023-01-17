@@ -17,7 +17,7 @@ use luminance::{
   primitive::{Connector, Primitive},
   render_slots::{DepthChannel, DepthRenderSlot, RenderChannel, RenderSlots},
   scissor::Scissor,
-  shader::{MemoryLayout, Program, Uni, Uniform, UniformBuffer, Uniforms},
+  shader::{InUseUniBuffer, MemoryLayout, Program, Uni, UniBuffer, UniType, Uniform, Uniforms},
   texture::{InUseTexture, MagFilter, MinFilter, Mipmaps, Texture, TextureSampling, Wrap},
   vertex::{
     Normalized, Vertex, VertexAttribDesc, VertexAttribDim, VertexAttribType, VertexBufferDesc,
@@ -112,7 +112,8 @@ pub struct State {
   textures: HashMap<usize, TextureData>,
   texture_units: Rc<RefCell<ResourceMapper>>,
   programs: HashMap<usize, ProgramData>,
-  uni_buffers: HashMap<usize, Buffer>,
+  uni_buffers: HashMap<usize, BufferWithBinding>,
+  uni_buffer_bindings: Rc<RefCell<ResourceMapper>>,
 
   // viewport
   viewport: Cached<[GLint; 4]>,
@@ -205,6 +206,9 @@ impl State {
     )));
     let programs = HashMap::new();
     let uni_buffers = HashMap::new();
+    let uni_buffer_bindings = Rc::new(RefCell::new(ResourceMapper::new(
+      GL33::get_max_uni_buffer_bindings(),
+    )));
     let viewport = Cached::empty();
     let clear_color = Cached::empty();
     let clear_depth = Cached::empty();
@@ -244,6 +248,7 @@ impl State {
       texture_units,
       programs,
       uni_buffers,
+      uni_buffer_bindings,
       context_active,
       viewport,
       clear_color,
@@ -321,6 +326,44 @@ impl State {
     }
   }
 
+  fn bind_uni_buffer(&mut self, handle: usize) -> Result<usize, ShaderError> {
+    let buffer_data = self
+      .uni_buffers
+      .get_mut(&handle)
+      .ok_or_else(|| ShaderError::NoData { handle })?;
+
+    match buffer_data.binding {
+      Some(binding) => {
+        self.uni_buffer_bindings.borrow_mut().mark_nonidle(binding);
+        Ok(binding)
+      }
+
+      None => {
+        let (binding, old_uni_buffer_handle) =
+          self.uni_buffer_bindings.borrow_mut().get_binding()?;
+        buffer_data.binding = Some(binding);
+
+        // if a uniform buffer was previously bound there, remove its binding; we stole it
+        if let Some(handle) = old_uni_buffer_handle {
+          if let Some(old_data) = self.uni_buffers.get_mut(&handle) {
+            old_data.binding = None;
+          }
+        }
+
+        // bind it!
+        self
+          .uni_buffer_bindings
+          .borrow_mut()
+          .current_binding()
+          .set_if_invalid(binding, || unsafe {
+            gl::BindBufferBase(gl::UNIFORM_BUFFER, binding as GLuint, handle as GLuint);
+          });
+
+        Ok(binding)
+      }
+    }
+  }
+
   fn idle_texture(&mut self, handle: usize) -> Result<(), TextureError> {
     let texture_data = self
       .textures
@@ -329,6 +372,22 @@ impl State {
 
     if let Some(unit) = texture_data.unit {
       self.texture_units.borrow_mut().mark_idle(unit, handle);
+    }
+
+    Ok(())
+  }
+
+  fn idle_uni_buffer(&mut self, handle: usize) -> Result<(), ShaderError> {
+    let buffer_data = self
+      .uni_buffers
+      .get_mut(&handle)
+      .ok_or_else(|| ShaderError::NoData { handle })?;
+
+    if let Some(binding) = buffer_data.binding {
+      self
+        .uni_buffer_bindings
+        .borrow_mut()
+        .mark_idle(binding, handle);
     }
 
     Ok(())
@@ -455,6 +514,35 @@ impl Buffer {
     }
 
     Ok(())
+  }
+}
+
+#[derive(Debug)]
+struct BufferWithBinding {
+  buffer: Buffer,
+  binding: Option<usize>,
+  bindings: Rc<RefCell<ResourceMapper>>,
+}
+
+impl BufferWithBinding {
+  fn new(buffer: Buffer, bindings: Rc<RefCell<ResourceMapper>>) -> Self {
+    Self {
+      buffer,
+      binding: None,
+      bindings,
+    }
+  }
+}
+
+impl Drop for BufferWithBinding {
+  fn drop(&mut self) {
+    // ensure we mark the binding (if any) idle before dying
+    if let Some(binding) = self.binding {
+      self
+        .bindings
+        .borrow_mut()
+        .mark_idle(binding, self.buffer.handle as _);
+    }
   }
 }
 
@@ -1316,17 +1404,27 @@ impl ProgramData {
   {
     let location = {
       let c_name = CString::new(name.as_bytes()).unwrap();
-      unsafe { gl::GetUniformLocation(handle, c_name.as_ptr() as *const GLchar) }
-    };
 
-    // ensure the location smells good
-    if location < 0 {
-      return None;
-    }
+      match T::uni_type() {
+        UniType::Buffer => {
+          let location =
+            unsafe { gl::GetUniformBlockIndex(handle, c_name.as_ptr() as *const GLchar) };
 
-    let uni = unsafe { Uni::new(location as _) };
+          // ensure the location smells extra good
+          (location != gl::INVALID_INDEX).then_some(location as _)
+        }
 
-    Some(uni)
+        _ => {
+          let location =
+            unsafe { gl::GetUniformLocation(handle, c_name.as_ptr() as *const GLchar) };
+
+          // ensure the location smells good
+          (location >= 0).then_some(location as _)
+        }
+      }
+    }?;
+
+    Some(unsafe { Uni::new(location) })
   }
 }
 
@@ -1349,12 +1447,20 @@ impl GL33 {
     unsafe { gl::PrimitiveRestartIndex(u32::MAX) };
   }
 
-  fn get_max_texture_units() -> usize {
+  fn get_max(resource: GLenum) -> usize {
     let mut max: GLint = 0;
     unsafe {
-      gl::GetIntegerv(gl::MAX_COMBINED_TEXTURE_IMAGE_UNITS, &mut max);
+      gl::GetIntegerv(resource, &mut max);
     }
     max as _
+  }
+
+  fn get_max_texture_units() -> usize {
+    Self::get_max(gl::MAX_COMBINED_TEXTURE_IMAGE_UNITS)
+  }
+
+  fn get_max_uni_buffer_bindings() -> usize {
+    Self::get_max(gl::MAX_UNIFORM_BUFFER_BINDINGS)
   }
 
   fn build_interleaved_buffer<V>(
@@ -2445,6 +2551,32 @@ unsafe impl ShaderBackend for GL33 {
     Ok(Program::new(handle, uniforms, dropper))
   }
 
+  unsafe fn new_uni_buffer<T, Scheme>(
+    &mut self,
+    value: T::Aligned,
+  ) -> Result<UniBuffer<T, Scheme>, ShaderError>
+  where
+    T: MemoryLayout<Scheme>,
+  {
+    let buffer = Buffer::from_slice(&self.state, gl::UNIFORM_BUFFER, &[value]);
+    let state = self.state.clone();
+    let buffer_with_binding =
+      BufferWithBinding::new(buffer, state.borrow().uni_buffer_bindings.clone());
+
+    let handle = buffer_with_binding.buffer.handle as usize;
+    self
+      .state
+      .borrow_mut()
+      .uni_buffers
+      .insert(handle, buffer_with_binding);
+
+    let dropper = Box::new(move |handle| {
+      state.borrow_mut().drop_uni_buffer(handle);
+    });
+
+    Ok(UniBuffer::new(handle, dropper))
+  }
+
   unsafe fn new_shader_uni<T>(&mut self, handle: usize, name: &str) -> Result<Uni<T>, ShaderError>
   where
     T: Uniform,
@@ -2768,23 +2900,35 @@ unsafe impl ShaderBackend for GL33 {
     Ok(())
   }
 
-  unsafe fn new_uniform_buffer<T, Scheme>(
+  fn visit_uni_buffer<T, Scheme>(
     &mut self,
-    value: T::Aligned,
-  ) -> Result<UniformBuffer<T, Scheme>, ShaderError>
+    uni: &Uni<UniBuffer<T, Scheme>>,
+    value: &InUseUniBuffer<T, Scheme>,
+  ) -> Result<(), ShaderError>
   where
     T: MemoryLayout<Scheme>,
   {
-    let buffer = Buffer::from_slice(&self.state, gl::UNIFORM_BUFFER, &[value]);
-    let handle = buffer.handle as usize;
-    self.state.borrow_mut().uni_buffers.insert(handle, buffer);
+    unsafe {
+      gl::Uniform1i(uni.handle() as GLint, value.handle() as GLint);
+    }
 
+    Ok(())
+  }
+
+  unsafe fn use_uni_buffer<T, Scheme>(
+    &mut self,
+    handle: usize,
+  ) -> Result<InUseUniBuffer<T, Scheme>, ShaderError>
+  where
+    T: MemoryLayout<Scheme>,
+  {
     let state = self.state.clone();
     let dropper = Box::new(move |handle| {
-      state.borrow_mut().drop_uni_buffer(handle);
+      let _ = state.borrow_mut().idle_uni_buffer(handle);
     });
 
-    Ok(UniformBuffer::new(handle, dropper))
+    let binding = self.state.borrow_mut().bind_uni_buffer(handle)?;
+    Ok(InUseUniBuffer::new(binding, dropper))
   }
 }
 
