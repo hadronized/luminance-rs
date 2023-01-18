@@ -17,7 +17,9 @@ use luminance::{
   primitive::{Connector, Primitive},
   render_slots::{DepthChannel, DepthRenderSlot, RenderChannel, RenderSlots},
   scissor::Scissor,
-  shader::{InUseUniBuffer, MemoryLayout, Program, Uni, UniBuffer, UniType, Uniform, Uniforms},
+  shader::{
+    InUseUniBuffer, MemoryLayout, Program, Uni, UniBuffer, UniBufferRef, UniType, Uniform, Uniforms,
+  },
   texture::{InUseTexture, MagFilter, MinFilter, Mipmaps, Texture, TextureSampling, Wrap},
   vertex::{
     Normalized, Vertex, VertexAttribDesc, VertexAttribDim, VertexAttribType, VertexBufferDesc,
@@ -156,6 +158,9 @@ pub struct State {
   // element buffer
   bound_element_array_buffer: Cached<GLuint>,
 
+  // uniform buffer
+  bound_uni_buffer: Cached<GLuint>,
+
   // framebuffer
   bound_draw_framebuffer: Cached<GLuint>,
 
@@ -230,6 +235,7 @@ impl State {
     let primitive_restart = Cached::empty();
     let bound_array_buffer = Cached::empty();
     let bound_element_array_buffer = Cached::empty();
+    let bound_uni_buffer = Cached::empty();
     let bound_draw_framebuffer = Cached::empty();
     let bound_vertex_array = Cached::empty();
     let current_program = Cached::empty();
@@ -271,6 +277,7 @@ impl State {
       primitive_restart,
       bound_array_buffer,
       bound_element_array_buffer,
+      bound_uni_buffer,
       bound_draw_framebuffer,
       bound_vertex_array,
       current_program,
@@ -2575,6 +2582,42 @@ unsafe impl ShaderBackend for GL33 {
     });
 
     Ok(UniBuffer::new(handle, dropper))
+  }
+
+  unsafe fn sync_uni_buffer<T, Scheme>(
+    &mut self,
+    uni_buffer_handle: usize,
+  ) -> Result<UniBufferRef<Self, T, Scheme>, ShaderError>
+  where
+    T: MemoryLayout<Scheme>,
+  {
+    // ensure we bind the buffer before mapping it
+    let handle = uni_buffer_handle as GLuint;
+    self
+      .state
+      .borrow_mut()
+      .bound_uni_buffer
+      .set_if_invalid(uni_buffer_handle as _, || {
+        gl::BindBuffer(gl::UNIFORM_BUFFER, handle);
+      });
+
+    let ptr = unsafe { gl::MapBuffer(gl::UNIFORM_BUFFER, gl::READ_WRITE) as *mut T };
+
+    if ptr.is_null() {
+      return Err(ShaderError::UniSync { cause: None });
+    }
+
+    Ok(UniBufferRef::new(self, uni_buffer_handle, ptr))
+  }
+
+  unsafe fn unsync_uni_buffer<T, Scheme>(&mut self, _: usize) -> Result<(), ShaderError>
+  where
+    T: MemoryLayout<Scheme>,
+  {
+    // NOTE: ensure that it’s statically not possible to bind a uniform buffer after calling sync_uni_buffer… otherwise
+    // we all ded
+    gl::UnmapBuffer(gl::UNIFORM_BUFFER);
+    Ok(())
   }
 
   unsafe fn new_shader_uni<T>(&mut self, handle: usize, name: &str) -> Result<Uni<T>, ShaderError>

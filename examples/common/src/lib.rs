@@ -21,6 +21,8 @@
 //! - If you want to write solid and smart Rust code, you want to handle errors, not rely on panics.
 //! - This is example code, so don’t blindly copy it, try to understand it first.
 
+#![feature(const_cmp)]
+
 use luminance::{backend::Backend, context::Context};
 use std::fmt::Display;
 
@@ -36,11 +38,11 @@ pub mod offscreen;
 pub mod query_info;
 pub mod query_texture_texels;
 pub mod render_state;
-// pub mod shader_data;
 pub mod shader_uniforms;
 pub mod shared;
 pub mod skybox;
 pub mod sliced_vertex_entity;
+pub mod uni_buffer;
 // pub mod stencil;
 pub mod texture;
 pub mod vertex_instancing;

@@ -6,7 +6,9 @@ use crate::{
   primitive::Primitive,
   render_slots::{DepthChannel, DepthRenderSlot, RenderChannel, RenderSlots},
   render_state::RenderState,
-  shader::{InUseUniBuffer, MemoryLayout, Program, Uni, UniBuffer, Uniform, Uniforms},
+  shader::{
+    InUseUniBuffer, MemoryLayout, Program, Uni, UniBuffer, UniBufferRef, Uniform, Uniforms,
+  },
   texture::{InUseTexture, Mipmaps, Texture, TextureSampling},
   vertex::Vertex,
   vertex_entity::{VertexEntity, VertexEntityView},
@@ -291,7 +293,7 @@ pub enum ShaderError {
     cause: Option<Box<dyn ErrorTrait>>,
   },
 
-  UniSet {
+  UniSync {
     cause: Option<Box<dyn ErrorTrait>>,
   },
 
@@ -329,9 +331,9 @@ impl fmt::Display for ShaderError {
           .unwrap_or_else(|| "unknown cause".to_string())
       ),
 
-      ShaderError::UniSet { cause } => write!(
+      ShaderError::UniSync { cause } => write!(
         f,
-        "cannot set uniform variable: {}",
+        "cannot synchronize uniform variable: {}",
         cause
           .as_ref()
           .map(|cause| cause.to_string())
@@ -813,6 +815,20 @@ pub unsafe trait ShaderBackend {
   unsafe fn new_shader_uni<T>(&mut self, handle: usize, name: &str) -> Result<Uni<T>, ShaderError>
   where
     T: Uniform;
+
+  unsafe fn sync_uni_buffer<T, Scheme>(
+    &mut self,
+    uni_buffer_handle: usize,
+  ) -> Result<UniBufferRef<Self, T, Scheme>, ShaderError>
+  where
+    T: MemoryLayout<Scheme>;
+
+  unsafe fn unsync_uni_buffer<T, Scheme>(
+    &mut self,
+    uni_buffer_handle: usize,
+  ) -> Result<(), ShaderError>
+  where
+    T: MemoryLayout<Scheme>;
 
   unsafe fn new_shader_uni_unbound<T>(&mut self, handle: usize) -> Result<Uni<T>, ShaderError>
   where

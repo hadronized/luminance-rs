@@ -9,7 +9,10 @@ use crate::{
   texture::InUseTexture,
   vertex::Vertex,
 };
-use std::marker::PhantomData;
+use std::{
+  marker::PhantomData,
+  ops::{Deref, DerefMut},
+};
 
 pub struct ProgramBuilder<V, W, P, S, E> {
   pub(crate) vertex_code: String,
@@ -591,6 +594,74 @@ impl<T, Scheme> InUseUniBuffer<T, Scheme> {
 impl<T, Scheme> Drop for InUseUniBuffer<T, Scheme> {
   fn drop(&mut self) {
     (self.dropper)(self.handle)
+  }
+}
+
+#[derive(Debug)]
+pub struct UniBufferRef<'a, B, T, Scheme>
+where
+  B: ?Sized + ShaderBackend,
+  T: MemoryLayout<Scheme>,
+{
+  backend: &'a mut B,
+  uni_buffer_handle: usize,
+  ptr: *mut T,
+  _phantom: PhantomData<*const Scheme>,
+}
+
+impl<'a, B, T, Scheme> UniBufferRef<'a, B, T, Scheme>
+where
+  B: ?Sized + ShaderBackend,
+  T: MemoryLayout<Scheme>,
+{
+  pub unsafe fn new(backend: &'a mut B, uni_buffer_handle: usize, ptr: *mut T) -> Self {
+    Self {
+      backend,
+      uni_buffer_handle,
+      ptr,
+      _phantom: PhantomData,
+    }
+  }
+
+  pub fn sync(self) {
+    // will just drop and automatically sync; magic!
+  }
+}
+
+impl<'a, B, T, Scheme> Drop for UniBufferRef<'a, B, T, Scheme>
+where
+  B: ?Sized + ShaderBackend,
+  T: MemoryLayout<Scheme>,
+{
+  fn drop(&mut self) {
+    unsafe {
+      // NOTE: maybe we want an optional dependency on log here? not sure
+      let _ = self
+        .backend
+        .unsync_uni_buffer::<T, Scheme>(self.uni_buffer_handle);
+    }
+  }
+}
+
+impl<'a, B, T, Scheme> Deref for UniBufferRef<'a, B, T, Scheme>
+where
+  B: ?Sized + ShaderBackend,
+  T: MemoryLayout<Scheme>,
+{
+  type Target = T;
+
+  fn deref(&self) -> &Self::Target {
+    unsafe { &*self.ptr }
+  }
+}
+
+impl<'a, B, T, Scheme> DerefMut for UniBufferRef<'a, B, T, Scheme>
+where
+  B: ?Sized + ShaderBackend,
+  T: MemoryLayout<Scheme>,
+{
+  fn deref_mut(&mut self) -> &mut Self::Target {
+    unsafe { &mut *self.ptr }
   }
 }
 

@@ -12,7 +12,8 @@ use crate::{
   primitive::Primitive,
   render_slots::{DepthRenderSlot, RenderSlots},
   shader::{
-    InUseUniBuffer, MemoryLayout, Program, ProgramBuilder, ProgramUpdate, UniBuffer, Uniforms,
+    InUseUniBuffer, MemoryLayout, Program, ProgramBuilder, ProgramUpdate, UniBuffer, UniBufferRef,
+    Uniforms,
   },
   texture::{InUseTexture, Mipmaps, Texture, TextureSampling},
   vertex::Vertex,
@@ -210,7 +211,7 @@ where
     updater(program_update, &program.uniforms)
   }
 
-  pub fn new_uni_buffer<V, W, P, S, E, T, Scheme>(
+  pub fn new_uni_buffer<T, Scheme>(
     &mut self,
     value: T::Aligned,
   ) -> Result<UniBuffer<T, Scheme>, ShaderError>
@@ -218,6 +219,16 @@ where
     T: MemoryLayout<Scheme>,
   {
     unsafe { self.backend.new_uni_buffer(value) }
+  }
+
+  pub fn sync_uni_buffer<'a, T, Scheme>(
+    &'a mut self,
+    uni_buffer: &UniBuffer<T, Scheme>,
+  ) -> Result<UniBufferRef<'a, B, T, Scheme>, ShaderError>
+  where
+    T: MemoryLayout<Scheme>,
+  {
+    unsafe { self.backend.sync_uni_buffer(uni_buffer.handle()) }
   }
 
   pub fn reserve_texture<D, P>(

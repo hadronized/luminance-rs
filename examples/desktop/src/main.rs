@@ -209,7 +209,7 @@ examples! {
   "skybox", skybox,
   "query-info", query_info,
   "mrt", mrt,
-  // "shader-data", shader_data,
+  "uniform-buffer", uni_buffer,
   // "stencil", stencil,
 
   // functional tests
