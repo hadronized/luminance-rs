@@ -210,7 +210,7 @@ examples! {
   "query-info", query_info,
   "mrt", mrt,
   "uniform-buffer", uni_buffer,
-  // "stencil", stencil,
+  "stencil", stencil,
 
   // functional tests
   funtests:

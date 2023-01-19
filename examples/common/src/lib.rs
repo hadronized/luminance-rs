@@ -42,9 +42,9 @@ pub mod shader_uniforms;
 pub mod shared;
 pub mod skybox;
 pub mod sliced_vertex_entity;
-pub mod uni_buffer;
-// pub mod stencil;
+pub mod stencil;
 pub mod texture;
+pub mod uni_buffer;
 pub mod vertex_instancing;
 
 // functional tests

@@ -1,22 +1,24 @@
-//! This example shows how to use the stencil buffer to implement a glowing effect when moving the cursor on the
-//! triangle.
+//! This example shows how to use the stencil buffer to implement a glowing effect on a triangle.
 
 use crate::{
-  shared::{Semantics, Vertex, VertexColor, VertexPosition},
+  shared::{FragSlot, Vertex},
   Example, InputAction, LoopFeedback, PlatformServices,
 };
-use luminance::UniformInterface;
-use luminance_front::{
-  context::GraphicsContext,
-  depth_stencil::{Comparison, StencilOp, StencilOperations, StencilTest},
-  framebuffer::Framebuffer,
-  pipeline::{PipelineState, TextureBinding},
-  pixel::{Depth32FStencil8, NormRGBA32UI, NormUnsigned},
+use luminance::{
+  backend::{Backend, Error},
+  context::Context,
+  depth_stencil::{Comparison, StencilOp, StencilTest},
+  dim::{Dim2, Size2},
+  framebuffer::{Back, Framebuffer},
+  pipeline::PipelineState,
+  pixel::{Depth32FStencil8, NormUnsigned},
+  primitive::{Triangle, TriangleFan},
   render_state::RenderState,
-  shader::{types::Vec3, Program, Uniform},
-  tess::{Mode, Tess},
-  texture::{Dim2, Sampler},
-  Backend,
+  shader::{Program, ProgramBuilder, Uni},
+  texture::{InUseTexture, Mipmaps, TextureSampling},
+  vertex_entity::{VertexEntity, View},
+  vertex_storage::Interleaved,
+  Uniforms,
 };
 
 const VS: &str = r#"
@@ -44,172 +46,198 @@ const COPY_FS: &str = include_str!("copy-fs.glsl");
 
 const VERTICES: [Vertex; 3] = [
   Vertex::new(
-    VertexPosition::new([-0.5, -0.5]),
-    VertexColor::new([1., 1., 1.]),
+    mint::Vector2 { x: -0.5, y: -0.5 },
+    mint::Vector3 {
+      x: 1.,
+      y: 1.,
+      z: 1.,
+    },
   ),
   Vertex::new(
-    VertexPosition::new([0.5, -0.5]),
-    VertexColor::new([1., 1., 1.]),
+    mint::Vector2 { x: 0.5, y: -0.5 },
+    mint::Vector3 {
+      x: 1.,
+      y: 1.,
+      z: 1.,
+    },
   ),
   Vertex::new(
-    VertexPosition::new([0., 0.5]),
-    VertexColor::new([1., 1., 1.]),
+    mint::Vector2 { x: 0., y: 0.5 },
+    mint::Vector3 {
+      x: 1.,
+      y: 1.,
+      z: 1.,
+    },
   ),
 ];
 
-#[derive(Debug, UniformInterface)]
+#[derive(Debug, Uniforms)]
 struct StencilInterface {
-  scale: Uniform<f32>,
-  color: Uniform<Vec3<f32>>,
+  scale: Uni<f32>,
+  color: Uni<mint::Vector3<f32>>,
 }
 
-#[derive(Debug, UniformInterface)]
+#[derive(Uniforms)]
 struct ShaderCopyInterface {
-  source_texture: Uniform<TextureBinding<Dim2, NormUnsigned>>,
+  source_texture: Uni<InUseTexture<Dim2, NormUnsigned>>,
 }
 
 pub struct LocalExample {
-  program: Program<Semantics, (), StencilInterface>,
-  copy_program: Program<(), (), ShaderCopyInterface>,
-  framebuffer: Framebuffer<Dim2, NormRGBA32UI, Depth32FStencil8>,
-  triangle: Tess<Vertex>,
-  attributeless: Tess<()>,
+  program: Program<Vertex, (), Triangle, FragSlot, StencilInterface>,
+  copy_program: Program<(), (), TriangleFan, FragSlot, ShaderCopyInterface>,
+  framebuffer: Framebuffer<Dim2, FragSlot, Depth32FStencil8>,
+  triangle: VertexEntity<Vertex, Triangle, Interleaved<Vertex>>,
+  attributeless: VertexEntity<(), TriangleFan, Interleaved<()>>,
+  back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }
 
 impl Example for LocalExample {
+  type Err = Error;
+
+  const TITLE: &'static str = "Stencil";
+
   fn bootstrap(
+    [width, height]: [u32; 2],
     _platform: &mut impl PlatformServices,
-    context: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> Self {
-    let program = context
-      .new_shader_program()
-      .from_strings(VS, None, None, FS)
-      .expect("program")
-      .ignore_warnings();
+    ctx: &mut Context<impl Backend>,
+  ) -> Result<Self, Self::Err> {
+    let program = ctx.new_program(
+      ProgramBuilder::new()
+        .add_vertex_stage(VS)
+        .no_primitive_stage()
+        .add_shading_stage(FS),
+    )?;
 
-    let copy_program = context
-      .new_shader_program()
-      .from_strings(COPY_VS, None, None, COPY_FS)
-      .expect("program")
-      .ignore_warnings();
+    let copy_program = ctx.new_program(
+      ProgramBuilder::new()
+        .add_vertex_stage(COPY_VS)
+        .no_primitive_stage()
+        .add_shading_stage(COPY_FS),
+    )?;
 
-    let framebuffer = context
-      .new_framebuffer([1, 1], 0, Sampler::default())
-      .expect("framebuffer");
+    let framebuffer = ctx.new_framebuffer(
+      Size2::new(width, height),
+      Mipmaps::No,
+      &TextureSampling::default(),
+    )?;
 
-    let triangle = context
-      .new_tess()
-      .set_mode(Mode::Triangle)
-      .set_vertices(VERTICES)
-      .build()
-      .expect("triangle");
+    let triangle = ctx.new_vertex_entity(
+      Interleaved::new().set_vertices(VERTICES),
+      [],
+      Interleaved::new(),
+    )?;
 
-    let attributeless = context
-      .new_tess()
-      .set_mode(Mode::TriangleFan)
-      .set_render_vertex_nb(4)
-      .build()
-      .expect("attributeless");
+    let attributeless = ctx.new_vertex_entity(Interleaved::new(), [], Interleaved::new())?;
 
-    LocalExample {
+    let back_buffer = ctx.back_buffer(Size2::new(width, height))?;
+
+    Ok(LocalExample {
       program,
       framebuffer,
       copy_program,
       triangle,
       attributeless,
-    }
+      back_buffer,
+    })
   }
 
   fn render_frame(
     mut self,
     time: f32,
-    back_buffer: Framebuffer<Dim2, (), ()>,
     actions: impl Iterator<Item = InputAction>,
-    context: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> LoopFeedback<Self> {
+    ctx: &mut Context<impl Backend>,
+  ) -> Result<LoopFeedback<Self>, Self::Err> {
     for action in actions {
       match action {
-        InputAction::Quit => return LoopFeedback::Exit,
+        InputAction::Quit => return Ok(LoopFeedback::Exit),
 
         InputAction::Resized { width, height } => {
-          self.framebuffer = context
-            .new_framebuffer([width, height], 0, Sampler::default())
-            .expect("framebuffer");
+          let size = Size2::new(width, height);
+          self.framebuffer = ctx.new_framebuffer(size, Mipmaps::No, &TextureSampling::default())?;
+          self.back_buffer = ctx.back_buffer(size)?;
         }
 
         _ => (),
       }
     }
 
-    let framebuffer = &mut self.framebuffer;
-    let program = &mut self.program;
-    let copy_program = &mut self.copy_program;
+    let framebuffer = &self.framebuffer;
+    let program = &self.program;
+    let copy_program = &self.copy_program;
     let triangle = &self.triangle;
     let attributeless = &self.attributeless;
 
-    let mut pipeline_gate = context.new_pipeline_gate();
-    let render = pipeline_gate
-      .pipeline(framebuffer, &PipelineState::default(), |_, mut shd_gate| {
-        shd_gate.shade(program, |mut iface, uni, mut rdr_gate| {
+    ctx.with_framebuffer(framebuffer, &PipelineState::default(), |mut frame| {
+      frame.with_program(program, |mut frame| {
+        frame.update(|mut update, unis| {
           // first we do a regular render in the framebuffer; we will write stencil bits to 1
-          iface.set(&uni.scale, 1.);
-          iface.set(&uni.color, Vec3::new(1., 1., 1.));
-
-          rdr_gate.render(
-            &RenderState::default()
-              // we pass the stencil test if the value is < 1
-              .set_stencil_test(StencilTest::new(Comparison::Less, 1, 0xFF))
-              .set_stencil_operations(
-                StencilOperations::default().on_depth_stencil_pass(StencilOp::Replace),
-              ),
-            |mut tess_gate| tess_gate.render(triangle),
-          )?;
-
-          // then, render again but slightly upscaled
-          iface.set(&uni.scale, 1. + (time * 3.).cos().abs() * 0.1);
-          iface.set(&uni.color, Vec3::new(0., 1., 0.));
-
-          rdr_gate.render(
-            &RenderState::default()
-              // we pass the stencil test if the value is == 0
-              .set_stencil_test(StencilTest::new(Comparison::Equal, 0, 0xFF))
-              .set_stencil_operations(
-                StencilOperations::default().on_depth_stencil_pass(StencilOp::Replace),
-              ),
-            |mut tess_gate| tess_gate.render(triangle),
+          update.set(&unis.scale, &1.)?;
+          update.set(
+            &unis.color,
+            &mint::Vector3 {
+              x: 1.,
+              y: 1.,
+              z: 1.,
+            },
           )
+        })?;
+
+        // we pass the stencil test if the value is < 1
+        let stencil_test = StencilTest::On {
+          comparison: Comparison::Less,
+          reference: 1,
+          mask: 0xFF,
+          depth_passes_stencil_fails: StencilOp::Keep,
+          depth_fails_stencil_passes: StencilOp::Keep,
+          depth_stencil_pass: StencilOp::Replace,
+        };
+        frame.with_render_state(
+          &RenderState::default().set_stencil_test(stencil_test),
+          |mut frame| frame.render_vertex_entity(triangle.view(..)),
+        )?;
+
+        // then, render again but slightly upscaled
+        frame.update(|mut update, unis| {
+          update.set(&unis.scale, &(1. + (time * 3.).cos().abs() * 0.1))?;
+          update.set(
+            &unis.color,
+            &mint::Vector3 {
+              x: 0.,
+              y: 1.,
+              z: 0.,
+            },
+          )
+        })?;
+
+        // we pass the stencil test if the value is == 0
+        let stencil_test = StencilTest::On {
+          comparison: Comparison::Equal,
+          reference: 0,
+          mask: 0xFF,
+          depth_passes_stencil_fails: StencilOp::Keep,
+          depth_fails_stencil_passes: StencilOp::Keep,
+          depth_stencil_pass: StencilOp::Replace,
+        };
+
+        frame.with_render_state(
+          &RenderState::default().set_stencil_test(stencil_test),
+          |mut frame| frame.render_vertex_entity(triangle.view(..)),
+        )
+      })
+    })?;
+
+    // copy the result the back buffer
+    ctx.with_framebuffer(&self.back_buffer, &PipelineState::default(), |mut frame| {
+      let source = frame.use_texture(&framebuffer.layers().frag)?;
+
+      frame.with_program(copy_program, |mut frame| {
+        frame.update(|mut update, unis| update.set(&unis.source_texture, &source))?;
+        frame.with_render_state(&RenderState::default(), |mut frame| {
+          frame.render_vertex_entity(attributeless.view(..4))
         })
       })
-      .assume();
+    })?;
 
-    if render.is_err() {
-      return LoopFeedback::Exit;
-    }
-
-    let render = pipeline_gate
-      .pipeline(
-        &back_buffer,
-        &PipelineState::default(),
-        |pipeline, mut shd_gate| {
-          let source = pipeline
-            .bind_texture(framebuffer.color_slot())
-            .expect("offscreen bound texture");
-
-          shd_gate.shade(copy_program, |mut iface, uni, mut rdr_gate| {
-            iface.set(&uni.source_texture, source.binding());
-
-            rdr_gate.render(&RenderState::default(), |mut tess_gate| {
-              tess_gate.render(attributeless)
-            })
-          })
-        },
-      )
-      .assume();
-
-    if render.is_ok() {
-      LoopFeedback::Continue(self)
-    } else {
-      LoopFeedback::Exit
-    }
+    Ok(LoopFeedback::Continue(self))
   }
 }
