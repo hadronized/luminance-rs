@@ -11,7 +11,7 @@ use luminance::{
     UniformWarning, VertexAttribWarning,
   },
   texture::{Dim, Dimensionable},
-  vertex::Semantics,
+  vertex::Vertex,
 };
 use luminance_std140::{ArrElem, Std140};
 use std::{
@@ -201,13 +201,13 @@ unsafe impl Shader for GL33 {
     program.link().map(move |_| program)
   }
 
-  unsafe fn apply_semantics<Sem>(
+  unsafe fn apply_semantics<V>(
     program: &mut Self::ProgramRepr,
   ) -> Result<Vec<VertexAttribWarning>, ProgramError>
   where
-    Sem: Semantics,
+    V: Vertex,
   {
-    let warnings = bind_vertex_attribs_locations::<Sem>(program);
+    let warnings = bind_vertex_attribs_locations::<V>(program);
 
     program.link()?;
 
@@ -393,13 +393,13 @@ fn check_uniform_type_match(
   )
 }
 
-fn bind_vertex_attribs_locations<Sem>(program: &Program) -> Vec<VertexAttribWarning>
+fn bind_vertex_attribs_locations<V>(program: &Program) -> Vec<VertexAttribWarning>
 where
-  Sem: Semantics,
+  V: Vertex,
 {
   let mut warnings = Vec::new();
 
-  for desc in Sem::semantics_set() {
+  for desc in V::vertex_desc() {
     match get_vertex_attrib_location(program, &desc.name) {
       Ok(_) => {
         let index = desc.index as GLuint;

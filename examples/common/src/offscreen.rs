@@ -3,21 +3,25 @@
 //!
 //! <https://docs.rs/luminance>
 
-use crate::{
-  shared::{Semantics, Vertex, VertexColor, VertexPosition},
-  Example, InputAction, LoopFeedback, PlatformServices,
-};
-use luminance::UniformInterface;
-use luminance_front::{
-  context::GraphicsContext,
-  framebuffer::Framebuffer,
-  pipeline::{PipelineState, TextureBinding},
-  pixel::{Floating, RGBA32F},
+use luminance::{
+  backend::{Backend, Error},
+  context::Context,
+  dim::{Dim2, Size2},
+  framebuffer::{Back, Framebuffer},
+  pipeline::PipelineState,
+  pixel::NormUnsigned,
+  primitive::{Triangle, TriangleFan},
   render_state::RenderState,
-  shader::{BuiltProgram, Program, Uniform},
-  tess::{Mode, Tess},
-  texture::{Dim2, Sampler},
-  Backend,
+  shader::{Program, ProgramBuilder, Uni},
+  texture::{InUseTexture, Mipmaps, TextureSampling},
+  vertex_entity::{VertexEntity, View},
+  vertex_storage::Interleaved,
+  Uniforms,
+};
+
+use crate::{
+  shared::{FragSlot, Vertex},
+  Example, InputAction, LoopFeedback, PlatformServices,
 };
 
 // we get the shader at compile time from local files
@@ -31,163 +35,147 @@ const COPY_FS: &'static str = include_str!("copy-fs.glsl");
 // a single triangle is enough here
 const TRI_VERTICES: [Vertex; 3] = [
   // triangle – an RGB one
-  Vertex {
-    pos: VertexPosition::new([0.5, -0.5]),
-    rgb: VertexColor::new([0., 1., 0.]),
-  },
-  Vertex {
-    pos: VertexPosition::new([0.0, 0.5]),
-    rgb: VertexColor::new([0., 0., 1.]),
-  },
-  Vertex {
-    pos: VertexPosition::new([-0.5, -0.5]),
-    rgb: VertexColor::new([1., 0., 0.]),
-  },
+  //
+  Vertex::new(
+    mint::Vector2 { x: 0.5, y: -0.5 },
+    mint::Vector3 {
+      x: 0.,
+      y: 1.,
+      z: 0.,
+    },
+  ),
+  Vertex::new(
+    mint::Vector2 { x: 0., y: 0.5 },
+    mint::Vector3 {
+      x: 0.,
+      y: 0.,
+      z: 1.,
+    },
+  ),
+  Vertex::new(
+    mint::Vector2 { x: -0.5, y: -0.5 },
+    mint::Vector3 {
+      x: 1.,
+      y: 0.,
+      z: 0.,
+    },
+  ),
 ];
 
 // the shader uniform interface is defined there
-#[derive(UniformInterface)]
-struct ShaderInterface {
+#[derive(Uniforms)]
+struct Uniforms {
   // we only need the source texture (from the framebuffer) to fetch from
   #[uniform(unbound, name = "source_texture")]
-  texture: Uniform<TextureBinding<Dim2, Floating>>,
+  texture: Uni<InUseTexture<Dim2, NormUnsigned>>,
 }
 
 pub struct LocalExample {
-  program: Program<Semantics, (), ()>,
-  copy_program: Program<(), (), ShaderInterface>,
-  triangle: Tess<Vertex>,
-  quad: Tess<()>,
-  offscreen_buffer: Framebuffer<Dim2, RGBA32F, ()>,
+  program: Program<Vertex, (), Triangle, FragSlot, ()>,
+  copy_program: Program<(), (), TriangleFan, FragSlot, Uniforms>,
+  triangle: VertexEntity<Vertex, Triangle, Interleaved<Vertex>>,
+  quad: VertexEntity<(), TriangleFan, Interleaved<()>>,
+  offscreen_buffer: Framebuffer<Dim2, FragSlot, ()>,
+  back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }
 
 impl Example for LocalExample {
+  type Err = Error;
+
+  const TITLE: &'static str = "Offscreen";
+
   fn bootstrap(
+    [width, height]: [u32; 2],
     _platform: &mut impl PlatformServices,
-    context: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> Self {
-    let program = context
-      .new_shader_program::<Semantics, (), ()>()
-      .from_strings(VS, None, None, FS)
-      .expect("program creation")
-      .ignore_warnings();
+    ctx: &mut Context<impl Backend>,
+  ) -> Result<Self, Self::Err> {
+    let program = ctx.new_program(
+      ProgramBuilder::new()
+        .add_vertex_stage(VS)
+        .no_primitive_stage()
+        .add_shading_stage(FS),
+    )?;
 
-    let BuiltProgram {
-      program: copy_program,
-      warnings,
-    } = context
-      .new_shader_program::<(), (), ShaderInterface>()
-      .from_strings(COPY_VS, None, None, COPY_FS)
-      .expect("copy program creation");
+    let copy_program = ctx.new_program(
+      ProgramBuilder::new()
+        .add_vertex_stage(COPY_VS)
+        .no_primitive_stage()
+        .add_shading_stage(COPY_FS),
+    )?;
 
-    for warning in &warnings {
-      eprintln!("copy shader warning: {:?}", warning);
-    }
+    let triangle = ctx.new_vertex_entity(
+      Interleaved::new().set_vertices(&TRI_VERTICES[..]),
+      [],
+      Interleaved::new(),
+    )?;
+    let quad = ctx.new_vertex_entity(Interleaved::new(), [], Interleaved::new())?;
+    let fb_size = Size2::new(width, height);
+    let offscreen_buffer =
+      ctx.new_framebuffer(fb_size, Mipmaps::No, &TextureSampling::default())?;
+    let back_buffer = ctx.back_buffer(fb_size)?;
 
-    let triangle = context
-      .new_tess()
-      .set_vertices(&TRI_VERTICES[..])
-      .set_mode(Mode::Triangle)
-      .build()
-      .unwrap();
-
-    // we’ll need an attributeless quad to fetch in full screen
-    let quad = context
-      .new_tess()
-      .set_render_vertex_nb(4)
-      .set_mode(Mode::TriangleFan)
-      .build()
-      .unwrap();
-
-    let offscreen_buffer = context
-      .new_framebuffer::<Dim2, RGBA32F, ()>([800, 600], 0, Sampler::default())
-      .expect("framebuffer creation");
-
-    Self {
+    Ok(Self {
       program,
       copy_program,
       triangle,
       quad,
       offscreen_buffer,
-    }
+      back_buffer,
+    })
   }
 
   fn render_frame(
     mut self,
     _time: f32,
-    back_buffer: Framebuffer<Dim2, (), ()>,
     actions: impl Iterator<Item = InputAction>,
-    context: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> LoopFeedback<Self> {
+    ctx: &mut Context<impl Backend>,
+  ) -> Result<LoopFeedback<Self>, Self::Err> {
     for action in actions {
       match action {
-        InputAction::Quit => return LoopFeedback::Exit,
+        InputAction::Quit => return Ok(LoopFeedback::Exit),
         InputAction::Resized { width, height } => {
-          self.offscreen_buffer = context
-            .new_framebuffer([width, height], 0, Sampler::default())
-            .expect("framebuffer recreation");
+          self.offscreen_buffer = ctx.new_framebuffer(
+            Size2::new(width, height),
+            Mipmaps::No,
+            &TextureSampling::default(),
+          )?;
         }
         _ => (),
       }
     }
 
-    // we get an object to create pipelines (we’ll need two)
-    let mut builder = context.new_pipeline_gate();
-    let program = &mut self.program;
-    let copy_program = &mut self.copy_program;
+    let program = &self.program;
+    let copy_program = &self.copy_program;
     let triangle = &self.triangle;
     let quad = &self.quad;
-    let offscreen_buffer = &mut self.offscreen_buffer;
+    let offscreen_buffer = &self.offscreen_buffer;
+    let back_buffer = &self.back_buffer;
 
     // render the triangle in the offscreen framebuffer first
-    let render = builder
-      .pipeline(
-        offscreen_buffer,
-        &PipelineState::default(),
-        |_, mut shd_gate| {
-          shd_gate.shade(program, |_, _, mut rdr_gate| {
-            rdr_gate.render(&RenderState::default(), |mut tess_gate| {
-              // we render the triangle here by asking for the whole triangle
-              tess_gate.render(triangle)
-            })
-          })
-        },
-      )
-      .assume();
-
-    if render.is_err() {
-      return LoopFeedback::Exit;
-    }
+    ctx.with_framebuffer(offscreen_buffer, &PipelineState::default(), |mut frame| {
+      frame.with_program(program, |mut frame| {
+        frame.with_render_state(&RenderState::default(), |mut frame| {
+          frame.render_vertex_entity(triangle.view(..))
+        })
+      })
+    })?;
 
     // read from the offscreen framebuffer and output it into the back buffer
-    let render = builder
-      .pipeline(
-        &back_buffer,
-        &PipelineState::default(),
-        |pipeline, mut shd_gate| {
-          // we must bind the offscreen framebuffer color content so that we can pass it to a shader
-          let bound_texture = pipeline.bind_texture(offscreen_buffer.color_slot())?;
+    ctx.with_framebuffer(back_buffer, &PipelineState::default(), |mut frame| {
+      frame.with_program(copy_program, |mut frame| {
+        // we must bind the offscreen framebuffer color content so that we can pass it to a shader
+        let used_render_layer = frame.use_texture(&offscreen_buffer.layers().frag)?;
+        // we update the texture with the bound texture
+        frame.update(|mut update, unis| update.set(&unis.texture, &used_render_layer))?;
 
-          shd_gate.shade(copy_program, |mut iface, uni, mut rdr_gate| {
-            // we update the texture with the bound texture
-            iface.set(&uni.texture, bound_texture.binding());
+        frame.with_render_state(&RenderState::default(), |mut frame| {
+          // this will render the attributeless quad with the offscreen framebuffer color slot
+          // bound for the shader to fetch from
+          frame.render_vertex_entity(quad.view(..4))
+        })
+      })
+    })?;
 
-            rdr_gate.render(&RenderState::default(), |mut tess_gate| {
-              // this will render the attributeless quad with the offscreen framebuffer color slot
-              // bound for the shader to fetch from
-              tess_gate.render(quad)
-            })
-          })
-        },
-      )
-      .assume();
-
-    // finally, swap the backbuffer with the frontbuffer in order to render our triangles onto your
-    // screen
-    if render.is_ok() {
-      LoopFeedback::Continue(self)
-    } else {
-      LoopFeedback::Exit
-    }
+    Ok(LoopFeedback::Continue(self))
   }
 }

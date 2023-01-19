@@ -1,75 +1,74 @@
-use luminance::{Semantics, Vertex};
-use luminance_front::{
-  context::GraphicsContext,
-  pixel::NormRGB8UI,
-  texture::{Dim2, Sampler, TexelUpload, Texture},
-  Backend,
-};
-
 use crate::PlatformServices;
+use luminance::{dim::Size2, namespace, pixel::NormRGB8UI, RenderSlots, Vertex};
+use mint::{Vector2, Vector3};
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Semantics)]
-pub enum Semantics {
-  // reference vertex positions with the co variable in vertex shaders
-  #[sem(name = "co", repr = "[f32; 2]", wrapper = "VertexPosition")]
-  Position,
+// Render slots.
+//
+// A render slot represents the channels the end stage of a shader program is going to end up writing to. In our case,
+// since we are only interested in rendering the color of each pixel, we will just have one single channel for the
+// color.
+#[derive(Clone, Copy, Debug, PartialEq, RenderSlots)]
+pub struct FragSlot {
+  frag: NormRGB8UI,
+}
 
-  // reference vertex positions with the co3 variable in vertex shaders
-  #[sem(name = "co3", repr = "[f32; 3]", wrapper = "VertexPosition3")]
-  Position3,
-
-  // reference vertex colors with the color variable in vertex shaders
-  #[sem(name = "color", repr = "[f32; 3]", wrapper = "VertexColor")]
-  Color,
-
-  // reference vertex normals with the nor variable in vertex shaders
-  #[sem(name = "nor", repr = "[f32; 3]", wrapper = "VertexNormal")]
-  Normal,
-
-  // reference vertex instance’s position on screen
-  #[sem(
-    name = "position",
-    repr = "[f32; 2]",
-    wrapper = "VertexInstancePosition"
-  )]
-  InstancePosition,
-
-  // reference vertex size in vertex shaders (used for vertex instancing)
-  #[sem(name = "weight", repr = "f32", wrapper = "VertexWeight")]
-  Weight,
+namespace! {
+  Namespace = {
+    "co",
+    "co3",
+    "color",
+    "nor",
+    "position",
+    "weight"
+  }
 }
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Vertex)]
-#[vertex(sem = "Semantics")]
+#[vertex(namespace = "Namespace")]
 pub struct Vertex {
-  pub pos: VertexPosition,
-  pub rgb: VertexColor,
+  pub co: Vector2<f32>,
+  pub color: Vector3<f32>,
+}
+
+impl Vertex {
+  pub const fn new(co: Vector2<f32>, color: Vector3<f32>) -> Self {
+    Self { co, color }
+  }
 }
 
 // definition of a single instance
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Vertex)]
-#[vertex(sem = "Semantics", instanced = "true")]
+#[vertex(namespace = "Namespace")]
 pub struct Instance {
-  pub pos: VertexInstancePosition,
-  pub w: VertexWeight,
+  pub position: Vector2<f32>,
+  pub weight: f32,
 }
 
-// Because we render “small” objects in these examples, we can leave indices using u8 only.
-pub type VertexIndex = u8;
+impl Instance {
+  pub const fn new(position: Vector2<f32>, weight: f32) -> Self {
+    Self { position, weight }
+  }
+}
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Vertex)]
-#[vertex(sem = "Semantics")]
+#[vertex(namespace = "Namespace")]
 pub struct CubeVertex {
-  pub pos: VertexPosition3,
-  pub nor: VertexNormal,
+  pub co3: Vector3<f32>,
+  pub nor: Vector3<f32>,
+}
+
+impl CubeVertex {
+  pub const fn new(co3: Vector3<f32>, nor: Vector3<f32>) -> Self {
+    Self { co3, nor }
+  }
 }
 
 // Simple interleaved cube of given size.
 #[rustfmt::skip]
-pub fn cube(size: f32) -> ([CubeVertex; 24], [VertexIndex; 30]) {
+pub fn cube(size: f32) -> ([CubeVertex; 24], [u32; 30]) {
   let s = size * 0.5;
 
   let vertices = [
@@ -106,42 +105,25 @@ pub fn cube(size: f32) -> ([CubeVertex; 24], [VertexIndex; 30]) {
   ];
 
   let indices = [
-    0, 1, 2, 3, VertexIndex::max_value(),
-    4, 5, 6, 7, VertexIndex::max_value(),
-    8, 9, 10,  11, VertexIndex::max_value(),
-    12, 13, 14, 15, VertexIndex::max_value(),
-    16, 17, 18, 19, VertexIndex::max_value(),
-    20, 21, 22, 23, VertexIndex::max_value(),
+    0, 1, 2, 3, u32::max_value(),
+    4, 5, 6, 7, u32::max_value(),
+    8, 9, 10,  11, u32::max_value(),
+    12, 13, 14, 15, u32::max_value(),
+    16, 17, 18, 19, u32::max_value(),
+    20, 21, 22, 23, u32::max_value(),
   ];
 
   (vertices, indices)
 }
 
-/// RGB texture.
-pub type RGBTexture = Texture<Dim2, NormRGB8UI>;
-
-pub fn load_texture(
-  context: &mut impl GraphicsContext<Backend = Backend>,
-  platform: &mut impl PlatformServices,
-) -> Option<RGBTexture> {
+pub fn load_img(platform: &mut impl PlatformServices) -> Option<(Size2, Vec<u8>)> {
   let img = platform
     .fetch_texture()
     .map_err(|e| log::error!("error while loading image: {}", e))
     .ok()?;
   let (width, height) = img.dimensions();
-  let texels = img.as_raw();
+  let texels = img.into_raw();
+  log::info!("loaded texture with width={} height={}", width, height);
 
-  // create the luminance texture; the third argument is the number of mipmaps we want (leave it
-  // to 0 for now) and the latest is the sampler to use when sampling the texels in the
-  // shader (we’ll just use the default one)
-  //
-  // the GenMipmaps argument disables mipmap generation (we don’t care so far)
-  context
-    .new_texture_raw(
-      [width, height],
-      Sampler::default(),
-      TexelUpload::base_level(texels, 0),
-    )
-    .map_err(|e| log::error!("error while creating texture: {}", e))
-    .ok()
+  Some((Size2::new(width, height), texels))
 }

@@ -11,7 +11,7 @@ repository = "https://github.com/phaazon/luminance-rs"
 documentation = "https://docs.rs/luminance-webgl"
 readme = "README.md"
 edition = "2021"
-rust-version = "1.56.0"
+rust-version = "1.65.0"
 
 [badges]
 maintenance = { status = "actively-developed" }

@@ -1,82 +1,78 @@
-#![cfg(feature = "derive")]
+#![allow(incomplete_features)]
+#![feature(adt_const_params)]
 
-use luminance::vertex::{
-  HasSemantics, Semantics, Vertex, VertexAttrib, VertexBufferDesc, VertexInstancing,
+use luminance::{
+  has_field::HasField,
+  namespace,
+  vertex::{CompatibleVertex, Vertex as _, VertexAttrib, VertexBufferDesc},
+  Vertex,
 };
-use luminance::{Semantics, Vertex};
+
+namespace! {
+  Namespace = { "pos", "nor", "col", "weight" }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Vertex)]
+#[vertex(namespace = "Namespace")]
+struct Vertex {
+  pos: [f32; 3],
+  nor: [f32; 3],
+  col: [u8; 4],
+}
 
 #[test]
-fn derive_simple_semantics() {
-  #[derive(Clone, Copy, Debug, Eq, PartialEq, Semantics)]
-  pub enum Semantics {
-    #[sem(name = "position", repr = "[f32; 3]", wrapper = "VertexPosition")]
-    Position,
-    #[sem(name = "normal", repr = "[f32; 3]", wrapper = "VertexNormal")]
-    Normal,
-    #[sem(name = "color", repr = "[f32; 4]", wrapper = "VertexColor")]
-    Color,
-  }
-
-  #[derive(Clone, Copy, Debug, Vertex)]
-  #[repr(C)]
-  #[vertex(sem = "Semantics", instanced = "true")]
-  struct Vertex {
-    pos: VertexPosition,
-    nor: VertexNormal,
-    col: VertexColor,
-  }
-
-  assert_eq!(Semantics::Position.index(), 0);
-  assert_eq!(Semantics::Normal.index(), 1);
-  assert_eq!(Semantics::Color.index(), 2);
-  assert_eq!("position".parse::<Semantics>(), Ok(Semantics::Position));
-  assert_eq!("normal".parse::<Semantics>(), Ok(Semantics::Normal));
-  assert_eq!("color".parse::<Semantics>(), Ok(Semantics::Color));
-  assert_eq!("bidule".parse::<Semantics>(), Err(()));
-  assert_eq!(VertexPosition::SEMANTICS, Semantics::Position);
-  assert_eq!(VertexNormal::SEMANTICS, Semantics::Normal);
-  assert_eq!(VertexColor::SEMANTICS, Semantics::Color);
-  assert_eq!(VertexPosition::new([1., 2., 3.]).repr, [1., 2., 3.]);
-
+fn vertex_desc() {
   let expected_desc = vec![
-    VertexBufferDesc::new(
-      Semantics::Position,
-      VertexInstancing::On,
-      <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_DESC,
-    ),
-    VertexBufferDesc::new(
-      Semantics::Normal,
-      VertexInstancing::On,
-      <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_DESC,
-    ),
-    VertexBufferDesc::new(
-      Semantics::Color,
-      VertexInstancing::On,
-      <[f32; 4] as VertexAttrib>::VERTEX_ATTRIB_DESC,
-    ),
+    VertexBufferDesc::new(0, "pos", <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_DESC),
+    VertexBufferDesc::new(1, "nor", <[f32; 3] as VertexAttrib>::VERTEX_ATTRIB_DESC),
+    VertexBufferDesc::new(2, "col", <[u8; 4] as VertexAttrib>::VERTEX_ATTRIB_DESC),
   ];
 
   assert_eq!(Vertex::vertex_desc(), expected_desc);
 }
 
 #[test]
-fn derive_struct_tuple_vertex() {
-  #[derive(Clone, Copy, Debug, Eq, PartialEq, Semantics)]
-  pub enum Semantics {
-    #[sem(name = "position", repr = "[f32; 3]", wrapper = "VertexPosition")]
-    Position,
-    #[sem(name = "normal", repr = "[f32; 3]", wrapper = "VertexNormal")]
-    Normal,
-    #[sem(name = "color", repr = "[u8; 4]", wrapper = "VertexColor")]
-    Color,
+fn has_field() {
+  fn must_have_field<const NAME: &'static str, V, F>()
+  where
+    V: HasField<NAME, FieldType = F>,
+  {
   }
 
-  #[derive(Clone, Copy, Debug, Vertex)]
+  must_have_field::<"pos", Vertex, [f32; 3]>();
+  must_have_field::<"nor", Vertex, [f32; 3]>();
+  must_have_field::<"col", Vertex, [u8; 4]>();
+}
+
+#[test]
+fn compatible_vertex_types() {
+  fn is_compatible<V, W>()
+  where
+    V: CompatibleVertex<W>,
+  {
+  }
+
   #[repr(C)]
-  #[vertex(sem = "Semantics")]
-  struct Vertex(
-    VertexPosition,
-    VertexNormal,
-    #[vertex(normalized = "true")] VertexColor,
-  );
+  #[derive(Clone, Copy, Debug, Vertex)]
+  #[vertex(namespace = "Namespace")]
+  struct VertexSame {
+    pos: [f32; 3],
+    nor: [f32; 3],
+    col: [u8; 4],
+  }
+
+  is_compatible::<Vertex, VertexSame>();
+
+  #[repr(C)]
+  #[derive(Clone, Copy, Debug, Vertex)]
+  #[vertex(namespace = "Namespace")]
+  struct VertexInclude {
+    pos: [f32; 3],
+    nor: [f32; 3],
+    col: [u8; 4],
+    weight: f32,
+  }
+
+  is_compatible::<Vertex, VertexInclude>();
 }

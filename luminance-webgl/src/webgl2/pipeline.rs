@@ -6,14 +6,14 @@ use luminance::{
     render_gate::RenderGate,
     shader::ShaderData,
     shading_gate::ShadingGate,
-    tess::Tess,
+    vertex_entity::Tess,
     tess_gate::TessGate,
   },
   blending::BlendingMode,
   pipeline::{PipelineError, PipelineState, Viewport},
   pixel::Pixel,
   render_state::RenderState,
-  tess::{Deinterleaved, DeinterleavedData, Interleaved, TessIndex, TessVertexData},
+  vertex_entity::{Deinterleaved, DeinterleavedData, Interleaved, TessIndex, TessVertexData},
   texture::Dimensionable,
 };
 use luminance_std140::{ArrElem, Std140};

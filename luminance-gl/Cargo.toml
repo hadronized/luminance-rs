@@ -11,7 +11,7 @@ repository = "https://github.com/phaazon/luminance-rs"
 documentation = "https://docs.rs/luminance-gl"
 readme = "README.md"
 edition = "2021"
-rust-version = "1.56.0"
+rust-version = "1.65.0"
 
 [badges]
 maintenance = { status = "actively-developed" }
@@ -24,5 +24,5 @@ GL_ARB_gpu_shader_fp64 = []
 
 [dependencies]
 gl = "0.14"
-luminance = { version = ">=0.46, <0.48", path = "../luminance" }
-luminance-std140 = { version = "0.2", path = "../luminance-std140" }
+luminance = { version = "0.48.0-dev", path = "../luminance" }
+# luminance-std140 = { version = "0.2", path = "../luminance-std140" }

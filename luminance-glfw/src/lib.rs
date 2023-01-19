@@ -1,16 +1,8 @@
 //! [GLFW](https://crates.io/crates/glfw) backend for [luminance](https://crates.io/crates/luminance).
 
-#![deny(missing_docs)]
-
-use gl;
 use glfw::{self, Glfw, InitError, Window, WindowEvent};
-use luminance::{
-  context::GraphicsContext,
-  framebuffer::{Framebuffer, FramebufferError},
-  texture::Dim2,
-};
-pub use luminance_gl::gl33::StateQueryError;
-use luminance_gl::GL33;
+use luminance::context::Context;
+use luminance_gl2::GL33;
 use std::{error, fmt, os::raw::c_void, sync::mpsc::Receiver};
 
 /// Error that can be risen while creating a surface.
@@ -22,14 +14,11 @@ pub enum GlfwSurfaceError<E> {
   /// This variant exposes a **glfw** error for further information about what went wrong.
   InitError(InitError),
 
+  /// Error with the backend.
+  BackendError(String),
+
   /// User error.
   UserError(E),
-
-  /// The graphics state is not available.
-  ///
-  /// This error is generated when the initialization code is called on a thread on which the
-  /// graphics state has already been acquired.
-  GraphicsStateError(StateQueryError),
 }
 
 impl<E> fmt::Display for GlfwSurfaceError<E>
@@ -37,12 +26,10 @@ where
   E: fmt::Display,
 {
   fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    match *self {
-      GlfwSurfaceError::InitError(ref e) => write!(f, "initialization error: {}", e),
-      GlfwSurfaceError::UserError(ref e) => write!(f, "user error: {}", e),
-      GlfwSurfaceError::GraphicsStateError(ref e) => {
-        write!(f, "failed to get graphics state: {}", e)
-      }
+    match self {
+      GlfwSurfaceError::InitError(e) => write!(f, "initialization error: {}", e),
+      GlfwSurfaceError::BackendError(reason) => write!(f, "backend error: {}", reason),
+      GlfwSurfaceError::UserError(e) => write!(f, "user error: {}", e),
     }
   }
 }
@@ -61,7 +48,7 @@ where
     match self {
       GlfwSurfaceError::InitError(e) => Some(e),
       GlfwSurfaceError::UserError(e) => Some(e),
-      GlfwSurfaceError::GraphicsStateError(e) => Some(e),
+      _ => None,
     }
   }
 }
@@ -74,14 +61,17 @@ where
 pub struct GlfwSurface {
   /// Wrapped GLFW events queue.
   pub events_rx: Receiver<(f64, WindowEvent)>,
+  ///
+  /// Wrapped GLFW window.
+  pub window: Window,
 
   /// Wrapped luminance context.
-  pub context: GL33Context,
+  pub ctx: Context<GL33>,
 }
 
 impl GlfwSurface {
-  /// Initialize GLFW to provide a luminance environment.
-  pub fn new<E>(
+  /// Initialize GLFW to provide a luminance context.
+  pub fn new_gl33<E>(
     create_window: impl FnOnce(
       &mut Glfw,
     )
@@ -107,38 +97,14 @@ impl GlfwSurface {
     // init OpenGL
     gl::load_with(|s| window.get_proc_address(s) as *const c_void);
 
-    let gl = GL33::new().map_err(GlfwSurfaceError::GraphicsStateError)?;
-    let context = GL33Context { window, gl };
-    let surface = GlfwSurface { events_rx, context };
+    let ctx = Context::new(GL33::new)
+      .ok_or_else(|| GlfwSurfaceError::BackendError("unavailable OpenGL 3.3 state".to_owned()))?;
+    let surface = GlfwSurface {
+      events_rx,
+      window,
+      ctx,
+    };
 
     Ok(surface)
-  }
-}
-
-/// Luminance OpenGL 3.3 context.
-///
-/// This type also re-exports the GLFW window, if you need access to it.
-#[derive(Debug)]
-pub struct GL33Context {
-  /// Wrapped GLFW window.
-  pub window: Window,
-
-  /// OpenGL 3.3 state.
-  gl: GL33,
-}
-
-impl GL33Context {
-  /// Get the back buffer.
-  pub fn back_buffer(&mut self) -> Result<Framebuffer<GL33, Dim2, (), ()>, FramebufferError> {
-    let (w, h) = self.window.get_framebuffer_size();
-    Framebuffer::back_buffer(self, [w as u32, h as u32])
-  }
-}
-
-unsafe impl GraphicsContext for GL33Context {
-  type Backend = GL33;
-
-  fn backend(&mut self) -> &mut Self::Backend {
-    &mut self.gl
   }
 }

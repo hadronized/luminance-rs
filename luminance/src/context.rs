@@ -1,206 +1,422 @@
-//! Graphics context.
-//!
-//! # Graphics context and backends
-//!
-//! A graphics context is an external type typically implemented by other crates and which provides
-//! support for backends. Its main scope is to unify all possible implementations of backends
-//! behind a single trait: [`GraphicsContext`]. A [`GraphicsContext`] really only requires two items
-//! to be implemented:
-//!
-//! - The type of the backend to use — [`GraphicsContext::Backend`]. That type will often be used
-//!   to access the GPU, cache costly operations, etc.
-//! - A method to get a mutable access to the underlying backend — [`GraphicsContext::backend`].
-//!
-//! Most of the time, if you want to work with _any_ windowing implementation, you will want to
-//! use a type variable such as `C: GraphicsContext`. If you want to work with any context
-//! supporting a specific backend, use `C: GraphicsContext<Backend = YourBackendType`. Etc.
-//!
-//! This crate doesn’t provide you with creating such contexts. Instead, you must do it yourself
-//! or rely on crates doing it for you.
-//!
-//! # Default implementation of helper functions
-//!
-//! By default, graphics contexts automatically get several methods implemented on them. Those
-//! methods are helper functions available to write code in a more elegant and compact way than
-//! passing around mutable references on the context. Often, it will help you not having to
-//! use type ascription, too, since the [`GraphicsContext::Backend`] type is known when calling
-//! those functions.
-//!
-//! Instead of:
-//!
-//! ```ignore
-//! use luminance::context::GraphicsContext as _;
-//! use luminance::buffer::Buffer;
-//!
-//! let buffer: Buffer<SomeBackendType, u8> = Buffer::from_slice(&mut context, slice).unwrap();
-//! ```
-//!
-//! You can simply do:
-//!
-//! ```ignore
-//! use luminance::context::GraphicsContext as _;
-//!
-//! let buffer = context.new_buffer_from_slice(slice).unwrap();
-//! ```
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{
   backend::{
-    color_slot::ColorSlot,
-    depth_stencil_slot::DepthStencilSlot,
-    framebuffer::Framebuffer as FramebufferBackend,
-    query::Query as QueryBackend,
-    shader::{Shader, ShaderData as ShaderDataBackend},
-    tess::Tess as TessBackend,
-    texture::Texture as TextureBackend,
+    Backend, FramebufferError, PipelineError, QueryError, ShaderBackend, ShaderError, TextureError,
+    VertexEntityError,
   },
-  texture::TexelUpload,
-};
-use crate::{
-  framebuffer::{Framebuffer, FramebufferError},
-  pipeline::PipelineGate,
+  dim::Dimensionable,
+  framebuffer::{Back, Framebuffer},
+  pipeline::{PipelineState, WithFramebuffer},
   pixel::Pixel,
-  query::Query,
-  shader::{ProgramBuilder, ShaderData, ShaderDataError, Stage, StageError, StageType},
-  tess::{Deinterleaved, Interleaved, TessBuilder, TessVertexData},
-  texture::{Dimensionable, Sampler, Texture, TextureError},
-  vertex::Semantics,
+  primitive::Primitive,
+  render_slots::{DepthRenderSlot, RenderSlots},
+  shader::{
+    InUseUniBuffer, MemoryLayout, Program, ProgramBuilder, ProgramUpdate, UniBuffer, UniBufferRef,
+    Uniforms,
+  },
+  texture::{InUseTexture, Mipmaps, Texture, TextureSampling},
+  vertex::Vertex,
+  vertex_entity::VertexEntity,
+  vertex_storage::AsVertexStorage,
 };
 
-/// Class of graphics context.
-///
-/// Graphics context must implement this trait to be able to be used throughout the rest of the
-/// crate.
-pub unsafe trait GraphicsContext: Sized {
-  /// Internal type used by the backend to cache, optimize and store data. This roughly represents
-  /// the GPU data / context a backend implementation needs to work correctly.
-  type Backend;
+#[derive(Clone, Debug)]
+pub struct ContextActive(Rc<RefCell<bool>>);
 
-  /// Access the underlying backend.
-  fn backend(&mut self) -> &mut Self::Backend;
+impl ContextActive {
+  fn new() -> Self {
+    Self(Rc::new(RefCell::new(true)))
+  }
 
-  /// Access the query API.
-  fn query(&mut self) -> Query<Self::Backend>
+  pub fn is_active(&self) -> bool {
+    *self.0.borrow()
+  }
+}
+
+#[derive(Debug)]
+pub struct Context<B>
+where
+  B: Backend,
+{
+  backend: B,
+  context_active: ContextActive,
+}
+
+impl<B> Context<B>
+where
+  B: Backend,
+{
+  pub fn new(builder: impl FnOnce(ContextActive) -> Option<B>) -> Option<Self> {
+    let context_active = ContextActive::new();
+    let backend = builder(context_active.clone())?;
+
+    Some(Self {
+      backend,
+      context_active,
+    })
+  }
+
+  pub fn backend_author(&self) -> Result<String, QueryError> {
+    self.backend.backend_author()
+  }
+
+  pub fn backend_name(&self) -> Result<String, QueryError> {
+    self.backend.backend_name()
+  }
+
+  pub fn backend_version(&self) -> Result<String, QueryError> {
+    self.backend.backend_version()
+  }
+
+  pub fn backend_shading_lang_version(&self) -> Result<String, QueryError> {
+    self.backend.backend_shading_lang_version()
+  }
+
+  pub fn new_vertex_entity<V, P, VS, I, W, WS>(
+    &mut self,
+    storage: VS,
+    indices: I,
+    instance_data: WS,
+  ) -> Result<VertexEntity<V, P, VS, W, WS>, VertexEntityError>
   where
-    Self::Backend: QueryBackend,
+    V: Vertex,
+    P: Primitive,
+    VS: AsVertexStorage<V>,
+    I: Into<Vec<u32>>,
+    W: Vertex,
+    WS: AsVertexStorage<W>,
   {
-    Query::new(self)
+    unsafe {
+      self
+        .backend
+        .new_vertex_entity(storage, indices, instance_data)
+    }
   }
 
-  /// Create a new pipeline gate
-  fn new_pipeline_gate(&mut self) -> PipelineGate<Self::Backend> {
-    PipelineGate::new(self)
+  pub fn update_vertices<V, P, VS>(
+    &mut self,
+    entity: &mut VertexEntity<V, P, VS>,
+  ) -> Result<(), VertexEntityError>
+  where
+    V: Vertex,
+    P: Primitive,
+    VS: AsVertexStorage<V>,
+  {
+    unsafe {
+      self
+        .backend
+        .vertex_entity_update_vertices(entity.handle(), entity.vertices())
+    }
   }
 
-  /// Create a new framebuffer.
-  ///
-  /// See the documentation of [`Framebuffer::new`] for further details.
-  fn new_framebuffer<D, CS, DS>(
+  pub fn update_indices<V, P, VS, W, WS>(
+    &mut self,
+    entity: &mut VertexEntity<V, P, VS, W, WS>,
+  ) -> Result<(), VertexEntityError>
+  where
+    V: Vertex,
+    P: Primitive,
+    VS: AsVertexStorage<V>,
+    W: Vertex,
+    WS: AsVertexStorage<W>,
+  {
+    unsafe {
+      self
+        .backend
+        .vertex_entity_update_indices(entity.handle(), entity.indices())
+    }
+  }
+
+  pub fn update_instance_data<V, P, VS, W, WS>(
+    &mut self,
+    entity: &mut VertexEntity<V, P, VS, W, WS>,
+  ) -> Result<(), VertexEntityError>
+  where
+    V: Vertex,
+    P: Primitive,
+    VS: AsVertexStorage<V>,
+    W: Vertex,
+    WS: AsVertexStorage<W>,
+  {
+    unsafe {
+      self
+        .backend
+        .vertex_entity_update_instance_data(entity.handle(), entity.instance_data())
+    }
+  }
+
+  pub fn new_framebuffer<D, RS, DS>(
     &mut self,
     size: D::Size,
-    mipmaps: usize,
-    sampler: Sampler,
-  ) -> Result<Framebuffer<Self::Backend, D, CS, DS>, FramebufferError>
+    mipmaps: Mipmaps,
+    sampling: &TextureSampling,
+  ) -> Result<Framebuffer<D, RS, DS>, FramebufferError>
   where
-    Self::Backend: FramebufferBackend<D>,
     D: Dimensionable,
-    CS: ColorSlot<Self::Backend, D>,
-    DS: DepthStencilSlot<Self::Backend, D>,
+    RS: RenderSlots,
+    DS: DepthRenderSlot,
   {
-    Framebuffer::new(self, size, mipmaps, sampler)
+    unsafe { self.backend.new_framebuffer(size, mipmaps, sampling) }
   }
 
-  /// Create a new shader stage.
-  ///
-  /// See the documentation of [`Stage::new`] for further details.
-  fn new_shader_stage<R>(
-    &mut self,
-    ty: StageType,
-    src: R,
-  ) -> Result<Stage<Self::Backend>, StageError>
-  where
-    Self::Backend: Shader,
-    R: AsRef<str>,
-  {
-    Stage::new(self, ty, src)
-  }
-
-  /// Create a new shader program.
-  ///
-  /// See the documentation of [`ProgramBuilder::new`] for further details.
-  fn new_shader_program<Sem, Out, Uni>(&mut self) -> ProgramBuilder<Self, Sem, Out, Uni>
-  where
-    Self::Backend: Shader,
-    Sem: Semantics,
-  {
-    ProgramBuilder::new(self)
-  }
-
-  /// Create a new shader data.
-  ///
-  /// See the documentation of [`ShaderData::new`] for further details.
-  fn new_shader_data<T>(
-    &mut self,
-    values: impl IntoIterator<Item = T>,
-  ) -> Result<ShaderData<Self::Backend, T>, ShaderDataError>
-  where
-    Self::Backend: ShaderDataBackend<T>,
-  {
-    ShaderData::new(self, values)
-  }
-
-  /// Create a [`TessBuilder`].
-  ///
-  /// See the documentation of [`TessBuilder::new`] for further details.
-  fn new_tess(&mut self) -> TessBuilder<Self::Backend, (), (), (), Interleaved>
-  where
-    Self::Backend: TessBackend<(), (), (), Interleaved>,
-  {
-    TessBuilder::new(self)
-  }
-
-  /// Create a [`TessBuilder`] with deinterleaved memory.
-  ///
-  /// See the documentation of [`TessBuilder::new`] for further details.
-  fn new_deinterleaved_tess<V, W>(&mut self) -> TessBuilder<Self::Backend, V, (), W, Deinterleaved>
-  where
-    Self::Backend: TessBackend<V, (), W, Deinterleaved>,
-    V: TessVertexData<Deinterleaved>,
-    W: TessVertexData<Deinterleaved>,
-  {
-    TessBuilder::new(self)
-  }
-
-  /// Create a new texture from texels.
-  ///
-  /// Feel free to have a look at the documentation of [`Texture::new`] for further details.
-  fn new_texture<D, P>(
+  pub fn back_buffer<D, RS, DS>(
     &mut self,
     size: D::Size,
-    sampler: Sampler,
-    texels: TexelUpload<[P::Encoding]>,
-  ) -> Result<Texture<Self::Backend, D, P>, TextureError>
+  ) -> Result<Framebuffer<D, Back<RS>, Back<DS>>, FramebufferError>
   where
-    Self::Backend: TextureBackend<D, P>,
+    D: Dimensionable,
+    RS: RenderSlots,
+    DS: DepthRenderSlot,
+  {
+    unsafe { self.backend.back_buffer(size) }
+  }
+
+  pub fn new_program<V, W, P, S, E>(
+    &mut self,
+    builder: ProgramBuilder<V, W, P, S, E>,
+  ) -> Result<Program<V, W, P, S, E>, ShaderError>
+  where
+    V: Vertex,
+    W: Vertex,
+    P: Primitive,
+    S: RenderSlots,
+    E: Uniforms,
+  {
+    unsafe {
+      self.backend.new_program(
+        builder.vertex_code,
+        builder.primitive_code,
+        builder.shading_code,
+      )
+    }
+  }
+
+  pub fn update_program<'a, V, W, P, S, E>(
+    &'a mut self,
+    program: &Program<V, W, P, S, E>,
+    updater: impl FnOnce(ProgramUpdate<'a, B>, &E) -> Result<(), ShaderError>,
+  ) -> Result<(), ShaderError>
+  where
+    V: Vertex,
+    W: Vertex,
+    P: Primitive,
+    S: RenderSlots,
+  {
+    let program_update = ProgramUpdate {
+      backend: &mut self.backend,
+      program_handle: program.handle(),
+    };
+
+    updater(program_update, &program.uniforms)
+  }
+
+  pub fn new_uni_buffer<T, Scheme>(
+    &mut self,
+    value: T::Aligned,
+  ) -> Result<UniBuffer<T, Scheme>, ShaderError>
+  where
+    T: MemoryLayout<Scheme>,
+  {
+    unsafe { self.backend.new_uni_buffer(value) }
+  }
+
+  pub fn sync_uni_buffer<'a, T, Scheme>(
+    &'a mut self,
+    uni_buffer: &UniBuffer<T, Scheme>,
+  ) -> Result<UniBufferRef<'a, B, T, Scheme>, ShaderError>
+  where
+    T: MemoryLayout<Scheme>,
+  {
+    unsafe { self.backend.sync_uni_buffer(uni_buffer.handle()) }
+  }
+
+  pub fn reserve_texture<D, P>(
+    &mut self,
+    size: D::Size,
+    mipmaps: Mipmaps,
+    sampling: &TextureSampling,
+  ) -> Result<Texture<D, P>, TextureError>
+  where
     D: Dimensionable,
     P: Pixel,
   {
-    Texture::new(self, size, sampler, texels)
+    unsafe { self.backend.reserve_texture(size, mipmaps, sampling) }
   }
 
-  /// Create a new texture from raw texels.
-  ///
-  /// Feel free to have a look at the documentation of [`Texture::new_raw`] for further details.
-  fn new_texture_raw<D, P>(
+  pub fn new_texture<D, P>(
     &mut self,
     size: D::Size,
-    sampler: Sampler,
-    texels: TexelUpload<[P::RawEncoding]>,
-  ) -> Result<Texture<Self::Backend, D, P>, TextureError>
+    mipmaps: Mipmaps,
+    sampling: &TextureSampling,
+    texels: &[P::RawEncoding],
+  ) -> Result<Texture<D, P>, TextureError>
   where
-    Self::Backend: TextureBackend<D, P>,
     D: Dimensionable,
     P: Pixel,
   {
-    Texture::new_raw(self, size, sampler, texels)
+    unsafe { self.backend.new_texture(size, mipmaps, sampling, texels) }
+  }
+
+  pub fn resize_texture<D, P>(
+    &mut self,
+    texture: &Texture<D, P>,
+    size: D::Size,
+    mipmaps: Mipmaps,
+  ) -> Result<(), TextureError>
+  where
+    D: Dimensionable,
+    P: Pixel,
+  {
+    unsafe {
+      self
+        .backend
+        .resize_texture::<D, P>(texture.handle(), size, mipmaps)
+    }
+  }
+
+  pub fn new_texture_with_levels<D, P>(
+    &mut self,
+    size: D::Size,
+    sampling: &TextureSampling,
+    levels: &[&[P::RawEncoding]],
+  ) -> Result<Texture<D, P>, TextureError>
+  where
+    D: Dimensionable,
+    P: Pixel,
+  {
+    unsafe {
+      let levels_count = levels.len();
+      let texture = self.backend.reserve_texture(size, Mipmaps::No, sampling)?;
+
+      for level in 0..levels_count {
+        self.backend.set_texture_data::<D, P>(
+          texture.handle(),
+          D::ZERO_OFFSET,
+          size,
+          false,
+          &levels[level],
+          level,
+        )?;
+      }
+
+      Ok(texture)
+    }
+  }
+
+  pub fn set_texture_base_level<D, P>(
+    &mut self,
+    texture: &Texture<D, P>,
+    offset: D::Offset,
+    size: D::Size,
+    texels: &[P::RawEncoding],
+  ) -> Result<(), TextureError>
+  where
+    D: Dimensionable,
+    P: Pixel,
+  {
+    unsafe {
+      self
+        .backend
+        .set_texture_data::<D, P>(texture.handle(), offset, size, true, texels, 0)
+    }
+  }
+
+  pub fn set_texture_level<D, P>(
+    &mut self,
+    texture: &Texture<D, P>,
+    offset: D::Offset,
+    size: D::Size,
+    texels: &[P::RawEncoding],
+    level: usize,
+  ) -> Result<(), TextureError>
+  where
+    D: Dimensionable,
+    P: Pixel,
+  {
+    unsafe {
+      self
+        .backend
+        .set_texture_data::<D, P>(texture.handle(), offset, size, false, texels, level)
+    }
+  }
+
+  pub fn clear_texture_data<D, P>(
+    &mut self,
+    texture: &Texture<D, P>,
+    offset: D::Offset,
+    size: D::Size,
+    clear_value: P::RawEncoding,
+  ) -> Result<(), TextureError>
+  where
+    D: Dimensionable,
+    P: Pixel,
+  {
+    unsafe {
+      self
+        .backend
+        .clear_texture_data::<D, P>(texture.handle(), offset, size, true, clear_value)
+    }
+  }
+
+  pub fn read_texture<D, P>(
+    &mut self,
+    texture: &Texture<D, P>,
+  ) -> Result<Vec<P::RawEncoding>, TextureError>
+  where
+    D: Dimensionable,
+    P: Pixel,
+  {
+    unsafe { self.backend.read_texture::<D, P>(texture.handle()) }
+  }
+
+  pub fn with_framebuffer<D, CS, DS, Err>(
+    &mut self,
+    framebuffer: &Framebuffer<D, CS, DS>,
+    state: &PipelineState,
+    f: impl for<'a> FnOnce(WithFramebuffer<'a, B, CS>) -> Result<(), Err>,
+  ) -> Result<(), Err>
+  where
+    D: Dimensionable,
+    CS: RenderSlots,
+    DS: DepthRenderSlot,
+    Err: From<PipelineError>,
+  {
+    unsafe { self.backend.with_framebuffer(framebuffer, state, f) }
+  }
+
+  pub fn use_texture<D, P>(
+    &mut self,
+    texture: &Texture<D, P>,
+  ) -> Result<InUseTexture<D, P::Type>, TextureError>
+  where
+    D: Dimensionable,
+    P: Pixel,
+  {
+    unsafe { self.backend.use_texture(texture.handle()) }
+  }
+
+  pub fn use_uniform_buffer<T, Scheme>(
+    &mut self,
+    uni_buffer: &UniBuffer<T, Scheme>,
+  ) -> Result<InUseUniBuffer<T, Scheme>, ShaderError>
+  where
+    B: ShaderBackend,
+    T: MemoryLayout<Scheme>,
+  {
+    unsafe { self.backend.use_uni_buffer(uni_buffer.handle()) }
+  }
+}
+
+impl<B> Drop for Context<B>
+where
+  B: Backend,
+{
+  fn drop(&mut self) {
+    unsafe {
+      self.backend.unload();
+    }
+
+    *self.context_active.0.borrow_mut() = false;
   }
 }

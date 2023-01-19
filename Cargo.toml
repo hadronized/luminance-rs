@@ -3,17 +3,17 @@
 members = [
   "examples/common",
   "examples/desktop",
-  "examples/web",
+  # "examples/web",
   "luminance",
   "luminance-derive",
-  "luminance-front",
-  "luminance-gl",
+  # "luminance-front",
+  "luminance-gl2",
   "luminance-glfw",
-  "luminance-glutin",
-  "luminance-sdl2",
-  "luminance-std140",
-  "luminance-webgl",
-  "luminance-web-sys",
+  # "luminance-glutin",
+  # "luminance-sdl2",
+  # "luminance-std140",
+  # "luminance-webgl",
+  # "luminance-web-sys",
 ]
 
 default-members = [
@@ -21,10 +21,10 @@ default-members = [
   "examples/desktop",
   "luminance",
   "luminance-derive",
-  "luminance-front",
-  "luminance-gl",
+  # "luminance-front",
+  "luminance-gl2",
   "luminance-glfw",
-  "luminance-glutin",
+  # "luminance-glutin",
   #"luminance-sdl2", # commented out because of <https://github.com/Rust-SDL2/rust-sdl2/issues/1029>
-  "luminance-std140",
+  # "luminance-std140",
 ]

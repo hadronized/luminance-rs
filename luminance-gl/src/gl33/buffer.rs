@@ -6,7 +6,7 @@ use crate::gl33::{
 };
 use gl;
 use gl::types::*;
-use luminance::tess::TessMapError;
+use luminance::vertex_entity::TessMapError;
 use std::{
   cell::RefCell,
   error, fmt, mem,

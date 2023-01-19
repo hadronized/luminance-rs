@@ -21,71 +21,68 @@
 //! - If you want to write solid and smart Rust code, you want to handle errors, not rely on panics.
 //! - This is example code, so don’t blindly copy it, try to understand it first.
 
-use std::error::Error;
+#![feature(const_cmp)]
 
-use luminance::{
-  backend::framebuffer::FramebufferBackBuffer, context::GraphicsContext, framebuffer::Framebuffer,
-  texture::Dim2,
-};
-use luminance_front::Backend;
+use luminance::{backend::Backend, context::Context};
+use std::fmt::Display;
 
 // examples
 pub mod attributeless;
 pub mod displacement_map;
 pub mod dynamic_uniform_interface;
 pub mod hello_world;
+pub mod hello_world_more;
 pub mod interactive_triangle;
 pub mod mrt;
 pub mod offscreen;
-pub mod polymorphic_hello_world;
 pub mod query_info;
 pub mod query_texture_texels;
 pub mod render_state;
-pub mod shader_data;
-pub mod shader_uniform_adapt;
 pub mod shader_uniforms;
 pub mod shared;
 pub mod skybox;
-pub mod sliced_tess;
+pub mod sliced_vertex_entity;
 pub mod stencil;
 pub mod texture;
+pub mod uni_buffer;
 pub mod vertex_instancing;
 
 // functional tests
-#[cfg(feature = "funtest")]
-pub mod funtest_360_manually_drop_framebuffer;
-#[cfg(feature = "funtest")]
-pub mod funtest_483_indices_mut_corruption;
-#[cfg(feature = "funtest")]
-pub mod funtest_flatten_slice;
-#[cfg(all(feature = "funtest", feature = "funtest-gl33-f64-uniform"))]
-pub mod funtest_gl33_f64_uniform;
-#[cfg(feature = "funtest")]
-pub mod funtest_pixel_array_encoding;
-#[cfg(feature = "funtest")]
-pub mod funtest_scissor_test;
-#[cfg(feature = "funtest")]
-pub mod funtest_tess_no_data;
+//#[cfg(feature = "funtest")]
+//pub mod funtest_360_manually_drop_framebuffer;
+//#[cfg(feature = "funtest")]
+//pub mod funtest_483_indices_mut_corruption;
+//#[cfg(feature = "funtest")]
+//pub mod funtest_flatten_slice;
+//#[cfg(all(feature = "funtest", feature = "funtest-gl33-f64-uniform"))]
+//pub mod funtest_gl33_f64_uniform;
+//#[cfg(feature = "funtest")]
+//pub mod funtest_pixel_array_encoding;
+//#[cfg(feature = "funtest")]
+//pub mod funtest_scissor_test;
+//#[cfg(feature = "funtest")]
+//pub mod funtest_tess_no_data;
 
 /// Example interface.
-pub trait Example<B = Backend>: Sized
-where
-  B: FramebufferBackBuffer,
-{
+pub trait Example: Sized {
+  type Err: From<luminance::backend::Error> + Display;
+
+  const TITLE: &'static str;
+
   /// Bootstrap the example.
   fn bootstrap(
+    frame_size: [u32; 2],
     platform: &mut impl PlatformServices,
-    context: &mut impl GraphicsContext<Backend = B>,
-  ) -> Self;
+    ctx: &mut Context<impl Backend>,
+  ) -> Result<Self, Self::Err>;
 
   /// Render a frame of the example.
   fn render_frame(
     self,
     time: f32,
-    back_buffer: Framebuffer<B, Dim2, (), ()>,
     actions: impl Iterator<Item = InputAction>,
-    context: &mut impl GraphicsContext<Backend = B>,
-  ) -> LoopFeedback<Self>;
+    ctx: &mut Context<impl Backend>,
+  ) -> Result<LoopFeedback<Self>, Self::Err>;
 }
 
 /// A type used to pass “inputs” to examples.
@@ -145,7 +142,7 @@ pub enum LoopFeedback<T> {
 
 /// Various services provided by the platform.
 pub trait PlatformServices {
-  type FetchError: Error;
+  type FetchError: std::error::Error;
 
   /// Fetch the next texture, if available.
   fn fetch_texture(&mut self) -> Result<image::RgbImage, Self::FetchError>;

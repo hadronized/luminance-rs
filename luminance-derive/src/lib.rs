@@ -1,40 +1,14 @@
-//! Derive procedural macros for [luminance].
-//!
-//! This crate exports several macros used to ease development with [luminance]. You are
-//! strongly advised to read the documentation of [luminance] in the first place.
-//!
-//! # `Vertex`
-//!
-//! This macro allows to derive the [`Vertex`] trait for a custom `struct` type.
-//!
-//! [See the full documentation here](https://docs.rs/luminance/latest/luminance/#vertex)
-//!
-//! # `Semantics`
-//!
-//! This macro allows to derive the [`Semantics`] trait for a custom `enum` type.
-//!
-//! [See the full documentation here](https://docs.rs/luminance/latest/luminance/#semantics)
-//!
-//! # `UniformInterface`
-//!
-//! This macro allows to derive the [`UniformInterface`] trait for a custom `struct` type.
-//!
-//! [See the full documentation here](https://docs.rs/luminance/latest/luminance/#uniform-interface)
-//!
-//! [luminance]: https://crates.io/crates/luminance
-//! [`Vertex`]: https://docs.rs/luminance/latest/luminance/vertex/trait.Vertex.html
-//! [`Semantics`]: https://docs.rs/luminance/latest/luminance/vertex/trait.Semantics.html
-
-extern crate proc_macro;
+#![feature(const_cmp, proc_macro_diagnostic)]
 
 mod attrib;
-mod semantics;
-mod uniform_interface;
+mod memory_layout;
+mod render_slots;
+mod uniforms;
 mod vertex;
 
-use crate::semantics::generate_enum_semantics_impl;
-use crate::uniform_interface::generate_uniform_interface_impl;
 use crate::vertex::generate_vertex_impl;
+use crate::{render_slots::impl_render_slots, uniforms::generate_uniforms_impl};
+use memory_layout::{impl_memory_layout, Layout};
 use proc_macro::TokenStream;
 use syn::{self, parse_macro_input, Data, DeriveInput};
 
@@ -53,32 +27,35 @@ pub fn derive_vertex(input: TokenStream) -> TokenStream {
   }
 }
 
-#[proc_macro_derive(Semantics, attributes(sem))]
-pub fn derive_semantics(input: TokenStream) -> TokenStream {
-  let di: DeriveInput = parse_macro_input!(input);
-
-  match di.data {
-    // for now, we only handle enums
-    Data::Enum(enum_) => match generate_enum_semantics_impl(di.ident, enum_) {
-      Ok(impl_) => impl_,
-      Err(e) => panic!("{}", e),
-    },
-
-    _ => panic!("only enums are currently supported for deriving VertexAttribSem"),
-  }
-}
-
-#[proc_macro_derive(UniformInterface, attributes(uniform))]
-pub fn derive_uniform_interface(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(Uniforms, attributes(uniform))]
+pub fn derive_uniforms(input: TokenStream) -> TokenStream {
   let di: DeriveInput = parse_macro_input!(input);
 
   match di.data {
     // for now, we only handle structs
-    Data::Struct(struct_) => match generate_uniform_interface_impl(di.ident, struct_) {
+    Data::Struct(struct_) => match generate_uniforms_impl(di.ident, struct_) {
       Ok(impl_) => impl_,
       Err(e) => panic!("{}", e),
     },
 
-    _ => panic!("only structs are currently supported for deriving UniformInterface"),
+    _ => panic!("only structs are currently supported for deriving Uniforms"),
   }
+}
+
+#[proc_macro_derive(RenderSlots, attributes(slot))]
+pub fn derive_render_slots(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+  let item: DeriveInput = parse_macro_input!(input);
+  impl_render_slots(item).into()
+}
+
+#[proc_macro_derive(Std140)]
+pub fn derive_std140(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+  let item: DeriveInput = parse_macro_input!(input);
+  impl_memory_layout(item, Layout::Std140).into()
+}
+
+#[proc_macro_derive(Std430)]
+pub fn derive_std430(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+  let item: DeriveInput = parse_macro_input!(input);
+  impl_memory_layout(item, Layout::Std430).into()
 }

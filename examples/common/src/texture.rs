@@ -6,120 +6,120 @@
 //! <https://docs.rs/luminance>
 
 use crate::{
-  shared::{load_texture, RGBTexture},
+  shared::{load_img, FragSlot},
   Example, InputAction, LoopFeedback, PlatformServices,
 };
-use luminance::UniformInterface;
-use luminance_front::{
-  blending::{Blending, Equation, Factor},
-  context::GraphicsContext,
-  framebuffer::Framebuffer,
-  pipeline::{PipelineState, TextureBinding},
-  pixel::NormUnsigned,
+use luminance::{
+  backend::{Backend, Error},
+  blending::{Blending, BlendingMode, Equation, Factor},
+  context::Context,
+  dim::{Dim2, Size2},
+  framebuffer::{Back, Framebuffer},
+  pipeline::PipelineState,
+  pixel::{NormRGB8UI, NormUnsigned},
+  primitive::TriangleFan,
   render_state::RenderState,
-  shader::{Program, Uniform},
-  tess::{Mode, Tess},
-  texture::Dim2,
-  Backend,
+  shader::{Program, ProgramBuilder, Uni},
+  texture::{InUseTexture, Mipmaps, Texture, TextureSampling},
+  vertex_entity::{VertexEntity, View},
+  vertex_storage::Interleaved,
+  Uniforms,
 };
 
 const VS: &'static str = include_str!("texture-vs.glsl");
 const FS: &'static str = include_str!("texture-fs.glsl");
 
 // we also need a special uniform interface here to pass the texture to the shader
-#[derive(UniformInterface)]
-struct ShaderInterface {
-  tex: Uniform<TextureBinding<Dim2, NormUnsigned>>,
+#[derive(Uniforms)]
+struct ShaderUniforms {
+  tex: Uni<InUseTexture<Dim2, NormUnsigned>>,
 }
 
 pub struct LocalExample {
-  image: RGBTexture,
-  program: Program<(), (), ShaderInterface>,
-  tess: Tess<()>,
+  texture: Texture<Dim2, NormRGB8UI>,
+  program: Program<(), (), TriangleFan, FragSlot, ShaderUniforms>,
+  vertex_entity: VertexEntity<(), TriangleFan, Interleaved<()>>,
+  back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }
 
 impl Example for LocalExample {
-  fn bootstrap(
-    platform: &mut impl PlatformServices,
-    context: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> Self {
-    let image = load_texture(context, platform).expect("texture to display");
+  type Err = Error;
 
-    // set the uniform interface to our type so that we can read textures from the shader
-    let program = context
-      .new_shader_program::<(), (), ShaderInterface>()
-      .from_strings(VS, None, None, FS)
-      .expect("program creation")
-      .ignore_warnings();
+  const TITLE: &'static str = "Texture";
+
+  fn bootstrap(
+    [width, height]: [u32; 2],
+    platform: &mut impl PlatformServices,
+    ctx: &mut Context<impl Backend>,
+  ) -> Result<Self, Self::Err> {
+    let (img_size, img_texels) = load_img(platform).expect("image to display");
+    let texture = ctx.new_texture(
+      img_size,
+      Mipmaps::No,
+      &TextureSampling::default(),
+      &img_texels,
+    )?;
+
+    let program = ctx.new_program(
+      ProgramBuilder::new()
+        .add_vertex_stage(VS)
+        .no_primitive_stage()
+        .add_shading_stage(FS),
+    )?;
 
     // we’ll use an attributeless render here to display a quad on the screen (two triangles); there
     // are over ways to cover the whole screen but this is easier for you to understand; the
     // TriangleFan creates triangles by connecting the third (and next) vertex to the first one
-    let tess = context
-      .new_tess()
-      .set_render_vertex_nb(4)
-      .set_mode(Mode::TriangleFan)
-      .build()
-      .unwrap();
+    let vertex_entity = ctx.new_vertex_entity(Interleaved::new(), [], Interleaved::new())?;
 
-    LocalExample {
-      image,
+    let back_buffer = ctx.back_buffer(Size2::new(width, height))?;
+
+    Ok(LocalExample {
+      texture,
       program,
-      tess,
-    }
+      vertex_entity,
+      back_buffer,
+    })
   }
 
   fn render_frame(
     mut self,
     _: f32,
-    back_buffer: Framebuffer<Dim2, (), ()>,
     actions: impl Iterator<Item = InputAction>,
-    context: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> LoopFeedback<Self> {
+    ctx: &mut Context<impl Backend>,
+  ) -> Result<LoopFeedback<Self>, Self::Err> {
     for action in actions {
       match action {
-        InputAction::Quit => return LoopFeedback::Exit,
+        InputAction::Quit => return Ok(LoopFeedback::Exit),
+
+        InputAction::Resized { width, height } => {
+          self.back_buffer = ctx.back_buffer(Size2::new(width, height))?;
+        }
+
         _ => (),
       }
     }
 
-    let tex = &mut self.image;
-    let program = &mut self.program;
-    let tess = &self.tess;
-    let render_st = &RenderState::default().set_blending(Blending {
+    let tex = &self.texture;
+    let program = &self.program;
+    let vertex_entity = &self.vertex_entity;
+    let render_state = &RenderState::default().set_blending(BlendingMode::Combined(Blending {
       equation: Equation::Additive,
       src: Factor::SrcAlpha,
       dst: Factor::Zero,
-    });
+    }));
 
-    let render = context
-      .new_pipeline_gate()
-      .pipeline(
-        &back_buffer,
-        &PipelineState::default(),
-        |pipeline, mut shd_gate| {
-          // bind our fancy texture to the GPU: it gives us a bound texture we can use with the shader
-          let bound_tex = pipeline.bind_texture(tex)?;
+    let in_use_texture = ctx.use_texture(tex)?;
+    ctx.with_framebuffer(&self.back_buffer, &PipelineState::default(), |mut frame| {
+      frame.with_program(program, |mut frame| {
+        frame.update(|mut program, unis| program.set(&unis.tex, &in_use_texture))?;
 
-          shd_gate.shade(program, |mut iface, uni, mut rdr_gate| {
-            // update the texture; strictly speaking, this update doesn’t do much: it just tells the GPU
-            // to use the texture passed as argument (no allocation or copy is performed)
-            iface.set(&uni.tex, bound_tex.binding());
+        frame.with_render_state(render_state, |mut frame| {
+          frame.render_vertex_entity(vertex_entity.view(..4))
+        })
+      })
+    })?;
 
-            rdr_gate.render(render_st, |mut tess_gate| {
-              // render the tessellation to the surface the regular way and let the vertex shader’s
-              // magic do the rest!
-              tess_gate.render(tess)
-            })
-          })
-        },
-      )
-      .assume();
-
-    if render.is_ok() {
-      LoopFeedback::Continue(self)
-    } else {
-      LoopFeedback::Exit
-    }
+    Ok(LoopFeedback::Continue(self))
   }
 }

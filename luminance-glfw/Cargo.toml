@@ -1,6 +1,6 @@
 [package]
 name = "luminance-glfw"
-version = "0.18.3"
+version = "0.19.0-dev"
 license = "BSD-3-Clause"
 authors = ["Dimitri Sabadie <dimitri.sabadie@gmail.com>"]
 description = "GLFW support for luminance"
@@ -11,16 +11,16 @@ repository = "https://github.com/phaazon/luminance-rs"
 documentation = "https://docs.rs/luminance-glfw"
 readme = "README.md"
 edition = "2021"
-rust-version = "1.56.0"
+rust-version = "1.65.0"
 
 [badges]
 maintenance = { status = "actively-developed" }
 
 [dependencies]
 gl = "0.14"
-glfw = { version = ">=0.43, <0.46", default-features = false }
-luminance = { version = ">=0.46, <0.48", path = "../luminance" }
-luminance-gl = { version = "0.19", path = "../luminance-gl" }
+glfw = { version = "0.45.0", default-features = false }
+luminance = { version = "0.48.0-dev", path = "../luminance" }
+luminance-gl2 = { version = "0.20.0-dev", path = "../luminance-gl2" }
 
 [features]
 default = ["glfw-sys"]

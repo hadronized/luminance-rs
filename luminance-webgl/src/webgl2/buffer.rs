@@ -5,7 +5,7 @@ use crate::webgl2::{
   WebGL2,
 };
 use core::fmt;
-use luminance::tess::TessError;
+use luminance::vertex_entity::TessError;
 use std::{
   cell::RefCell,
   error,
