@@ -5,7 +5,7 @@ jobs:
   build-linux:
     strategy:
       matrix:
-        rustc: ["1.56.0", "stable"]
+        rustc: ["nightly"]
     runs-on: ubuntu-latest
     steps:
       - name: Install dependencies
@@ -22,7 +22,7 @@ jobs:
   build-windows:
     strategy:
       matrix:
-        rustc: ["1.56.0"]
+        rustc: ["nightly"]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2
@@ -35,7 +35,7 @@ jobs:
   build-macosx:
     strategy:
       matrix:
-        rustc: ["1.56.0"]
+        rustc: ["nightly"]
     runs-on: macOS-latest
     steps:
       - name: Install dependencies
@@ -50,7 +50,7 @@ jobs:
   # build-wasm:
   #   strategy:
   #     matrix:
-  #       rustc: ["1.56.0"]
+  #       rustc: ["nightly"]
   #   runs-on: ubuntu-latest
   #   steps:
   #     - name: Install rustup WASM toolchain
@@ -71,7 +71,7 @@ jobs:
   # functional-tests-desktop:
   #   strategy:
   #     matrix:
-  #       rustc: ["1.56.0"]
+  #       rustc: ["nightly"]
   #   runs-on: ubuntu-latest
   #   steps:
   #     - name: Install dependencies
@@ -88,7 +88,7 @@ jobs:
   # functional-tests-web:
   #   strategy:
   #     matrix:
-  #       rustc: ["1.56.0"]
+  #       rustc: ["nightly"]
   #   runs-on: ubuntu-latest
   #   steps:
   #     - name: Install rustup WASM toolchain
@@ -104,7 +104,7 @@ jobs:
   quality:
     strategy:
       matrix:
-        rustc: ["1.56.0"]
+        rustc: ["nightly"]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -112,47 +112,6 @@ jobs:
         run: |
           rustup default ${{ matrix.rustc }}
           rustup component add rustfmt
-          cargo install --force cargo-sync-readme
-      - name: cargo sync-readme luminance
-        run: |
-          cd $GITHUB_WORKSPACE/luminance
-          cargo sync-readme -c
-      - name: cargo sync-readme luminance-derive
-        run: |
-          cd $GITHUB_WORKSPACE/luminance-derive
-          cargo sync-readme -c
-      - name: cargo sync-readme luminance-front
-        run: |
-          cd $GITHUB_WORKSPACE/luminance-front
-          cargo sync-readme -c
-      - name: cargo sync-readme luminance-gl
-        run: |
-          cd $GITHUB_WORKSPACE/luminance-gl
-          cargo sync-readme -c
-      - name: cargo sync-readme luminance-glfw
-        run: |
-          cd $GITHUB_WORKSPACE/luminance-glfw
-          cargo sync-readme -c
-      - name: cargo sync-readme luminance-glutin
-        run: |
-          cd $GITHUB_WORKSPACE/luminance-glutin
-          cargo sync-readme -c
-      - name: cargo sync-readme luminance-sdl2
-        run: |
-          cd $GITHUB_WORKSPACE/luminance-sdl2
-          cargo sync-readme -c
-      - name: cargo sync-readme luminance-std140
-        run: |
-          cd $GITHUB_WORKSPACE/luminance-std140
-          cargo sync-readme -c
-      - name: cargo sync-readme luminance-web-sys
-        run: |
-          cd $GITHUB_WORKSPACE/luminance-web-sys
-          cargo sync-readme -c
-      - name: cargo sync-readme luminance-webgl
-        run: |
-          cd $GITHUB_WORKSPACE/luminance-webgl
-          cargo sync-readme -c
       - name: rustfmt
         run: |
           cargo fmt -- --check
