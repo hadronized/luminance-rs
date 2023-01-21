@@ -21,7 +21,7 @@ use luminance::{
   primitive::Triangle,
   render_state::RenderState,
   shader::{Program, ProgramBuilder},
-  vertex_entity::{VertexEntity, View},
+  vertex_entity::{VertexEntity, VertexEntityBuilder, View},
   vertex_storage::Interleaved,
 };
 use mint::{Vector2, Vector3};
@@ -116,9 +116,7 @@ impl Example for LocalExample {
     )?;
 
     let triangle = ctx.new_vertex_entity(
-      Interleaved::new().set_vertices(TRI_VERTICES),
-      [],
-      Interleaved::new(),
+      VertexEntityBuilder::new().add_vertices(Interleaved::new().set_vertices(TRI_VERTICES)),
     )?;
 
     let cursor_pos = None;

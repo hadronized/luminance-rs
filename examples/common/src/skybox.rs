@@ -30,7 +30,7 @@ use luminance::{
   render_state::RenderState,
   shader::{Program, ProgramBuilder, Uni},
   texture::{InUseTexture, Mipmaps, Texture, TextureSampling},
-  vertex_entity::{VertexEntity, View},
+  vertex_entity::{VertexEntity, VertexEntityBuilder, View},
   vertex_storage::Interleaved,
   Uniforms,
 };
@@ -132,7 +132,7 @@ pub struct LocalExample {
   skybox_program: Program<(), (), TriangleStrip, FragSlot, SkyboxShaderInterface>,
   env_map_program:
     Program<CubeVertex, (), TriangleStrip, FragSlot, EnvironmentMappingShaderInterface>,
-  fullscreen_quad: VertexEntity<(), TriangleStrip, Interleaved<()>>,
+  fullscreen_quad: VertexEntity<(), TriangleStrip, ()>,
   cube: VertexEntity<CubeVertex, TriangleStrip, Interleaved<CubeVertex>>,
   last_cursor_pos: Option<cgmath::Vector2<f32>>,
   rotate_viewport: bool,
@@ -182,14 +182,14 @@ impl Example for LocalExample {
 
     // A fullscreen quad used to render the skybox. The vertex shader will have to spawn the vertices
     // on the fly for this to work.
-    let fullscreen_quad = ctx.new_vertex_entity(Interleaved::new(), [], Interleaved::new())?;
+    let fullscreen_quad = ctx.new_vertex_entity(VertexEntityBuilder::new())?;
 
     // The cube that will reflect the skybox.
     let (cube_vertices, cube_indices) = cube(0.5);
     let cube = ctx.new_vertex_entity(
-      Interleaved::new().set_vertices(cube_vertices),
-      cube_indices,
-      Interleaved::new(),
+      VertexEntityBuilder::new()
+        .add_vertices(Interleaved::new().set_vertices(cube_vertices))
+        .add_indices(cube_indices),
     )?;
 
     // A bunch of render loop-specific variables used to track what’s happening with your keyboard and

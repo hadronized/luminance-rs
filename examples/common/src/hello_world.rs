@@ -14,7 +14,7 @@ use luminance::{
   primitive::Triangle,
   render_state::RenderState,
   shader::{Program, ProgramBuilder},
-  vertex_entity::{VertexEntity, View},
+  vertex_entity::{VertexEntity, VertexEntityBuilder, View},
   vertex_storage::Interleaved,
   RenderSlots, Vertex,
 };
@@ -144,15 +144,11 @@ impl Example for LocalExample {
       )
       .unwrap();
 
-    let triangles = context
-      .new_vertex_entity(
-        Interleaved::new().set_vertices(&TRI_VERTICES[..]),
-        [],
-        Interleaved::new(),
-      )
-      .unwrap();
+    let triangles = context.new_vertex_entity(
+      VertexEntityBuilder::new().add_vertices(Interleaved::new().set_vertices(TRI_VERTICES)),
+    )?;
 
-    let back_buffer = context.back_buffer(Size2::new(width, height)).unwrap();
+    let back_buffer = context.back_buffer(Size2::new(width, height))?;
 
     Ok(Self {
       back_buffer,

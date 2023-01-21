@@ -16,7 +16,7 @@ use luminance::{
   render_state::RenderState,
   shader::{Program, ProgramBuilder, Uni},
   texture::{InUseTexture, Mipmaps, TextureSampling},
-  vertex_entity::{VertexEntity, View},
+  vertex_entity::{VertexEntity, VertexEntityBuilder, View},
   vertex_storage::Interleaved,
   Uniforms,
 };
@@ -87,7 +87,7 @@ pub struct LocalExample {
   copy_program: Program<(), (), TriangleFan, FragSlot, ShaderCopyInterface>,
   framebuffer: Framebuffer<Dim2, FragSlot, Depth32FStencil8>,
   triangle: VertexEntity<Vertex, Triangle, Interleaved<Vertex>>,
-  attributeless: VertexEntity<(), TriangleFan, Interleaved<()>>,
+  attributeless: VertexEntity<(), TriangleFan, ()>,
   back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }
 
@@ -122,12 +122,10 @@ impl Example for LocalExample {
     )?;
 
     let triangle = ctx.new_vertex_entity(
-      Interleaved::new().set_vertices(VERTICES),
-      [],
-      Interleaved::new(),
+      VertexEntityBuilder::new().add_vertices(Interleaved::new().set_vertices(VERTICES)),
     )?;
 
-    let attributeless = ctx.new_vertex_entity(Interleaved::new(), [], Interleaved::new())?;
+    let attributeless = ctx.new_vertex_entity(VertexEntityBuilder::new())?;
 
     let back_buffer = ctx.back_buffer(Size2::new(width, height))?;
 

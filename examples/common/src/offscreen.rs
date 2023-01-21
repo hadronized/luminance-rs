@@ -14,7 +14,7 @@ use luminance::{
   render_state::RenderState,
   shader::{Program, ProgramBuilder, Uni},
   texture::{InUseTexture, Mipmaps, TextureSampling},
-  vertex_entity::{VertexEntity, View},
+  vertex_entity::{VertexEntity, VertexEntityBuilder, View},
   vertex_storage::Interleaved,
   Uniforms,
 };
@@ -74,7 +74,7 @@ pub struct LocalExample {
   program: Program<Vertex, (), Triangle, FragSlot, ()>,
   copy_program: Program<(), (), TriangleFan, FragSlot, Uniforms>,
   triangle: VertexEntity<Vertex, Triangle, Interleaved<Vertex>>,
-  quad: VertexEntity<(), TriangleFan, Interleaved<()>>,
+  quad: VertexEntity<(), TriangleFan, ()>,
   offscreen_buffer: Framebuffer<Dim2, FragSlot, ()>,
   back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }
@@ -104,11 +104,9 @@ impl Example for LocalExample {
     )?;
 
     let triangle = ctx.new_vertex_entity(
-      Interleaved::new().set_vertices(&TRI_VERTICES[..]),
-      [],
-      Interleaved::new(),
+      VertexEntityBuilder::new().add_vertices(Interleaved::new().set_vertices(TRI_VERTICES)),
     )?;
-    let quad = ctx.new_vertex_entity(Interleaved::new(), [], Interleaved::new())?;
+    let quad = ctx.new_vertex_entity(VertexEntityBuilder::new())?;
     let fb_size = Size2::new(width, height);
     let offscreen_buffer =
       ctx.new_framebuffer(fb_size, Mipmaps::No, &TextureSampling::default())?;

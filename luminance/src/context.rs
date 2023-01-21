@@ -17,7 +17,7 @@ use crate::{
   },
   texture::{InUseTexture, Mipmaps, Texture, TextureSampling},
   vertex::Vertex,
-  vertex_entity::VertexEntity,
+  vertex_entity::{VertexEntity, VertexEntityBuilder},
   vertex_storage::AsVertexStorage,
 };
 
@@ -73,25 +73,18 @@ where
     self.backend.backend_shading_lang_version()
   }
 
-  pub fn new_vertex_entity<V, P, VS, I, W, WS>(
+  pub fn new_vertex_entity<V, P, VS, W, WS>(
     &mut self,
-    storage: VS,
-    indices: I,
-    instance_data: WS,
+    builder: VertexEntityBuilder<VS, WS>,
   ) -> Result<VertexEntity<V, P, VS, W, WS>, VertexEntityError>
   where
     V: Vertex,
     P: Primitive,
     VS: AsVertexStorage<V>,
-    I: Into<Vec<u32>>,
     W: Vertex,
     WS: AsVertexStorage<W>,
   {
-    unsafe {
-      self
-        .backend
-        .new_vertex_entity(storage, indices, instance_data)
-    }
+    unsafe { self.backend.new_vertex_entity(builder) }
   }
 
   pub fn update_vertices<V, P, VS>(

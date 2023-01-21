@@ -17,8 +17,7 @@ use luminance::{
   primitive::Triangle,
   render_state::RenderState,
   shader::{Program, ProgramBuilder},
-  vertex_entity::{VertexEntity, View},
-  vertex_storage::Interleaved,
+  vertex_entity::{VertexEntity, VertexEntityBuilder, View},
 };
 
 use crate::{shared::FragSlot, Example, InputAction, LoopFeedback, PlatformServices};
@@ -28,7 +27,7 @@ const FS: &'static str = include_str!("simple-fs.glsl");
 
 pub struct LocalExample {
   program: Program<(), (), Triangle, FragSlot, ()>,
-  attributeless: VertexEntity<(), Triangle, Interleaved<()>>,
+  attributeless: VertexEntity<(), Triangle, ()>,
   back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }
 
@@ -52,7 +51,7 @@ impl Example for LocalExample {
 
     // yet, we still need to tell luminance to render a certain number of vertices (even if we send no
     // attributes / data); in our case, we’ll just render a triangle, which has three vertices
-    let attributeless = ctx.new_vertex_entity(Interleaved::new(), [], Interleaved::new())?;
+    let attributeless = ctx.new_vertex_entity(VertexEntityBuilder::new())?;
 
     let back_buffer = ctx.back_buffer(Size2::new(width, height))?;
 

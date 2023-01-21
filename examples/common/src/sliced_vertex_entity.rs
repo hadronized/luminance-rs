@@ -22,7 +22,7 @@ use luminance::{
   primitive::Triangle,
   render_state::RenderState,
   shader::{Program, ProgramBuilder},
-  vertex_entity::{VertexEntity, View as _},
+  vertex_entity::{VertexEntity, VertexEntityBuilder, View as _},
   vertex_storage::Interleaved,
 };
 use mint::{Vector2, Vector3};
@@ -132,9 +132,8 @@ impl Example for LocalExample {
 
     // create a single GPU tessellation that holds both the triangles (like in 01-hello-world)
     let triangles = ctx.new_vertex_entity(
-      Interleaved::new().set_vertices(&TRI_RED_BLUE_VERTICES[..]),
-      [],
-      Interleaved::new(),
+      VertexEntityBuilder::new()
+        .add_vertices(Interleaved::new().set_vertices(TRI_RED_BLUE_VERTICES)),
     )?;
 
     let view_method = ViewMethod::Red;

@@ -8,12 +8,19 @@ use std::{marker::PhantomData, mem};
 
 #[derive(Debug)]
 pub enum VertexStorage<'a, V> {
+  NoStorage,
   Interleaved(&'a mut Interleaved<V>),
   Deinterleaved(&'a mut Deinterleaved<V>),
 }
 
 pub trait AsVertexStorage<V> {
   fn as_vertex_storage(&mut self) -> VertexStorage<V>;
+}
+
+impl<V> AsVertexStorage<V> for () {
+  fn as_vertex_storage(&mut self) -> VertexStorage<V> {
+    VertexStorage::NoStorage
+  }
 }
 
 impl<V> AsVertexStorage<V> for Interleaved<V> {

@@ -21,8 +21,7 @@ use luminance::{
   render_state::RenderState,
   shader::{Program, ProgramBuilder, Uni},
   texture::{InUseTexture, Mipmaps, Texture, TextureSampling},
-  vertex_entity::{VertexEntity, View},
-  vertex_storage::Interleaved,
+  vertex_entity::{VertexEntity, VertexEntityBuilder, View},
   Uniforms,
 };
 
@@ -38,7 +37,7 @@ struct ShaderUniforms {
 pub struct LocalExample {
   texture: Texture<Dim2, NormRGB8UI>,
   program: Program<(), (), TriangleFan, FragSlot, ShaderUniforms>,
-  vertex_entity: VertexEntity<(), TriangleFan, Interleaved<()>>,
+  vertex_entity: VertexEntity<(), TriangleFan, ()>,
   back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }
 
@@ -70,7 +69,7 @@ impl Example for LocalExample {
     // we’ll use an attributeless render here to display a quad on the screen (two triangles); there
     // are over ways to cover the whole screen but this is easier for you to understand; the
     // TriangleFan creates triangles by connecting the third (and next) vertex to the first one
-    let vertex_entity = ctx.new_vertex_entity(Interleaved::new(), [], Interleaved::new())?;
+    let vertex_entity = ctx.new_vertex_entity(VertexEntityBuilder::new())?;
 
     let back_buffer = ctx.back_buffer(Size2::new(width, height))?;
 

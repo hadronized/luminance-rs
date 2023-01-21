@@ -19,7 +19,7 @@ use luminance::{
   primitive::Triangle,
   render_state::RenderState,
   shader::{Program, ProgramBuilder},
-  vertex_entity::{VertexEntity, View},
+  vertex_entity::{VertexEntity, VertexEntityBuilder, View},
   vertex_storage::Interleaved,
 };
 use mint::{Vector2, Vector3};
@@ -142,15 +142,13 @@ impl Example for LocalExample {
 
     // create a red and blue triangles
     let red_triangle = ctx.new_vertex_entity(
-      Interleaved::new().set_vertices(&TRI_RED_BLUE_VERTICES[0..3]),
-      [],
-      Interleaved::new(),
+      VertexEntityBuilder::new()
+        .add_vertices(Interleaved::new().set_vertices(&TRI_RED_BLUE_VERTICES[0..3])),
     )?;
 
     let blue_triangle = ctx.new_vertex_entity(
-      Interleaved::new().set_vertices(&TRI_RED_BLUE_VERTICES[3..6]),
-      [],
-      Interleaved::new(),
+      VertexEntityBuilder::new()
+        .add_vertices(Interleaved::new().set_vertices(&TRI_RED_BLUE_VERTICES[3..6])),
     )?;
 
     let blending = BlendingMode::Off;

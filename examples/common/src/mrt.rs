@@ -19,7 +19,7 @@ use luminance::{
   render_state::RenderState,
   shader::{Program, ProgramBuilder, Uni},
   texture::{InUseTexture, Mipmaps, TextureSampling},
-  vertex_entity::{VertexEntity, View},
+  vertex_entity::{VertexEntity, VertexEntityBuilder, View},
   vertex_storage::Interleaved,
   RenderSlots, Uniforms,
 };
@@ -83,7 +83,7 @@ pub struct LocalExample {
   program: Program<Vertex, (), Triangle, OffscreenSlots, ()>,
   copy_program: Program<(), (), TriangleFan, FragSlot, ShaderInterface>,
   triangle: VertexEntity<Vertex, Triangle, Interleaved<Vertex>>,
-  quad: VertexEntity<(), TriangleFan, Interleaved<()>>,
+  quad: VertexEntity<(), TriangleFan, ()>,
   offscreen_buffer: Framebuffer<Dim2, OffscreenSlots, ()>,
   back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }
@@ -113,13 +113,11 @@ impl Example for LocalExample {
     )?;
 
     let triangle = ctx.new_vertex_entity(
-      Interleaved::new().set_vertices(TRI_VERTICES),
-      [],
-      Interleaved::new(),
+      VertexEntityBuilder::new().add_vertices(Interleaved::new().set_vertices(TRI_VERTICES)),
     )?;
 
     // we’ll need an attributeless quad to fetch in full screen
-    let quad = ctx.new_vertex_entity(Interleaved::new(), [], Interleaved::new())?;
+    let quad = ctx.new_vertex_entity(VertexEntityBuilder::new())?;
 
     // the offscreen buffer; defined with a dummy 10×10 dimension
     let size = Size2::new(width, height);

@@ -24,7 +24,7 @@ use luminance::{
   vertex::{
     Normalized, Vertex, VertexAttribDesc, VertexAttribDim, VertexAttribType, VertexBufferDesc,
   },
-  vertex_entity::{VertexEntity, VertexEntityView},
+  vertex_entity::{VertexEntity, VertexEntityBuilder, VertexEntityView},
   vertex_storage::{AsVertexStorage, Deinterleaved, Interleaved, VertexStorage},
 };
 use std::{
@@ -1554,6 +1554,11 @@ impl GL33 {
     V: Vertex,
   {
     match storage.as_vertex_storage() {
+      VertexStorage::NoStorage => Ok(BuiltVertexBuffers {
+        buffers: None,
+        len: 0,
+      }),
+
       VertexStorage::Interleaved(storage) => self.build_interleaved_buffer(storage, instanced),
       VertexStorage::Deinterleaved(storage) => self.build_deinterleaved_buffers(storage, instanced),
     }
@@ -2065,21 +2070,18 @@ unsafe impl Backend for GL33 {
 }
 
 unsafe impl VertexEntityBackend for GL33 {
-  unsafe fn new_vertex_entity<V, P, S, I, W, WS>(
+  unsafe fn new_vertex_entity<V, P, VS, W, WS>(
     &mut self,
-    mut vertices: S,
-    indices: I,
-    mut instance_data: WS,
-  ) -> Result<VertexEntity<V, P, S, W, WS>, VertexEntityError>
+    mut builder: VertexEntityBuilder<VS, WS>,
+  ) -> Result<VertexEntity<V, P, VS, W, WS>, VertexEntityError>
   where
     V: Vertex,
     P: Primitive,
-    S: AsVertexStorage<V>,
-    I: Into<Vec<u32>>,
+    VS: AsVertexStorage<V>,
     W: Vertex,
     WS: AsVertexStorage<W>,
   {
-    let indices = indices.into();
+    let indices = builder.indices;
 
     let mut vao: GLuint = 0;
 
@@ -2087,10 +2089,10 @@ unsafe impl VertexEntityBackend for GL33 {
     gl::BindVertexArray(vao);
     self.state.borrow_mut().bound_vertex_array.set(vao);
 
-    let built_vertex_buffers = self.build_vertex_buffers(&mut vertices, false)?;
+    let built_vertex_buffers = self.build_vertex_buffers(&mut builder.vertices, false)?;
     let vertex_buffers = built_vertex_buffers.buffers;
     let index_buffer = self.build_index_buffer(&indices);
-    let built_instance_buffers = self.build_vertex_buffers(&mut instance_data, true)?;
+    let built_instance_buffers = self.build_vertex_buffers(&mut builder.instances, true)?;
     let instance_buffers = built_instance_buffers.buffers;
 
     let vertex_count = if indices.is_empty() {
@@ -2117,8 +2119,8 @@ unsafe impl VertexEntityBackend for GL33 {
 
     Ok(VertexEntity::new(
       vao,
-      vertices,
-      instance_data,
+      builder.vertices,
+      builder.instances,
       indices,
       vertex_count,
       dropper,
