@@ -875,6 +875,27 @@ pub unsafe trait ShaderBackend {
     as_ref visit_mat44, [[f32; 4]; 4],
   }
 
+  #[cfg(feature = "shader-f64")]
+  mk_uniform_visit! {
+    visit_f64, f64,
+  }
+
+  #[cfg(feature = "shader-f64")]
+  mk_uniform_visit! {
+    array visit_f64_array, f64,
+  }
+
+  #[cfg(feature = "shader-f64")]
+  mk_uniform_visit! {
+    as_ref visit_dvec2, [f64; 2],
+    as_ref visit_dvec3, [f64; 3],
+    as_ref visit_dvec4, [f64; 4],
+
+    as_ref visit_dmat22, [[f64; 2]; 2],
+    as_ref visit_dmat33, [[f64; 3]; 3],
+    as_ref visit_dmat44, [[f64; 4]; 4],
+  }
+
   fn visit_texture<D, P>(
     &mut self,
     uni: &Uni<InUseTexture<D, P>>, // FIXME: probably wrong too?

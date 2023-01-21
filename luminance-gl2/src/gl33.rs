@@ -1278,12 +1278,12 @@ impl StageHandle {
     }
   }
 
-  #[cfg(feature = "GL_ARB_gpu_shader_fp64")]
+  #[cfg(feature = "shader-f64")]
   const GLSL_PRAGMA: &str = "#version 330 core\n\
                            #extension GL_ARB_separate_shader_objects : require\n
                            #extension GL_ARB_gpu_shader_fp64 : require\n\
                            layout(std140) uniform;\n";
-  #[cfg(not(feature = "GL_ARB_gpu_shader_fp64"))]
+  #[cfg(not(feature = "shader-f64"))]
   const GLSL_PRAGMA: &str = "#version 330 core\n\
                            #extension GL_ARB_separate_shader_objects : require\n\
                            layout(std140) uniform;\n";
@@ -2678,6 +2678,15 @@ unsafe impl ShaderBackend for GL33 {
     Ok(())
   }
 
+  #[cfg(feature = "shader-f64")]
+  fn visit_f64(&mut self, uni: &Uni<f64>, value: &f64) -> Result<(), ShaderError> {
+    unsafe {
+      gl::Uniform1d(uni.handle() as GLint, *value);
+    }
+
+    Ok(())
+  }
+
   fn visit_bool(&mut self, uni: &Uni<bool>, value: &bool) -> Result<(), ShaderError> {
     unsafe {
       gl::Uniform1ui(uni.handle() as GLint, *value as u32);
@@ -2717,6 +2726,19 @@ unsafe impl ShaderBackend for GL33 {
   ) -> Result<(), ShaderError> {
     unsafe {
       gl::Uniform1fv(uni.handle() as GLint, N as GLsizei, value.as_ptr());
+    }
+
+    Ok(())
+  }
+
+  #[cfg(feature = "shader-f64")]
+  fn visit_f64_array<const N: usize>(
+    &mut self,
+    uni: &Uni<[f64; N]>,
+    value: &[f64; N],
+  ) -> Result<(), ShaderError> {
+    unsafe {
+      gl::Uniform1dv(uni.handle() as GLint, N as GLsizei, value.as_ptr());
     }
 
     Ok(())
@@ -2770,6 +2792,18 @@ unsafe impl ShaderBackend for GL33 {
     Ok(())
   }
 
+  #[cfg(feature = "shader-f64")]
+  fn visit_dvec2<T>(&mut self, uni: &Uni<T>, value: &[f64; 2]) -> Result<(), ShaderError>
+  where
+    T: AsRef<[f64; 2]>,
+  {
+    unsafe {
+      gl::Uniform2d(uni.handle() as GLint, value[0], value[1]);
+    }
+
+    Ok(())
+  }
+
   fn visit_bvec2<T>(&mut self, uni: &Uni<T>, value: &[bool; 2]) -> Result<(), ShaderError>
   where
     T: AsRef<[bool; 2]>,
@@ -2809,6 +2843,18 @@ unsafe impl ShaderBackend for GL33 {
   {
     unsafe {
       gl::Uniform3f(uni.handle() as GLint, value[0], value[1], value[2]);
+    }
+
+    Ok(())
+  }
+
+  #[cfg(feature = "shader-f64")]
+  fn visit_dvec3<T>(&mut self, uni: &Uni<T>, value: &[f64; 3]) -> Result<(), ShaderError>
+  where
+    T: AsRef<[f64; 3]>,
+  {
+    unsafe {
+      gl::Uniform3d(uni.handle() as GLint, value[0], value[1], value[2]);
     }
 
     Ok(())
@@ -2881,6 +2927,24 @@ unsafe impl ShaderBackend for GL33 {
     Ok(())
   }
 
+  #[cfg(feature = "shader-f64")]
+  fn visit_dvec4<T>(&mut self, uni: &Uni<T>, value: &[f64; 4]) -> Result<(), ShaderError>
+  where
+    T: AsRef<[f64; 4]>,
+  {
+    unsafe {
+      gl::Uniform4d(
+        uni.handle() as GLint,
+        value[0],
+        value[1],
+        value[2],
+        value[3],
+      );
+    }
+
+    Ok(())
+  }
+
   fn visit_bvec4<T>(&mut self, uni: &Uni<T>, value: &[bool; 4]) -> Result<(), ShaderError>
   where
     T: AsRef<[bool; 4]>,
@@ -2926,6 +2990,42 @@ unsafe impl ShaderBackend for GL33 {
   {
     unsafe {
       gl::UniformMatrix4fv(uni.handle() as GLint, 1, gl::FALSE, value.as_ptr() as _);
+    }
+
+    Ok(())
+  }
+
+  #[cfg(feature = "shader-f64")]
+  fn visit_dmat22<T>(&mut self, uni: &Uni<T>, value: &[[f64; 2]; 2]) -> Result<(), ShaderError>
+  where
+    T: AsRef<[[f64; 2]; 2]>,
+  {
+    unsafe {
+      gl::UniformMatrix2dv(uni.handle() as GLint, 1, gl::FALSE, value.as_ptr() as _);
+    }
+
+    Ok(())
+  }
+
+  #[cfg(feature = "shader-f64")]
+  fn visit_dmat33<T>(&mut self, uni: &Uni<T>, value: &[[f64; 3]; 3]) -> Result<(), ShaderError>
+  where
+    T: AsRef<[[f64; 3]; 3]>,
+  {
+    unsafe {
+      gl::UniformMatrix3dv(uni.handle() as GLint, 1, gl::FALSE, value.as_ptr() as _);
+    }
+
+    Ok(())
+  }
+
+  #[cfg(feature = "shader-f64")]
+  fn visit_dmat44<T>(&mut self, uni: &Uni<T>, value: &[[f64; 4]; 4]) -> Result<(), ShaderError>
+  where
+    T: AsRef<[[f64; 4]; 4]>,
+  {
+    unsafe {
+      gl::UniformMatrix4dv(uni.handle() as GLint, 1, gl::FALSE, value.as_ptr() as _);
     }
 
     Ok(())
