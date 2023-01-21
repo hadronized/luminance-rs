@@ -151,9 +151,15 @@ pub enum UniType {
 
   Floating(UniDim),
 
+  #[cfg(feature = "shader-f64")]
+  Floating64(UniDim),
+
   Boolean(UniDim),
 
   Matrix(UniMatDim),
+
+  #[cfg(feature = "shader-f64")]
+  Matrix64(UniMatDim),
 
   Sampler(pixel::Type, Dim),
 
@@ -260,6 +266,12 @@ impl_Uniform!(array u32, visit_u32_array);
 impl_Uniform!(array f32, visit_f32_array);
 impl_Uniform!(array bool, visit_bool_array);
 
+#[cfg(feature = "shader-f64")]
+impl_Uniform!(f64, Floating64, visit_f64, UniDim::Dim1);
+
+#[cfg(feature = "shader-f64")]
+impl_Uniform!(array f64, visit_f64_array);
+
 #[cfg(feature = "mint")]
 impl_Uniform!(
   as_ref
@@ -285,6 +297,15 @@ impl_Uniform!(
   [f32; 2],
   Floating,
   visit_vec2,
+  UniDim::Dim2
+);
+#[cfg(all(feature = "mint", feature = "shader-f64"))]
+impl_Uniform!(
+  as_ref
+  mint::Vector2<f64>,
+  [f64; 2],
+  Floating64,
+  visit_dvec2,
   UniDim::Dim2
 );
 #[cfg(feature = "mint")]
@@ -323,6 +344,15 @@ impl_Uniform!(
   visit_vec3,
   UniDim::Dim3
 );
+#[cfg(all(feature = "mint", feature = "shader-f64"))]
+impl_Uniform!(
+  as_ref
+  mint::Vector3<f64>,
+  [f64; 3],
+  Floating64,
+  visit_dvec3,
+  UniDim::Dim3
+);
 #[cfg(feature = "mint")]
 impl_Uniform!(
   as_ref
@@ -357,6 +387,15 @@ impl_Uniform!(
   [f32; 4],
   Floating,
   visit_vec4,
+  UniDim::Dim4
+);
+#[cfg(all(feature = "mint", feature = "shader-f64"))]
+impl_Uniform!(
+  as_ref
+  mint::Vector4<f64>,
+  [f64; 4],
+  Floating64,
+  visit_dvec4,
   UniDim::Dim4
 );
 #[cfg(feature = "mint")]
@@ -394,6 +433,34 @@ impl_Uniform!(
   [[f32; 4]; 4],
   Matrix,
   visit_mat44,
+  UniMatDim::Mat44
+);
+
+#[cfg(all(feature = "mint", feature = "shader-f64"))]
+impl_Uniform!(
+  as_ref
+  mint::ColumnMatrix2<f64>,
+  [[f64; 2]; 2],
+  Matrix64,
+  visit_dmat22,
+  UniMatDim::Mat22
+);
+#[cfg(all(feature = "mint", feature = "shader-f64"))]
+impl_Uniform!(
+  as_ref
+  mint::ColumnMatrix3<f64>,
+  [[f64; 3]; 3],
+  Matrix64,
+  visit_dmat33,
+  UniMatDim::Mat33
+);
+#[cfg(all(feature = "mint", feature = "shader-f64"))]
+impl_Uniform!(
+  as_ref
+  mint::ColumnMatrix4<f64>,
+  [[f64; 4]; 4],
+  Matrix64,
+  visit_dmat44,
   UniMatDim::Mat44
 );
 
