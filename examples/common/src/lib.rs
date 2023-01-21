@@ -60,8 +60,6 @@ pub mod vertex_instancing;
 //pub mod funtest_pixel_array_encoding;
 //#[cfg(feature = "funtest")]
 //pub mod funtest_scissor_test;
-//#[cfg(feature = "funtest")]
-//pub mod funtest_tess_no_data;
 
 /// Example interface.
 pub trait Example: Sized {
