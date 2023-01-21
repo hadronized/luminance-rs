@@ -20,7 +20,7 @@ use luminance::{
   render_state::RenderState,
   shader::{Program, ProgramBuilder},
   texture::{Mipmaps, TextureSampling},
-  vertex_entity::{VertexEntity, View},
+  vertex_entity::{VertexEntity, VertexEntityBuilder, View},
   vertex_storage::Interleaved,
 };
 use mint::{Vector2, Vector3};
@@ -111,9 +111,7 @@ impl Example for LocalExample {
     // create tessellation for direct geometry; that is, tessellation that will render vertices by
     // taking one after another in the provided slice
     let triangles = ctx.new_vertex_entity(
-      Interleaved::new().set_vertices(TRI_VERTICES),
-      [],
-      Interleaved::new(),
+      VertexEntityBuilder::new().add_vertices(Interleaved::new().set_vertices(TRI_VERTICES)),
     )?;
 
     // the back buffer, which we will make our render into (we make it mutable so that we can change

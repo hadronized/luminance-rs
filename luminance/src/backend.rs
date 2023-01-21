@@ -11,7 +11,7 @@ use crate::{
   },
   texture::{InUseTexture, Mipmaps, Texture, TextureSampling},
   vertex::Vertex,
-  vertex_entity::{VertexEntity, VertexEntityView},
+  vertex_entity::{VertexEntity, VertexEntityBuilder, VertexEntityView},
   vertex_storage::AsVertexStorage,
 };
 use std::{collections::HashMap, error::Error as ErrorTrait, fmt};
@@ -682,17 +682,14 @@ pub unsafe trait Backend:
 }
 
 pub unsafe trait VertexEntityBackend {
-  unsafe fn new_vertex_entity<V, P, S, I, W, WS>(
+  unsafe fn new_vertex_entity<V, P, VS, W, WS>(
     &mut self,
-    vertices: S,
-    indices: I,
-    instance_data: WS,
-  ) -> Result<VertexEntity<V, P, S, W, WS>, VertexEntityError>
+    builder: VertexEntityBuilder<VS, WS>,
+  ) -> Result<VertexEntity<V, P, VS, W, WS>, VertexEntityError>
   where
     V: Vertex,
     P: Primitive,
-    S: AsVertexStorage<V>,
-    I: Into<Vec<u32>>,
+    VS: AsVertexStorage<V>,
     W: Vertex,
     WS: AsVertexStorage<W>;
 

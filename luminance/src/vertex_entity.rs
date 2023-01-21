@@ -1,14 +1,56 @@
-use crate::{
-  primitive::Primitive,
-  vertex::Vertex,
-  vertex_storage::{AsVertexStorage, Interleaved},
-};
+use crate::{primitive::Primitive, vertex::Vertex, vertex_storage::AsVertexStorage};
 use std::{
   marker::PhantomData,
   ops::{Range, RangeFrom, RangeFull, RangeTo, RangeToInclusive},
 };
 
-pub struct VertexEntity<V, P, VS, W = (), WS = Interleaved<W>> {
+#[derive(Debug)]
+pub struct VertexEntityBuilder<VS, WS> {
+  pub vertices: VS,
+  pub indices: Vec<u32>,
+  pub instances: WS,
+}
+
+impl VertexEntityBuilder<(), ()> {
+  pub fn new() -> Self {
+    Self {
+      vertices: (),
+      indices: Vec::new(),
+      instances: (),
+    }
+  }
+}
+
+impl<WS> VertexEntityBuilder<(), WS> {
+  pub fn add_vertices<VS>(self, vertices: VS) -> VertexEntityBuilder<VS, WS> {
+    VertexEntityBuilder {
+      vertices,
+      indices: self.indices,
+      instances: self.instances,
+    }
+  }
+}
+
+impl<VS> VertexEntityBuilder<VS, ()> {
+  pub fn add_instances<WS>(self, instances: WS) -> VertexEntityBuilder<VS, WS> {
+    VertexEntityBuilder {
+      vertices: self.vertices,
+      indices: self.indices,
+      instances,
+    }
+  }
+}
+
+impl<VS, WS> VertexEntityBuilder<VS, WS> {
+  pub fn add_indices(self, indices: impl Into<Vec<u32>>) -> Self {
+    Self {
+      indices: indices.into(),
+      ..self
+    }
+  }
+}
+
+pub struct VertexEntity<V, P, VS, W = (), WS = ()> {
   handle: usize,
   vertices: VS,
   instance_data: WS,

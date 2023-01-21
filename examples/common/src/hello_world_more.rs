@@ -19,7 +19,7 @@ use luminance::{
   primitive::Triangle,
   render_state::RenderState,
   shader::{Program, ProgramBuilder},
-  vertex_entity::{VertexEntity, View},
+  vertex_entity::{VertexEntity, VertexEntityBuilder, View},
   vertex_storage::{Deinterleaved, Interleaved},
   RenderSlots, Vertex,
 };
@@ -202,62 +202,52 @@ impl Example for LocalExample {
     context: &mut Context<impl Backend>,
   ) -> Result<Self, Self::Err> {
     // We need a program to “shade” our triangles
-    let program = context
-      .new_program(
-        ProgramBuilder::new()
-          .add_vertex_stage(VS)
-          .no_primitive_stage()
-          .add_shading_stage(FS),
-      )
-      .unwrap();
+    let program = context.new_program(
+      ProgramBuilder::new()
+        .add_vertex_stage(VS)
+        .no_primitive_stage()
+        .add_shading_stage(FS),
+    )?;
 
     // Create a vertex entity for direct geometry; that is, a vertex entity that will render vertices by
     // taking one after another in the provided slice.
-    let direct_triangles = context
-      .new_vertex_entity(
-        Interleaved::new().set_vertices(&TRI_VERTICES[..]),
-        [],
-        Interleaved::new(),
-      )
-      .unwrap();
+    let direct_triangles = context.new_vertex_entity(
+      VertexEntityBuilder::new().add_vertices(Interleaved::new().set_vertices(TRI_VERTICES)),
+    )?;
 
     // Indexed vertex entity; that is, the vertices will be picked by using the indexes provided
     // by the second slice and this indexes will reference the first slice (useful not to duplicate
     // vertices on more complex objects than just two triangles).
-    let indexed_triangles = context
-      .new_vertex_entity(
-        Interleaved::new().set_vertices(&TRI_VERTICES[..]),
-        &TRI_INDICES[..],
-        Interleaved::new(),
-      )
-      .unwrap();
+    let indexed_triangles = context.new_vertex_entity(
+      VertexEntityBuilder::new()
+        .add_vertices(Interleaved::new().set_vertices(TRI_VERTICES))
+        .add_indices(TRI_INDICES),
+    )?;
 
     // Create a direct, deinterleaved vertex entity; such vertex entity allows to separate vertex
     // attributes in several contiguous regions of memory.
-    let direct_deinterleaved_triangles = context
-      .new_vertex_entity(
+    let direct_deinterleaved_triangles = context.new_vertex_entity(
+      VertexEntityBuilder::new().add_vertices(
         Deinterleaved::new()
-          .set_components::<"pos">(&TRI_DEINT_POS_VERTICES[..])
-          .set_components::<"rgb">(&TRI_DEINT_COLOR_VERTICES[..]),
-        [],
-        Interleaved::new(),
-      )
-      .unwrap();
+          .set_components::<"pos">(TRI_DEINT_POS_VERTICES)
+          .set_components::<"rgb">(TRI_DEINT_COLOR_VERTICES),
+      ),
+    )?;
 
     // Create an indexed, deinterleaved vertex entity.
-    let indexed_deinterleaved_triangles = context
-      .new_vertex_entity(
-        Deinterleaved::new()
-          .set_components::<"pos">(&TRI_DEINT_POS_VERTICES[..])
-          .set_components::<"rgb">(&TRI_DEINT_COLOR_VERTICES[..]),
-        &TRI_INDICES[..],
-        Interleaved::new(),
-      )
-      .unwrap();
+    let indexed_deinterleaved_triangles = context.new_vertex_entity(
+      VertexEntityBuilder::new()
+        .add_vertices(
+          Deinterleaved::new()
+            .set_components::<"pos">(TRI_DEINT_POS_VERTICES)
+            .set_components::<"rgb">(TRI_DEINT_COLOR_VERTICES),
+        )
+        .add_indices(TRI_INDICES),
+    )?;
 
     let method = Method::Direct;
 
-    let back_buffer = context.back_buffer(Size2::new(width, height)).unwrap();
+    let back_buffer = context.back_buffer(Size2::new(width, height))?;
 
     Ok(Self {
       back_buffer,

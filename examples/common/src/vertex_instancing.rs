@@ -15,7 +15,7 @@ use luminance::{
   primitive::Triangle,
   render_state::RenderState,
   shader::{Program, ProgramBuilder},
-  vertex_entity::{VertexEntity, View},
+  vertex_entity::{VertexEntity, VertexEntityBuilder, View},
   vertex_storage::Interleaved,
 };
 
@@ -100,9 +100,9 @@ impl Example for LocalExample {
     )?;
 
     let triangle = ctx.new_vertex_entity(
-      Interleaved::new().set_vertices(&TRI_VERTICES[..]),
-      [],
-      Interleaved::new().set_vertices(&INSTANCES[..]),
+      VertexEntityBuilder::new()
+        .add_vertices(Interleaved::new().set_vertices(TRI_VERTICES))
+        .add_instances(Interleaved::new().set_vertices(INSTANCES)),
     )?;
 
     let back_buffer = ctx.back_buffer(Size2::new(width, height))?;

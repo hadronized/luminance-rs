@@ -20,7 +20,7 @@ use luminance::{
   primitive::Triangle,
   render_state::RenderState,
   shader::{Program, ProgramBuilder, Uni},
-  vertex_entity::{VertexEntity, View},
+  vertex_entity::{VertexEntity, VertexEntityBuilder, View},
   vertex_storage::Interleaved,
   Uniforms,
 };
@@ -97,9 +97,7 @@ impl Example for LocalExample {
         .add_shading_stage(FS),
     )?;
     let triangle = ctx.new_vertex_entity(
-      Interleaved::new().set_vertices(&TRI_VERTICES[..]),
-      [],
-      Interleaved::new(),
+      VertexEntityBuilder::new().add_vertices(Interleaved::new().set_vertices(&TRI_VERTICES[..])),
     )?;
     let triangle_pos = Vector2 { x: 0., y: 0. };
     let back_buffer = ctx.back_buffer(Size2::new(width, height))?;

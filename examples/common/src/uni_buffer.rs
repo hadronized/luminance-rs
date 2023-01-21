@@ -17,7 +17,7 @@ use luminance::{
   primitive::TriangleFan,
   render_state::RenderState,
   shader::{Program, ProgramBuilder, Std140, Uni, UniBuffer},
-  vertex_entity::{VertexEntity, View},
+  vertex_entity::{VertexEntity, VertexEntityBuilder, View},
   vertex_storage::Interleaved,
   Std140, Uniforms,
 };
@@ -94,9 +94,7 @@ impl Example for LocalExample {
     ctx: &mut Context<impl Backend>,
   ) -> Result<Self, Self::Err> {
     let square = ctx.new_vertex_entity(
-      Interleaved::new().set_vertices(VERTICES),
-      [],
-      Interleaved::new(),
+      VertexEntityBuilder::new().add_vertices(Interleaved::new().set_vertices(VERTICES)),
     )?;
 
     let program = ctx.new_program(

@@ -27,8 +27,7 @@ use luminance::{
   render_state::RenderState,
   shader::{Program, ProgramBuilder, Uni},
   texture::{InUseTexture, Mipmaps, Texture, TextureSampling},
-  vertex_entity::{VertexEntity, View},
-  vertex_storage::Interleaved,
+  vertex_entity::{VertexEntity, VertexEntityBuilder, View},
   Uniforms,
 };
 use mint::Vector2;
@@ -55,7 +54,7 @@ pub struct LocalExample {
   img_tex: Texture<Dim2, NormRGB8UI>,
   displacement_maps: [Texture<Dim2, NormRGB8UI>; 2],
   program: Program<(), (), TriangleFan, FragSlot, ShaderInterface>,
-  quad: VertexEntity<(), TriangleFan, Interleaved<()>>,
+  quad: VertexEntity<(), TriangleFan, ()>,
   displacement_scale: f32,
   back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }
@@ -91,7 +90,7 @@ impl Example for LocalExample {
         .add_shading_stage(FS),
     )?;
 
-    let quad = ctx.new_vertex_entity(Interleaved::new(), [], Interleaved::new())?;
+    let quad = ctx.new_vertex_entity(VertexEntityBuilder::new())?;
     let displacement_scale = 0.01;
 
     let back_buffer = ctx.back_buffer(Size2::new(width, height))?;
