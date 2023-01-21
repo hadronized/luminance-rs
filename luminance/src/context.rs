@@ -18,7 +18,7 @@ use crate::{
   texture::{InUseTexture, Mipmaps, Texture, TextureSampling},
   vertex::Vertex,
   vertex_entity::{VertexEntity, VertexEntityBuilder},
-  vertex_storage::AsVertexStorage,
+  vertex_storage::VertexStorageFamily,
 };
 
 #[derive(Clone, Debug)]
@@ -73,28 +73,30 @@ where
     self.backend.backend_shading_lang_version()
   }
 
-  pub fn new_vertex_entity<V, P, VS, W, WS>(
+  pub fn new_vertex_entity<V, P, VSF, W, WSF>(
     &mut self,
-    builder: VertexEntityBuilder<VS, WS>,
-  ) -> Result<VertexEntity<V, P, VS, W, WS>, VertexEntityError>
+    builder: VertexEntityBuilder<VSF::Storage<V>, WSF::Storage<W>>,
+  ) -> Result<VertexEntity<V, P, VSF, W, WSF>, VertexEntityError>
   where
     V: Vertex,
     P: Primitive,
-    VS: AsVertexStorage<V>,
+    VSF: VertexStorageFamily,
     W: Vertex,
-    WS: AsVertexStorage<W>,
+    WSF: VertexStorageFamily,
   {
     unsafe { self.backend.new_vertex_entity(builder) }
   }
 
-  pub fn update_vertices<V, P, VS>(
+  pub fn update_vertices<V, P, VSF, W, WSF>(
     &mut self,
-    entity: &mut VertexEntity<V, P, VS>,
+    entity: &mut VertexEntity<V, P, VSF, W, WSF>,
   ) -> Result<(), VertexEntityError>
   where
     V: Vertex,
     P: Primitive,
-    VS: AsVertexStorage<V>,
+    VSF: VertexStorageFamily,
+    W: Vertex,
+    WSF: VertexStorageFamily,
   {
     unsafe {
       self
@@ -103,16 +105,16 @@ where
     }
   }
 
-  pub fn update_indices<V, P, VS, W, WS>(
+  pub fn update_indices<V, P, VSF, W, WSF>(
     &mut self,
-    entity: &mut VertexEntity<V, P, VS, W, WS>,
+    entity: &mut VertexEntity<V, P, VSF, W, WSF>,
   ) -> Result<(), VertexEntityError>
   where
     V: Vertex,
     P: Primitive,
-    VS: AsVertexStorage<V>,
+    VSF: VertexStorageFamily,
     W: Vertex,
-    WS: AsVertexStorage<W>,
+    WSF: VertexStorageFamily,
   {
     unsafe {
       self
@@ -121,16 +123,16 @@ where
     }
   }
 
-  pub fn update_instance_data<V, P, VS, W, WS>(
+  pub fn update_instance_data<V, P, VSF, W, WSF>(
     &mut self,
-    entity: &mut VertexEntity<V, P, VS, W, WS>,
+    entity: &mut VertexEntity<V, P, VSF, W, WSF>,
   ) -> Result<(), VertexEntityError>
   where
     V: Vertex,
     P: Primitive,
-    VS: AsVertexStorage<V>,
+    VSF: VertexStorageFamily,
     W: Vertex,
-    WS: AsVertexStorage<W>,
+    WSF: VertexStorageFamily,
   {
     unsafe {
       self

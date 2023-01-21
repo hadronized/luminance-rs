@@ -20,7 +20,7 @@ use luminance::{
   shader::{Program, ProgramBuilder, Uni},
   texture::{InUseTexture, Mipmaps, TextureSampling},
   vertex_entity::{VertexEntity, VertexEntityBuilder, View},
-  vertex_storage::Interleaved,
+  vertex_storage::{Interleaved, Interleaving},
   RenderSlots, Uniforms,
 };
 use mint::{Vector2, Vector3};
@@ -82,7 +82,7 @@ struct OffscreenSlots {
 pub struct LocalExample {
   program: Program<Vertex, (), Triangle, OffscreenSlots, ()>,
   copy_program: Program<(), (), TriangleFan, FragSlot, ShaderInterface>,
-  triangle: VertexEntity<Vertex, Triangle, Interleaved<Vertex>>,
+  triangle: VertexEntity<Vertex, Triangle, Interleaving>,
   quad: VertexEntity<(), TriangleFan, ()>,
   offscreen_buffer: Framebuffer<Dim2, OffscreenSlots, ()>,
   back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,

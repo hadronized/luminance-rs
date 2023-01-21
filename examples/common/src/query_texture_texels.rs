@@ -21,7 +21,7 @@ use luminance::{
   shader::{Program, ProgramBuilder},
   texture::{Mipmaps, TextureSampling},
   vertex_entity::{VertexEntity, VertexEntityBuilder, View},
-  vertex_storage::Interleaved,
+  vertex_storage::{Interleaved, Interleaving},
 };
 use mint::{Vector2, Vector3};
 
@@ -85,7 +85,7 @@ const TRI_VERTICES: [Vertex; 6] = [
 
 pub struct LocalExample {
   program: Program<Vertex, (), Triangle, FragSlot, ()>,
-  triangles: VertexEntity<Vertex, Triangle, Interleaved<Vertex>>,
+  triangles: VertexEntity<Vertex, Triangle, Interleaving>,
   framebuffer: Framebuffer<Dim2, FragSlot, ()>,
 }
 

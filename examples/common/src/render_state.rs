@@ -20,7 +20,7 @@ use luminance::{
   render_state::RenderState,
   shader::{Program, ProgramBuilder},
   vertex_entity::{VertexEntity, VertexEntityBuilder, View},
-  vertex_storage::Interleaved,
+  vertex_storage::{Interleaved, Interleaving},
 };
 use mint::{Vector2, Vector3};
 
@@ -116,8 +116,8 @@ fn toggle_blending(blending: BlendingMode) -> BlendingMode {
 
 pub struct LocalExample {
   program: Program<Vertex, (), Triangle, FragSlot, ()>,
-  red_triangle: VertexEntity<Vertex, Triangle, Interleaved<Vertex>>,
-  blue_triangle: VertexEntity<Vertex, Triangle, Interleaved<Vertex>>,
+  red_triangle: VertexEntity<Vertex, Triangle, Interleaving>,
+  blue_triangle: VertexEntity<Vertex, Triangle, Interleaving>,
   blending: BlendingMode,
   depth_method: DepthMethod,
   back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,

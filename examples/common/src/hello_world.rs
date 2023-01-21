@@ -15,7 +15,7 @@ use luminance::{
   render_state::RenderState,
   shader::{Program, ProgramBuilder},
   vertex_entity::{VertexEntity, VertexEntityBuilder, View},
-  vertex_storage::Interleaved,
+  vertex_storage::{Interleaved, Interleaving},
   RenderSlots, Vertex,
 };
 
@@ -121,7 +121,7 @@ pub struct LocalExample {
   back_buffer: Framebuffer<Dim2, Back<Slots>, Back<()>>,
   // the program will render by mapping our Vertex type as triangles to the color slot, containing a single color
   program: Program<Vertex, (), Triangle, Slots, ()>,
-  triangles: VertexEntity<Vertex, Triangle, Interleaved<Vertex>>,
+  triangles: VertexEntity<Vertex, Triangle, Interleaving>,
 }
 
 impl Example for LocalExample {

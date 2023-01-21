@@ -18,7 +18,7 @@ use luminance::{
   render_state::RenderState,
   shader::{Program, ProgramBuilder, Std140, Uni, UniBuffer},
   vertex_entity::{VertexEntity, VertexEntityBuilder, View},
-  vertex_storage::Interleaved,
+  vertex_storage::{Interleaved, Interleaving},
   Std140, Uniforms,
 };
 
@@ -77,7 +77,7 @@ pub struct UniBlock {
 }
 
 pub struct LocalExample {
-  square: VertexEntity<Vertex, TriangleFan, Interleaved<Vertex>>,
+  square: VertexEntity<Vertex, TriangleFan, Interleaving>,
   program: Program<Vertex, (), TriangleFan, FragSlot, ShaderUniforms>,
   uni_buffer: UniBuffer<UniBlock, Std140>,
   back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,

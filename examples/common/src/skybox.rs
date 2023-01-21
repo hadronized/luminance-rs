@@ -31,7 +31,7 @@ use luminance::{
   shader::{Program, ProgramBuilder, Uni},
   texture::{InUseTexture, Mipmaps, Texture, TextureSampling},
   vertex_entity::{VertexEntity, VertexEntityBuilder, View},
-  vertex_storage::Interleaved,
+  vertex_storage::{Interleaved, Interleaving},
   Uniforms,
 };
 use mint::ColumnMatrix4;
@@ -133,7 +133,7 @@ pub struct LocalExample {
   env_map_program:
     Program<CubeVertex, (), TriangleStrip, FragSlot, EnvironmentMappingShaderInterface>,
   fullscreen_quad: VertexEntity<(), TriangleStrip, ()>,
-  cube: VertexEntity<CubeVertex, TriangleStrip, Interleaved<CubeVertex>>,
+  cube: VertexEntity<CubeVertex, TriangleStrip, Interleaving>,
   last_cursor_pos: Option<cgmath::Vector2<f32>>,
   rotate_viewport: bool,
   x_theta: f32,

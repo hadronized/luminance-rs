@@ -21,7 +21,7 @@ use luminance::{
   render_state::RenderState,
   shader::{Program, ProgramBuilder, Uni},
   vertex_entity::{VertexEntity, VertexEntityBuilder, View},
-  vertex_storage::Interleaved,
+  vertex_storage::{Interleaved, Interleaving},
   Uniforms,
 };
 use mint::{Vector2, Vector3};
@@ -75,7 +75,7 @@ struct ShaderUniforms {
 
 pub struct LocalExample {
   program: Program<Vertex, (), Triangle, FragSlot, ShaderUniforms>,
-  triangle: VertexEntity<Vertex, Triangle, Interleaved<Vertex>>,
+  triangle: VertexEntity<Vertex, Triangle, Interleaving>,
   triangle_pos: Vector2<f32>,
   back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }

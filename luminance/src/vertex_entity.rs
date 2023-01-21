@@ -1,4 +1,4 @@
-use crate::{primitive::Primitive, vertex::Vertex, vertex_storage::AsVertexStorage};
+use crate::{primitive::Primitive, vertex::Vertex, vertex_storage::VertexStorageFamily};
 use std::{
   marker::PhantomData,
   ops::{Range, RangeFrom, RangeFull, RangeTo, RangeToInclusive},
@@ -50,28 +50,32 @@ impl<VS, WS> VertexEntityBuilder<VS, WS> {
   }
 }
 
-pub struct VertexEntity<V, P, VS, W = (), WS = ()> {
+pub struct VertexEntity<V, P, VSF, W = (), WSF = ()>
+where
+  VSF: VertexStorageFamily,
+  WSF: VertexStorageFamily,
+{
   handle: usize,
-  vertices: VS,
-  instance_data: WS,
+  vertices: VSF::Storage<V>,
+  instance_data: WSF::Storage<W>,
   indices: Vec<u32>,
   vertex_count: usize,
   dropper: Box<dyn FnMut(usize)>,
   _phantom: PhantomData<*const (V, P, W)>,
 }
 
-impl<V, P, VS, W, WS> VertexEntity<V, P, VS, W, WS>
+impl<V, P, VSF, W, WSF> VertexEntity<V, P, VSF, W, WSF>
 where
   V: Vertex,
   P: Primitive,
-  VS: AsVertexStorage<V>,
+  VSF: VertexStorageFamily,
   W: Vertex,
-  WS: AsVertexStorage<W>,
+  WSF: VertexStorageFamily,
 {
   pub unsafe fn new(
     handle: usize,
-    vertices: VS,
-    instance_data: WS,
+    vertices: VSF::Storage<V>,
+    instance_data: WSF::Storage<W>,
     indices: Vec<u32>,
     vertex_count: usize,
     dropper: Box<dyn FnMut(usize)>,
@@ -99,11 +103,11 @@ where
     self.indices.len()
   }
 
-  pub fn vertices(&mut self) -> &mut VS {
+  pub fn vertices(&mut self) -> &mut VSF::Storage<V> {
     &mut self.vertices
   }
 
-  pub fn instance_data(&mut self) -> &mut WS {
+  pub fn instance_data(&mut self) -> &mut WSF::Storage<W> {
     &mut self.instance_data
   }
 
@@ -112,7 +116,11 @@ where
   }
 }
 
-impl<V, P, VS, W, WS> Drop for VertexEntity<V, P, VS, W, WS> {
+impl<V, P, VSF, W, WSF> Drop for VertexEntity<V, P, VSF, W, WSF>
+where
+  VSF: VertexStorageFamily,
+  WSF: VertexStorageFamily,
+{
   fn drop(&mut self) {
     (self.dropper)(self.handle);
   }
@@ -135,7 +143,11 @@ pub struct VertexEntityView<V, W, P> {
 }
 
 impl<'a, V, W, P> VertexEntityView<V, W, P> {
-  pub fn new<S, WS>(vertex_entity: &VertexEntity<V, P, S, W, WS>) -> Self {
+  pub fn new<VSF, WSF>(vertex_entity: &VertexEntity<V, P, VSF, W, WSF>) -> Self
+  where
+    VSF: VertexStorageFamily,
+    WSF: VertexStorageFamily,
+  {
     let handle = vertex_entity.handle;
     let vertex_count = vertex_entity.vertex_count;
 
@@ -188,13 +200,13 @@ pub trait View<R> {
   fn view(&self, range: R) -> VertexEntityView<Self::Vertex, Self::Instance, Self::Primitive>;
 }
 
-impl<V, P, VS, W, WS> View<RangeFull> for VertexEntity<V, P, VS, W, WS>
+impl<V, P, VSF, W, WSF> View<RangeFull> for VertexEntity<V, P, VSF, W, WSF>
 where
   V: Vertex,
   P: Primitive,
-  VS: AsVertexStorage<V>,
+  VSF: VertexStorageFamily,
   W: Vertex,
-  WS: AsVertexStorage<W>,
+  WSF: VertexStorageFamily,
 {
   type Vertex = V;
   type Instance = W;
@@ -205,13 +217,13 @@ where
   }
 }
 
-impl<V, P, VS, W, WS> View<Range<usize>> for VertexEntity<V, P, VS, W, WS>
+impl<V, P, VSF, W, WSF> View<Range<usize>> for VertexEntity<V, P, VSF, W, WSF>
 where
   V: Vertex,
   P: Primitive,
-  VS: AsVertexStorage<V>,
+  VSF: VertexStorageFamily,
   W: Vertex,
-  WS: AsVertexStorage<W>,
+  WSF: VertexStorageFamily,
 {
   type Vertex = V;
   type Instance = W;
@@ -231,13 +243,13 @@ where
   }
 }
 
-impl<V, P, VS, W, WS> View<RangeFrom<usize>> for VertexEntity<V, P, VS, W, WS>
+impl<V, P, VSF, W, WSF> View<RangeFrom<usize>> for VertexEntity<V, P, VSF, W, WSF>
 where
   V: Vertex,
   P: Primitive,
-  VS: AsVertexStorage<V>,
+  VSF: VertexStorageFamily,
   W: Vertex,
-  WS: AsVertexStorage<W>,
+  WSF: VertexStorageFamily,
 {
   type Vertex = V;
   type Instance = W;
@@ -257,13 +269,13 @@ where
   }
 }
 
-impl<V, P, VS, W, WS> View<RangeTo<usize>> for VertexEntity<V, P, VS, W, WS>
+impl<V, P, VSF, W, WSF> View<RangeTo<usize>> for VertexEntity<V, P, VSF, W, WSF>
 where
   V: Vertex,
   P: Primitive,
-  VS: AsVertexStorage<V>,
+  VSF: VertexStorageFamily,
   W: Vertex,
-  WS: AsVertexStorage<W>,
+  WSF: VertexStorageFamily,
 {
   type Vertex = V;
   type Instance = W;
@@ -283,13 +295,13 @@ where
   }
 }
 
-impl<V, P, VS, W, WS> View<RangeToInclusive<usize>> for VertexEntity<V, P, VS, W, WS>
+impl<V, P, VSF, W, WSF> View<RangeToInclusive<usize>> for VertexEntity<V, P, VSF, W, WSF>
 where
   V: Vertex,
   P: Primitive,
-  VS: AsVertexStorage<V>,
+  VSF: VertexStorageFamily,
   W: Vertex,
-  WS: AsVertexStorage<W>,
+  WSF: VertexStorageFamily,
 {
   type Vertex = V;
   type Instance = W;

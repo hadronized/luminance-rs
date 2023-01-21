@@ -16,7 +16,7 @@ use luminance::{
   render_state::RenderState,
   shader::{Program, ProgramBuilder},
   vertex_entity::{VertexEntity, VertexEntityBuilder, View},
-  vertex_storage::Interleaved,
+  vertex_storage::{Interleaved, Interleaving},
 };
 
 const VS: &'static str = include_str!("instancing-vs.glsl");
@@ -78,7 +78,7 @@ const INSTANCES: [Instance; 5] = [
 
 pub struct LocalExample {
   program: Program<Vertex, Instance, Triangle, FragSlot, ()>,
-  triangle: VertexEntity<Vertex, Triangle, Interleaved<Vertex>, Instance, Interleaved<Instance>>,
+  triangle: VertexEntity<Vertex, Triangle, Interleaving, Instance, Interleaving>,
   back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }
 
