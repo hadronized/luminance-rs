@@ -249,7 +249,6 @@ examples! {
   "stencil", stencil,
 
   funtests:
-  "funtest-tess-no-data", funtest_tess_no_data,
   "funtest-scissor-test", funtest_scissor_test,
   "funtest-360-manually-drop-framebuffer", funtest_360_manually_drop_framebuffer,
   "funtest-flatten-slice", funtest_flatten_slice,

@@ -214,7 +214,6 @@ examples! {
 
   // functional tests
   funtests:
-  // "funtest-tess-no-data", funtest_tess_no_data,
   // "funtest-gl33-f64-uniform" if "funtest-gl33-f64-uniform", funtest_gl33_f64_uniform,
   // "funtest-scissor-test", funtest_scissor_test,
   // "funtest-360-manually-drop-framebuffer", funtest_360_manually_drop_framebuffer,
