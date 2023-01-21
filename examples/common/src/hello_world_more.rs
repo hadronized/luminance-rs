@@ -20,7 +20,7 @@ use luminance::{
   render_state::RenderState,
   shader::{Program, ProgramBuilder},
   vertex_entity::{VertexEntity, VertexEntityBuilder, View},
-  vertex_storage::{Deinterleaved, Interleaved},
+  vertex_storage::{Deinterleaved, Deinterleaving, Interleaved, Interleaving},
   RenderSlots, Vertex,
 };
 
@@ -184,10 +184,10 @@ pub struct LocalExample {
   back_buffer: Framebuffer<Dim2, Back<Slots>, Back<()>>,
   // the program will render by mapping our Vertex type as triangles to the color slot, containing a single color
   program: Program<Vertex, (), Triangle, Slots, ()>,
-  direct_triangles: VertexEntity<Vertex, Triangle, Interleaved<Vertex>>,
-  indexed_triangles: VertexEntity<Vertex, Triangle, Interleaved<Vertex>>,
-  direct_deinterleaved_triangles: VertexEntity<Vertex, Triangle, Deinterleaved<Vertex>>,
-  indexed_deinterleaved_triangles: VertexEntity<Vertex, Triangle, Deinterleaved<Vertex>>,
+  direct_triangles: VertexEntity<Vertex, Triangle, Interleaving>,
+  indexed_triangles: VertexEntity<Vertex, Triangle, Interleaving>,
+  direct_deinterleaved_triangles: VertexEntity<Vertex, Triangle, Deinterleaving>,
+  indexed_deinterleaved_triangles: VertexEntity<Vertex, Triangle, Deinterleaving>,
   method: Method,
 }
 

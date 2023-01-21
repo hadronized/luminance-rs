@@ -25,7 +25,9 @@ use luminance::{
     Normalized, Vertex, VertexAttribDesc, VertexAttribDim, VertexAttribType, VertexBufferDesc,
   },
   vertex_entity::{VertexEntity, VertexEntityBuilder, VertexEntityView},
-  vertex_storage::{AsVertexStorage, Deinterleaved, Interleaved, VertexStorage},
+  vertex_storage::{
+    AsVertexStorage, Deinterleaved, Interleaved, VertexStorage, VertexStorageFamily,
+  },
 };
 use std::{
   cell::RefCell,
@@ -2070,16 +2072,16 @@ unsafe impl Backend for GL33 {
 }
 
 unsafe impl VertexEntityBackend for GL33 {
-  unsafe fn new_vertex_entity<V, P, VS, W, WS>(
+  unsafe fn new_vertex_entity<V, P, VSF, W, WSF>(
     &mut self,
-    mut builder: VertexEntityBuilder<VS, WS>,
-  ) -> Result<VertexEntity<V, P, VS, W, WS>, VertexEntityError>
+    mut builder: VertexEntityBuilder<VSF::Storage<V>, WSF::Storage<W>>,
+  ) -> Result<VertexEntity<V, P, VSF, W, WSF>, VertexEntityError>
   where
     V: Vertex,
     P: Primitive,
-    VS: AsVertexStorage<V>,
+    VSF: VertexStorageFamily,
     W: Vertex,
-    WS: AsVertexStorage<W>,
+    WSF: VertexStorageFamily,
   {
     let indices = builder.indices;
 

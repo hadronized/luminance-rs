@@ -23,7 +23,7 @@ use luminance::{
   render_state::RenderState,
   shader::{Program, ProgramBuilder},
   vertex_entity::{VertexEntity, VertexEntityBuilder, View as _},
-  vertex_storage::Interleaved,
+  vertex_storage::{Interleaved, Interleaving},
 };
 use mint::{Vector2, Vector3};
 
@@ -108,7 +108,7 @@ impl ViewMethod {
 
 pub struct LocalExample {
   program: Program<Vertex, (), Triangle, FragSlot, ()>,
-  triangles: VertexEntity<Vertex, Triangle, Interleaved<Vertex>>,
+  triangles: VertexEntity<Vertex, Triangle, Interleaving>,
   view_method: ViewMethod,
   back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }

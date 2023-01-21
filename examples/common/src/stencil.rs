@@ -17,7 +17,7 @@ use luminance::{
   shader::{Program, ProgramBuilder, Uni},
   texture::{InUseTexture, Mipmaps, TextureSampling},
   vertex_entity::{VertexEntity, VertexEntityBuilder, View},
-  vertex_storage::Interleaved,
+  vertex_storage::{Interleaved, Interleaving},
   Uniforms,
 };
 
@@ -86,7 +86,7 @@ pub struct LocalExample {
   program: Program<Vertex, (), Triangle, FragSlot, StencilInterface>,
   copy_program: Program<(), (), TriangleFan, FragSlot, ShaderCopyInterface>,
   framebuffer: Framebuffer<Dim2, FragSlot, Depth32FStencil8>,
-  triangle: VertexEntity<Vertex, Triangle, Interleaved<Vertex>>,
+  triangle: VertexEntity<Vertex, Triangle, Interleaving>,
   attributeless: VertexEntity<(), TriangleFan, ()>,
   back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }

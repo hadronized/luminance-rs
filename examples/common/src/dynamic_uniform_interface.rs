@@ -24,7 +24,7 @@ use luminance::{
   render_state::RenderState,
   shader::{Program, ProgramBuilder},
   vertex_entity::{VertexEntity, VertexEntityBuilder, View},
-  vertex_storage::Interleaved,
+  vertex_storage::{Interleaved, Interleaving},
 };
 
 const VS: &'static str = include_str!("displacement-vs.glsl");
@@ -62,7 +62,7 @@ const TRI_VERTICES: [Vertex; 3] = [
 
 pub struct LocalExample {
   program: Program<Vertex, (), Triangle, FragSlot, ()>, // no uniform environment; we want dynamic lookups
-  triangle: VertexEntity<Vertex, Triangle, Interleaved<Vertex>>,
+  triangle: VertexEntity<Vertex, Triangle, Interleaving>,
   triangle_pos: mint::Vector2<f32>,
   back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }

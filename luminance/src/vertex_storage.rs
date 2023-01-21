@@ -35,6 +35,28 @@ impl<V> AsVertexStorage<V> for Deinterleaved<V> {
   }
 }
 
+pub trait VertexStorageFamily {
+  type Storage<V>: AsVertexStorage<V>;
+}
+
+impl VertexStorageFamily for () {
+  type Storage<V> = ();
+}
+
+#[derive(Debug)]
+pub struct Interleaving;
+
+impl VertexStorageFamily for Interleaving {
+  type Storage<V> = Interleaved<V>;
+}
+
+#[derive(Debug)]
+pub struct Deinterleaving;
+
+impl VertexStorageFamily for Deinterleaving {
+  type Storage<V> = Deinterleaved<V>;
+}
+
 /// Store vertices as an interleaved array.
 #[derive(Debug)]
 pub struct Interleaved<V> {

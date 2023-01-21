@@ -22,7 +22,7 @@ use luminance::{
   render_state::RenderState,
   shader::{Program, ProgramBuilder},
   vertex_entity::{VertexEntity, VertexEntityBuilder, View},
-  vertex_storage::Interleaved,
+  vertex_storage::{Interleaved, Interleaving},
 };
 use mint::{Vector2, Vector3};
 
@@ -87,7 +87,7 @@ fn window_to_screen(a: &Vector2<f32>, w: f32, h: f32) -> Vector2<f32> {
 
 pub struct LocalExample {
   program: Program<Vertex, (), Triangle, FragSlot, ()>,
-  triangle: VertexEntity<Vertex, Triangle, Interleaved<Vertex>>,
+  triangle: VertexEntity<Vertex, Triangle, Interleaving>,
   // current cursor position
   cursor_pos: Option<Vector2<f32>>,
   // when we press down a button, if we are to select a vertex, we need to know which one; this
