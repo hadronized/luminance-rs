@@ -48,8 +48,8 @@ pub mod uni_buffer;
 pub mod vertex_instancing;
 
 // functional tests
-//#[cfg(feature = "funtest")]
-//pub mod funtest_360_manually_drop_framebuffer;
+#[cfg(feature = "funtest")]
+pub mod funtest_360_manually_drop_framebuffer;
 //#[cfg(feature = "funtest")]
 //pub mod funtest_483_indices_mut_corruption;
 //#[cfg(feature = "funtest")]

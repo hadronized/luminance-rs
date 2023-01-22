@@ -216,7 +216,7 @@ examples! {
   funtests:
   "funtest-gl33-f64-uniform" if "funtest-gl33-f64-uniform", funtest_gl33_f64_uniform,
   "funtest-scissor-test", funtest_scissor_test,
-  // "funtest-360-manually-drop-framebuffer", funtest_360_manually_drop_framebuffer,
+  "funtest-360-manually-drop-framebuffer", funtest_360_manually_drop_framebuffer,
   // "funtest-flatten-slice", funtest_flatten_slice,
   // "funtest-pixel-array-encoding", funtest_pixel_array_encoding,
   // "funtest-483-indices-mut-corruption", funtest_483_indices_mut_corruption,
