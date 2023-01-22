@@ -1,15 +1,17 @@
-use crate::{Example, InputAction, LoopFeedback, PlatformServices};
-use luminance_front::{
-  context::GraphicsContext,
-  framebuffer::Framebuffer,
+use luminance::{
+  backend::{Backend, Error},
+  context::Context,
+  dim::{Dim2, Size2},
+  framebuffer::{Back, Framebuffer},
   pipeline::PipelineState,
+  primitive::TriangleFan,
   render_state::RenderState,
-  scissor::ScissorRegion,
-  shader::Program,
-  tess::{Mode, Tess},
-  texture::Dim2,
-  Backend,
+  scissor::Scissor,
+  shader::{Program, ProgramBuilder},
+  vertex_entity::{VertexEntity, VertexEntityBuilder, View},
 };
+
+use crate::{shared::FragSlot, Example, InputAction, LoopFeedback, PlatformServices};
 
 const VS: &str = "
 const vec2[4] POSITIONS = vec2[](
@@ -31,43 +33,47 @@ void main() {
 }";
 
 pub struct LocalExample {
-  program: Program<(), (), ()>,
-  tess: Tess<()>,
+  program: Program<(), (), TriangleFan, FragSlot, ()>,
+  tess: VertexEntity<(), TriangleFan, ()>,
   is_active: bool,
+  back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }
 
 impl Example for LocalExample {
+  type Err = Error;
+
+  const TITLE: &'static str = "funtest-scissor-test";
+
   fn bootstrap(
+    [width, height]: [u32; 2],
     _: &mut impl PlatformServices,
-    context: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> Self {
-    let program = context
-      .new_shader_program::<(), (), ()>()
-      .from_strings(VS, None, None, FS)
-      .unwrap()
-      .ignore_warnings();
+    ctx: &mut Context<impl Backend>,
+  ) -> Result<Self, Self::Err> {
+    let program = ctx.new_program(
+      ProgramBuilder::new()
+        .add_vertex_stage(VS)
+        .no_primitive_stage()
+        .add_shading_stage(FS),
+    )?;
 
-    let tess = context
-      .new_tess()
-      .set_mode(Mode::TriangleFan)
-      .set_render_vertex_nb(4)
-      .build()
-      .unwrap();
+    let tess = ctx.new_vertex_entity(VertexEntityBuilder::new())?;
 
-    LocalExample {
+    let back_buffer = ctx.back_buffer(Size2::new(width, height))?;
+
+    Ok(LocalExample {
       program,
       tess,
       is_active: true,
-    }
+      back_buffer,
+    })
   }
 
   fn render_frame(
     mut self,
     _: f32,
-    back_buffer: Framebuffer<Dim2, (), ()>,
     actions: impl Iterator<Item = InputAction>,
-    context: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> LoopFeedback<Self> {
+    ctx: &mut Context<impl Backend>,
+  ) -> Result<LoopFeedback<Self>, Self::Err> {
     for action in actions {
       match action {
         InputAction::PrimaryReleased => {
@@ -78,47 +84,35 @@ impl Example for LocalExample {
           );
         }
 
-        InputAction::Quit => return LoopFeedback::Exit,
+        InputAction::Quit => return Ok(LoopFeedback::Exit),
         _ => (),
       }
     }
 
-    let [width, height] = back_buffer.size();
+    let &Size2 { width, height } = self.back_buffer.size();
     let (w2, h2) = (width as u32 / 2, height as u32 / 2);
-    let program = &mut self.program;
+    let program = &self.program;
     let tess = &self.tess;
-    let is_active = self.is_active;
 
-    let render = context
-      .new_pipeline_gate()
-      .pipeline(
-        &back_buffer,
-        &PipelineState::default(),
-        |_, mut shd_gate| {
-          shd_gate.shade(program, |_, _, mut rdr_gate| {
-            if is_active {
-              let rdr_st = RenderState::default().set_scissor(ScissorRegion {
-                x: w2 - w2 / 2,
-                y: h2 - h2 / 2,
-                width: w2,
-                height: h2,
-              });
-
-              rdr_gate.render(&rdr_st, |mut tess_gate| tess_gate.render(tess))
-            } else {
-              rdr_gate.render(&RenderState::default(), |mut tess_gate| {
-                tess_gate.render(tess)
-              })
-            }
-          })
-        },
-      )
-      .assume();
-
-    if render.is_ok() {
-      LoopFeedback::Continue(self)
+    let rdr_state = if self.is_active {
+      RenderState::default().set_scissor(Scissor::On {
+        x: w2 - w2 / 2,
+        y: h2 - h2 / 2,
+        width: w2,
+        height: h2,
+      })
     } else {
-      LoopFeedback::Exit
-    }
+      RenderState::default()
+    };
+
+    ctx.with_framebuffer(&self.back_buffer, &PipelineState::default(), |mut frame| {
+      frame.with_program(program, |mut frame| {
+        frame.with_render_state(&rdr_state, |mut frame| {
+          frame.render_vertex_entity(tess.view(..4))
+        })
+      })
+    })?;
+
+    Ok(LoopFeedback::Continue(self))
   }
 }

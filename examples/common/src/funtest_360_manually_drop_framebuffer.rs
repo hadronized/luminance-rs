@@ -7,40 +7,53 @@
 //! displayed and the window flashes on the screen. Run the application in a tool such as apitrace
 //! or renderdoc to analyze it.
 
-use crate::{Example, InputAction, LoopFeedback, PlatformServices};
-use luminance_front::{
-  context::GraphicsContext,
+use luminance::{
+  backend::{Backend, Error},
+  context::Context,
+  dim::{Dim2, Size2},
   framebuffer::Framebuffer,
-  pixel::{Depth32F, RGBA32F},
-  texture::{Dim2, Sampler},
-  Backend,
+  pixel::Depth32F,
+  texture::{Mipmaps, TextureSampling},
 };
+
+use crate::{shared::FragSlot, Example, InputAction, LoopFeedback, PlatformServices};
 
 pub struct LocalExample;
 
 impl Example for LocalExample {
+  type Err = Error;
+
+  const TITLE: &'static str = "funtest-#360-manually-drop-framebuffer";
+
   fn bootstrap(
+    _: [u32; 2],
     _: &mut impl PlatformServices,
-    context: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> Self {
-    let framebuffer =
-      context.new_framebuffer::<Dim2, RGBA32F, Depth32F>([1024, 1024], 0, Sampler::default());
+    ctx: &mut Context<impl Backend>,
+  ) -> Result<Self, Self::Err> {
+    let framebuffer: Framebuffer<Dim2, FragSlot, Depth32F> = ctx.new_framebuffer(
+      Size2::new(1024, 1024),
+      Mipmaps::No,
+      &TextureSampling::default(),
+    )?;
 
     std::mem::drop(framebuffer);
 
     // #360 occurs here after the drop
-    let _ = context.new_framebuffer::<Dim2, RGBA32F, Depth32F>([1024, 1024], 0, Sampler::default());
+    let _: Framebuffer<Dim2, FragSlot, Depth32F> = ctx.new_framebuffer(
+      Size2::new(1024, 1024),
+      Mipmaps::No,
+      &TextureSampling::default(),
+    )?;
 
-    LocalExample
+    Ok(LocalExample)
   }
 
   fn render_frame(
     self,
     _: f32,
-    _: Framebuffer<Dim2, (), ()>,
     _: impl Iterator<Item = InputAction>,
-    _: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> LoopFeedback<Self> {
-    LoopFeedback::Exit
+    _: &mut Context<impl Backend>,
+  ) -> Result<LoopFeedback<Self>, Self::Err> {
+    Ok(LoopFeedback::Exit)
   }
 }
