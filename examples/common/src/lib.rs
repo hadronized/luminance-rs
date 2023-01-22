@@ -58,8 +58,8 @@ pub mod vertex_instancing;
 pub mod funtest_gl33_f64_uniform;
 //#[cfg(feature = "funtest")]
 //pub mod funtest_pixel_array_encoding;
-//#[cfg(feature = "funtest")]
-//pub mod funtest_scissor_test;
+#[cfg(feature = "funtest")]
+pub mod funtest_scissor_test;
 
 /// Example interface.
 pub trait Example: Sized {
