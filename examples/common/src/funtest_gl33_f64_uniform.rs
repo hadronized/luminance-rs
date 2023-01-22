@@ -1,15 +1,17 @@
-use crate::{Example, InputAction, LoopFeedback, PlatformServices};
-use luminance::UniformInterface;
-use luminance_front::{
-  context::GraphicsContext,
-  framebuffer::Framebuffer,
+use luminance::{
+  backend::{Backend, Error},
+  context::Context,
+  dim::{Dim2, Size2},
+  framebuffer::{Back, Framebuffer},
   pipeline::PipelineState,
+  primitive::TriangleFan,
   render_state::RenderState,
-  shader::{types::Vec3, Program, Uniform},
-  tess::{Mode, Tess},
-  texture::Dim2,
-  Backend,
+  shader::{Program, ProgramBuilder, Uni},
+  vertex_entity::{VertexEntity, VertexEntityBuilder, View},
+  Uniforms,
 };
+
+use crate::{shared::FragSlot, Example, InputAction, LoopFeedback, PlatformServices};
 
 const VS: &str = "
 const vec2[4] POSITIONS = vec2[](
@@ -32,77 +34,77 @@ void main() {
   frag = vec3(color);
 }";
 
-#[derive(Debug, UniformInterface)]
+#[derive(Debug, Uniforms)]
 struct ShaderInterface {
-  color: Uniform<Vec3<f64>>,
+  color: Uni<mint::Vector3<f64>>,
 }
 
 pub struct LocalExample {
-  program: Program<(), (), ShaderInterface>,
-  tess: Tess<()>,
+  program: Program<(), (), TriangleFan, FragSlot, ShaderInterface>,
+  quad: VertexEntity<(), TriangleFan, ()>,
+  back_buffer: Framebuffer<Dim2, Back<FragSlot>, Back<()>>,
 }
 
 impl Example for LocalExample {
+  type Err = Error;
+
+  const TITLE: &'static str = "funtest-gl33-f64-uniform";
+
   fn bootstrap(
+    [width, height]: [u32; 2],
     _: &mut impl PlatformServices,
-    context: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> Self {
-    let program = context
-      .new_shader_program::<(), (), ShaderInterface>()
-      .from_strings(VS, None, None, FS)
-      .unwrap()
-      .ignore_warnings();
+    ctx: &mut Context<impl Backend>,
+  ) -> Result<Self, Self::Err> {
+    let program = ctx.new_program(
+      ProgramBuilder::new()
+        .add_vertex_stage(VS)
+        .no_primitive_stage()
+        .add_shading_stage(FS),
+    )?;
 
-    let tess = context
-      .new_tess()
-      .set_mode(Mode::TriangleFan)
-      .set_render_vertex_nb(4)
-      .build()
-      .unwrap();
+    let quad = ctx.new_vertex_entity(VertexEntityBuilder::new())?;
 
-    LocalExample { program, tess }
+    let back_buffer = ctx.back_buffer(Size2::new(width, height))?;
+
+    Ok(LocalExample {
+      program,
+      quad,
+      back_buffer,
+    })
   }
 
   fn render_frame(
-    mut self,
+    self,
     t: f32,
-    back_buffer: Framebuffer<Dim2, (), ()>,
     actions: impl Iterator<Item = InputAction>,
-    context: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> LoopFeedback<Self> {
+    ctx: &mut Context<impl Backend>,
+  ) -> Result<LoopFeedback<Self>, Self::Err> {
     for action in actions {
       match action {
-        InputAction::Quit => return LoopFeedback::Exit,
+        InputAction::Quit => return Ok(LoopFeedback::Exit),
         _ => (),
       }
     }
 
     let t = t as f64;
-    let color = Vec3::new(t.cos(), 0.3, t.sin());
-    let program = &mut self.program;
-    let tess = &self.tess;
+    let color = mint::Vector3 {
+      x: t.cos(),
+      y: 0.3,
+      z: t.sin(),
+    };
 
-    let render = context
-      .new_pipeline_gate()
-      .pipeline(
-        &back_buffer,
-        &PipelineState::default(),
-        |_, mut shd_gate| {
-          shd_gate.shade(program, |mut iface, uni, mut rdr_gate| {
-            iface.set(&uni.color, color);
+    let program = &self.program;
+    let quad = &self.quad;
 
-            rdr_gate.render(&RenderState::default(), |mut tess_gate| {
-              tess_gate.render(tess)
-            })
-          })
-        },
-      )
-      .assume();
+    ctx.with_framebuffer(&self.back_buffer, &PipelineState::default(), |mut frame| {
+      frame.with_program(program, |mut frame| {
+        frame.update(|mut update, unis| update.set(&unis.color, &color))?;
+        frame.with_render_state(&RenderState::default(), |mut frame| {
+          frame.render_vertex_entity(quad.view(..4))
+        })
+      })
+    })?;
 
-    if render.is_ok() {
-      LoopFeedback::Continue(self)
-    } else {
-      LoopFeedback::Exit
-    }
+    Ok(LoopFeedback::Continue(self))
   }
 }

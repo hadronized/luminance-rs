@@ -54,8 +54,8 @@ pub mod vertex_instancing;
 //pub mod funtest_483_indices_mut_corruption;
 //#[cfg(feature = "funtest")]
 //pub mod funtest_flatten_slice;
-//#[cfg(all(feature = "funtest", feature = "funtest-gl33-f64-uniform"))]
-//pub mod funtest_gl33_f64_uniform;
+#[cfg(all(feature = "funtest", feature = "funtest-gl33-f64-uniform"))]
+pub mod funtest_gl33_f64_uniform;
 //#[cfg(feature = "funtest")]
 //pub mod funtest_pixel_array_encoding;
 //#[cfg(feature = "funtest")]
