@@ -50,8 +50,8 @@ pub mod vertex_instancing;
 // functional tests
 #[cfg(feature = "funtest")]
 pub mod funtest_360_manually_drop_framebuffer;
-//#[cfg(feature = "funtest")]
-//pub mod funtest_483_indices_mut_corruption;
+#[cfg(feature = "funtest")]
+pub mod funtest_483_indices_mut_corruption;
 #[cfg(all(feature = "funtest", feature = "funtest-gl33-f64-uniform"))]
 pub mod funtest_gl33_f64_uniform;
 #[cfg(feature = "funtest")]

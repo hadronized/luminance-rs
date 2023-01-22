@@ -1,53 +1,79 @@
+use luminance::{
+  backend::{Backend, Error},
+  context::Context,
+  primitive::Point,
+  vertex_entity::{VertexEntity, VertexEntityBuilder},
+  vertex_storage::{Interleaved, Interleaving},
+};
+
 use crate::{shared::Vertex, Example, InputAction, LoopFeedback, PlatformServices};
-use luminance_front::{context::GraphicsContext, framebuffer::Framebuffer, texture::Dim2, Backend};
-use std::ops::Deref as _;
 
 pub struct LocalExample;
 
 impl Example for LocalExample {
+  type Err = Error;
+
+  const TITLE: &'static str = "funtest-483-indices-mut-corruption";
+
   fn bootstrap(
+    _: [u32; 2],
     _: &mut impl PlatformServices,
-    context: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> Self {
+    ctx: &mut Context<impl Backend>,
+  ) -> Result<Self, Self::Err> {
     let vertices = [
-      Vertex::new([1., 2.].into(), [1., 1., 1.].into()),
-      Vertex::new([-1., 2.].into(), [1., 0., 1.].into()),
-      Vertex::new([1., -2.].into(), [1., 1., 0.].into()),
+      Vertex {
+        co: mint::Vector2 { x: 1., y: 2. },
+        color: mint::Vector3 {
+          x: 0.,
+          y: 1.,
+          z: 1.,
+        },
+      },
+      Vertex {
+        co: mint::Vector2 { x: -1., y: 2. },
+        color: mint::Vector3 {
+          x: 1.,
+          y: 0.,
+          z: 1.,
+        },
+      },
+      Vertex {
+        co: mint::Vector2 { x: 1., y: -2. },
+        color: mint::Vector3 {
+          x: 1.,
+          y: 1.,
+          z: 0.,
+        },
+      },
     ];
-    let mut tess = context
-      .new_tess()
-      .set_vertices(&vertices[..])
-      .set_indices([0u8, 1, 2])
-      .set_mode(luminance_front::tess::Mode::Point)
-      .build()
-      .expect("tessellation");
 
-    tess
-      .indices_mut()
-      .expect("sliced indices")
-      .copy_from_slice(&[10, 20, 30]);
+    let mut triangle: VertexEntity<Vertex, Point, Interleaving> = ctx.new_vertex_entity(
+      VertexEntityBuilder::new()
+        .add_vertices(Interleaved::new().set_vertices(vertices))
+        .add_indices([0, 1, 2]),
+    )?;
 
-    {
-      let slice = tess.indices().expect("sliced indices");
-      log::info!("slice after mutation is:  {:?}", slice.deref());
-    }
+    let slice = triangle.indices();
+
+    log::info!("slice before mutation is: {slice:?}");
+
+    slice.copy_from_slice(&[10, 20, 30]);
+    ctx.update_indices(&mut triangle)?;
 
     {
-      let _ = tess.indices_mut().expect("sliced indices");
+      let slice = triangle.indices();
+      log::info!("slice after mutation is: {slice:?}");
     }
 
-    drop(tess);
-
-    LocalExample
+    Ok(LocalExample)
   }
 
   fn render_frame(
     self,
     _: f32,
-    _: Framebuffer<Dim2, (), ()>,
     _: impl Iterator<Item = InputAction>,
-    _: &mut impl GraphicsContext<Backend = Backend>,
-  ) -> LoopFeedback<Self> {
-    LoopFeedback::Exit
+    _: &mut Context<impl Backend>,
+  ) -> Result<LoopFeedback<Self>, Self::Err> {
+    Ok(LoopFeedback::Exit)
   }
 }
