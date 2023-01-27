@@ -255,13 +255,15 @@ fn opengl_shader_type(t: StageType) -> GLenum {
 
 #[cfg(feature = "GL_ARB_gpu_shader_fp64")]
 const GLSL_PRAGMA: &str = "#version 330 core\n\
-                           #extension GL_ARB_separate_shader_objects : require\n
+                           #extension GL_ARB_separate_shader_objects : require\n\
                            #extension GL_ARB_gpu_shader_fp64 : require\n\
-                           layout(std140) uniform;\n";
+                           layout(std140) uniform;\n\
+                           #line 1\n";
 #[cfg(not(feature = "GL_ARB_gpu_shader_fp64"))]
 const GLSL_PRAGMA: &str = "#version 330 core\n\
                            #extension GL_ARB_separate_shader_objects : require\n\
-                           layout(std140) uniform;\n";
+                           layout(std140) uniform;\n\
+                           #line 1\n";
 
 fn glsl_pragma_src(src: &str) -> String {
   let mut pragma = String::from(GLSL_PRAGMA);

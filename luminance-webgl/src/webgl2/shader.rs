@@ -315,8 +315,9 @@ fn webgl_shader_type(ty: StageType) -> Option<u32> {
 
 const GLSL_PRAGMA: &str = "#version 300 es\n\
                            precision highp float;\n\
-                           precision highp int;
-                           layout(std140) uniform;\n";
+                           precision highp int;\n\
+                           layout(std140) uniform;\n\
+                           #line 1\n";
 
 fn patch_shader_src(src: &str) -> String {
   let mut pragma = String::from(GLSL_PRAGMA);
