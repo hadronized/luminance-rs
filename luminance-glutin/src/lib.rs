@@ -116,18 +116,9 @@ impl GlutinSurface {
       ContextBuilder::new()
         .with_gl(GlRequest::Specific(Api::OpenGl, (3, 3)))
         .with_gl_profile(GlProfile::Core),
-    )
-    .build_windowed(window_builder, &event_loop)?;
+    );
 
-    let ctx = unsafe { windowed_ctx.make_current().map_err(|(_, e)| e)? };
-
-    // init OpenGL
-    gl::load_with(|s| ctx.get_proc_address(s) as *const c_void);
-
-    ctx.window().set_visible(true);
-
-    let gl = GL33::new().map_err(GlutinError::GraphicsStateError)?;
-    let surface = GlutinSurface { ctx, gl };
+    let surface = Self::new_gl33_with_builders(&event_loop, window_builder, windowed_ctx)?;
 
     Ok((surface, event_loop))
   }
@@ -138,12 +129,27 @@ impl GlutinSurface {
     samples: u16,
   ) -> Result<(Self, EventLoop<()>), GlutinError> {
     let event_loop = EventLoop::new();
-
     let windowed_ctx = ContextBuilder::new()
+      .with_multisampling(samples)
+      .with_double_buffer(Some(true));
+    let surface = Self::new_gl33_with_builders(&event_loop, window_builder, windowed_ctx)?;
+
+    Ok((surface, event_loop))
+  }
+
+  /// Create a new [`GlutinSurface`] by passing in the builders.
+  ///
+  /// This is the most flexible but least hand-holding way of creating a [`GlutinSurface`].
+  ///
+  /// The OpenGL context should be version 3.3, core profile, and double-buffered.
+  pub fn new_gl33_with_builders<T>(
+    event_loop: &EventLoop<T>,
+    window_builder: WindowBuilder,
+    context_builder: ContextBuilder<NotCurrent>,
+  ) -> Result<Self, GlutinError> {
+    let windowed_ctx = context_builder
       .with_gl(GlRequest::Specific(Api::OpenGl, (3, 3)))
       .with_gl_profile(GlProfile::Core)
-      .with_multisampling(samples)
-      .with_double_buffer(Some(true))
       .build_windowed(window_builder, &event_loop)?;
 
     let ctx = unsafe { windowed_ctx.make_current().map_err(|(_, e)| e)? };
@@ -155,8 +161,7 @@ impl GlutinSurface {
 
     let gl = GL33::new().map_err(GlutinError::GraphicsStateError)?;
     let surface = GlutinSurface { ctx, gl };
-
-    Ok((surface, event_loop))
+    Ok(surface)
   }
 
   /// Get the underlying size (in physical pixels) of the surface.
